@@ -20,6 +20,8 @@ TBD
 %package kickstarts
 Summary:        Kickstarts to create some related images
 Group:          Applications/System
+BuildRequires:  pykickstart
+Requires:       lorax
 
 
 %description kickstarts
