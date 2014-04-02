@@ -1,5 +1,9 @@
-AC_INIT([imgbased], [1.0], [fabidn@fedoraproject.org])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability tar-pax])
+AC_INIT([imgbased], [0.1], [fabiand@fedoraproject.org])
+
+AC_PREFIX_DEFAULT([/usr])
+AM_MAINTAINER_MODE([enable])
+AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules tar-pax no-dist-gzip dist-xz subdir-objects])
+AM_SILENT_RULES([yes])
 
 AC_SUBST([FEDORA],[[`rpm --eval '%{fedora}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([RHEL], [[`rpm --eval '%{rhel}'|sed 's/[^0-9]//g'`]])
@@ -24,7 +28,6 @@ AM_CONDITIONAL(TARGET_SYSTEMD, test 0$RHEL -ge 7 || test 0$FEDORA -ge 16 || test
 
 AM_PATH_PYTHON
 
-AC_CONFIG_FILES([Makefile
-                ])
+AC_CONFIG_FILES([Makefile])
 
 AC_OUTPUT

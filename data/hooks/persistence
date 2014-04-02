@@ -1,0 +1,7 @@
+#!/bin/bash
+
+HOOK=$1
+shift 1
+ARGS=$@
+
+echo Persisting $HOOK $ARGS

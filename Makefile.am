@@ -3,5 +3,37 @@ SHELL := /bin/bash
 
 SUBDIRS =
 
+hooksdir = $(prefix)/lib/imgbased/hooks.d/
+pyimagebaseddir = $(pythondir)/imgbased
+
+
 dist_sbin_SCRIPTS = \
-  src/imgbase
+  data/imgbase
+
+
+dist_pyimagebased_PYTHON = \
+  src/__init__.py \
+  src/imgbase.py
+
+dist_hooks_SCRIPTS = \
+  data/hooks/persistence
+
+
+dist_doc_DATA = \
+  data/kickstarts/rootfs.ks \
+  data/kickstarts/post-installation.ks \
+  data/kickstarts/rootfs.template.ks \
+  data/kickstarts/post-installation.template.ks \
+  data/kickstarts/repositories.partial.ks \
+  data/kickstarts/packages.partial.ks \
+  data/kickstarts/header.partial.ks \
+  data/kickstarts/post.partial.ks
+
+
+%.ks:
+	ksflatten --config="$*.template.ks" --output="$@"
+
+
+EXTRA_DIST = \
+  README.md \
+  imgbased.spec
