@@ -4,4 +4,21 @@ HOOK=$1
 shift 1
 ARGS=$@
 
-echo Persisting $HOOK $ARGS
+FILE_LIST=/config/files
+
+echo "Persistence handler for: '$HOOK' '$ARGS'"
+echo "  Filelist: $FILE_LIST"
+
+if [[ "$HOOK" = "new-layer-added" ]];
+then
+    echo "Handling $HOOK"
+    OLD_ROOT=$1
+    NEW_ROOT=$2
+
+    [[ ! -e $FILE_LIST ]] && { echo "  No files persisted" ; exit 1 ; }
+
+    echo "  Copying persisted files fom '$OLD_ROOT' to '$NEW_ROOT'"
+    pushd "$OLD_ROOT"
+    echo cpio -p -uvd "$NEW_ROOT" < $FILE_LIST;
+    popd
+fi
