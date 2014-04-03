@@ -21,9 +21,9 @@ dist_hooks_SCRIPTS = \
 
 dist_doc_DATA = \
   data/kickstarts/rootfs.ks \
-  data/kickstarts/post-installation.ks \
+  data/kickstarts/runtime-layout.ks \
   data/kickstarts/rootfs.template.ks \
-  data/kickstarts/post-installation.template.ks \
+  data/kickstarts/runtime-layout.template.ks \
   data/kickstarts/repositories.partial.ks \
   data/kickstarts/packages.partial.ks \
   data/kickstarts/header.partial.ks \

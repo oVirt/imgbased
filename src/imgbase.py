@@ -27,6 +27,8 @@ import argparse
 import os
 import glob
 import subprocess
+import re
+import sys
 
 
 def call(*args, **kwargs):
@@ -38,6 +40,24 @@ def call(*args, **kwargs):
 def uuid():
     with open("/proc/sys/kernel/random/uuid") as src:
         return src.read().replace("-", "")
+
+
+def format_to_pattern(fmt):
+    """Take a format string and make a pattern from it
+    https://docs.python.org/2/library/re.html#simulating-scanf
+
+    >>> fmt = "Bar-%d"
+    >>> pat = format_to_pattern(fmt)
+    >>> pat
+    'Bar-([-+]?\\\\d+)'
+
+    >>> re.search(pat, "Bar-01").groups()
+    ('01',)
+    """
+    pat = fmt
+    pat = pat.replace("%d", r"([-+]?\d+)")
+    pat = pat.replace("%s", r"(\S+)")
+    return pat
 
 
 class Hooks(object):
@@ -76,9 +96,28 @@ class ImageLayers(object):
     hooks = None
 
     vg = "HostVG"
-    baselv = "BaseImage"
     thinpool = "ImagePool"
-    layerprefix = "Layer"
+    layerformat = "Image-%d.%d"
+
+    class Image(object):
+        version = None
+        release = None
+        layers = None
+
+        @property
+        def name(self):
+            return str(self)
+
+        def __init__(self, v=None, r=None):
+            self.version = v
+            self.release = r
+            self.layers = []
+
+        def __str__(self):
+            return ImageLayers.layerformat % (self.version, self.release)
+
+        def __repr__(self):
+            return "<%s %s/>" % (self, self.layers or "")
 
     def __init__(self):
         self.hooks = Hooks()
@@ -87,6 +126,74 @@ class ImageLayers(object):
         log.debug("Calling: %s %s" % (args, kwargs))
         if not self.dry:
             return call(*args, **kwargs)
+
+    def _lvs(self):
+        return sorted(n.strip() for n in
+                      call(["lvs", "--noheadings", "-o", "lv_name"]))
+
+    def _lvs_tree(self, lvs=None):
+        """
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
+
+        >>> layers = ImageLayers()
+        >>> layers._lvs_tree(lvs)
+        [<Image-0.0 />, <Image-2.0 [<Image-2.1 />]/>, <Image-13.0 />]
+        """
+        laypat = format_to_pattern(self.layerformat)
+        sorted_lvs = []
+
+        lvs = lvs or self._lvs()
+
+        for lv in lvs:
+            if not re.match(laypat, lv):
+                continue
+            baseidx, layidx = [int(x) for x in re.search(laypat, lv).groups()]
+            sorted_lvs.append((baseidx, layidx))
+
+        sorted_lvs = sorted(sorted_lvs)
+
+        lst = []
+        for img in (ImageLayers.Image(*v) for v in sorted_lvs):
+            if img.release == 0:
+                lst.append(img)
+            else:
+                lst[-1].layers.append(img)
+
+        return lst
+
+    def _last_base(self, lvs=None):
+        """
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
+
+        >>> layers = ImageLayers()
+        >>> layers._last_base(lvs)
+        <Image-13.0 />
+        """
+        return self._lvs_tree(lvs)[-1]
+
+    def _last_layer(self, base=None, lvs=None):
+        """
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
+
+        >>> layers = ImageLayers()
+        >>> layers._last_layer(lvs=lvs)
+        <Image-13.1 />
+        """
+        base = base or self._last_base(lvs)
+        images = dict((x.name, x) for x in self._lvs_tree(lvs))
+        return images[base.name].layers[-1]
+
+    def _next_layer(self, base=None, lvs=None):
+        """
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
+
+        >>> layers = ImageLayers()
+        >>> layers._next_layer(lvs=lvs)
+        <Image-13.2 />
+        """
+        last_layer = self._last_layer(base, lvs)
+        last_layer.release += 1
+        return last_layer
 
     def _add_layer(self, previous_layer, new_layer):
         log.info("Adding a new layer")
@@ -131,27 +238,56 @@ class ImageLayers(object):
 
     def add_bootable_layer(self):
         log.info("Adding a new layer which can be booted from the bootloader")
-        idx = self.call("lvs | egrep '\s+%s' | wc -l" % self.layerprefix,
-                        shell=True)
-        previous_layer = "%s%s" % (self.layerprefix, int(idx) + 1) \
-            if idx == 0 else self.baselv
+        last_layer = self._last_layer().name
+        new_layer = self._next_layer().name
 
-        new_layer = "%s%s" % (self.layerprefix, idx)
-        self._add_layer("%s/%s" % (self.vg, previous_layer),
+        self._add_layer("%s/%s" % (self.vg, last_layer),
                         "%s/%s" % (self.vg, new_layer))
         self._add_boot_entry("%s/%s" % (self.vg, new_layer),
                              "/dev/mapper/%s-%s" % (self.vg, new_layer))
 
+    def add_base(self, infile):
+        raise NotImplementedError()
+
+class ImageBuilder(object):
+    ksdir = "/usr/share/doc/imgbased/"
+
+    ksnames = ["runtime-layout", "rootfs"]
+
+    def index(self):
+        return self.ksnames
+
+    def build(self, ksname):
+        if not ksname in self.ksnames:
+            raise RuntimeError("Unknown image: %s" % ksname)
+
+        call(["livemedia-creator",
+              "--make-diskimage",
+              "--ks", "%s.ks" % ksname,
+              "--iso", "boot.iso",
+              "--vcpus", "4",
+              "--image-name", "%s.img" % ksname])
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="imgbased")
-    subparsers = parser.add_subparsers(title="Sub-commands")
+    subparsers = parser.add_subparsers(title="Sub-commands", dest="command")
 
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--dry", action="store_true")
 
-    layer_parser = subparsers.add_parser("layer", help="Runtime layer handling")
-    layer_parser.add_argument("--add", dest="layer_add", action="store_true",
-                              help="Add a new layer")
+    base_parser = subparsers.add_parser("base",
+                                         help="Runtime base handling")
+    base_parser.add_argument("--add", action="store_true",
+                              help="Add a base layer from a file or stdin")
+    base_parser.add_argument("image", nargs="?", type=argparse.FileType('r'),
+                             default=sys.stdin,
+                             help="File or stdin to use")
+
+    layer_parser = subparsers.add_parser("layer",
+                                         help="Runtime layer handling")
+    layer_parser.add_argument("--add", action="store_true",
+                              default=False, help="Add a new layer")
 
     image_parser = subparsers.add_parser("image", help="Image creation")
     image_parser.add_argument("--create", dest="image_create",
@@ -168,9 +304,14 @@ if __name__ == '__main__':
     imgbase.debug = args.debug
     imgbase.dry = args.dry
 
-    if args.layer_add:
-        imgbase.add_bootable_layer()
+    if args.command == "layer":
+        if args.add:
+            imgbase.add_bootable_layer()
 
-    elif args.image_create:
-        pass
+    elif args.command == "base":
+        if args.add:
+            imgbase.add_base(args.image)
 
+    elif args.command == "image":
+        if args.image_create:
+            pass
