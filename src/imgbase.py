@@ -171,6 +171,23 @@ class ImageLayers(object):
         """
         return self._lvs_tree(lvs)[-1]
 
+    def _next_base(self, version=None, lvs=None):
+        """
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
+
+        >>> layers = ImageLayers()
+        >>> layers._next_base(lvs=lvs)
+        <Image-14.0 />
+
+        >>> layers._next_base(version=20140401, lvs=lvs)
+        <Image-20140401.0 />
+        """
+        base = self._last_base(lvs)
+        base.version = version or base.version + 1
+        base.release = 0
+        base.layers = []
+        return base
+
     def _last_layer(self, base=None, lvs=None):
         """
         >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
@@ -191,9 +208,9 @@ class ImageLayers(object):
         >>> layers._next_layer(lvs=lvs)
         <Image-13.2 />
         """
-        last_layer = self._last_layer(base, lvs)
-        last_layer.release += 1
-        return last_layer
+        layer = self._last_layer(base, lvs)
+        layer.release += 1
+        return layer
 
     def _add_layer(self, previous_layer, new_layer):
         log.info("Adding a new layer")
@@ -249,6 +266,7 @@ class ImageLayers(object):
     def add_base(self, infile):
         raise NotImplementedError()
 
+
 class ImageBuilder(object):
     ksdir = "/usr/share/doc/imgbased/"
 
@@ -277,9 +295,9 @@ if __name__ == '__main__':
     parser.add_argument("--dry", action="store_true")
 
     base_parser = subparsers.add_parser("base",
-                                         help="Runtime base handling")
+                                        help="Runtime base handling")
     base_parser.add_argument("--add", action="store_true",
-                              help="Add a base layer from a file or stdin")
+                             help="Add a base layer from a file or stdin")
     base_parser.add_argument("image", nargs="?", type=argparse.FileType('r'),
                              default=sys.stdin,
                              help="File or stdin to use")
