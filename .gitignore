@@ -11,3 +11,7 @@ missing
 *.gz
 *~
 *.swp
+tests/*.trs
+tests/*.log
+test-suite.log
+*.pyc

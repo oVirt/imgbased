@@ -41,6 +41,10 @@ make %{?_smp_mflags}
 %make_install
 
 
+%check
+%{__make} check TESTS="tests/check_python.test"
+
+
 %files
 %doc README.md
 %{_sbindir}/imgbase

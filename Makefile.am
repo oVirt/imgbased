@@ -3,6 +3,10 @@ SHELL := /bin/bash
 
 SUBDIRS =
 
+TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+                  $(top_srcdir)/tap-driver.sh
+TESTS = tests/check_python.test tests/check_packaging.test
+
 hooksdir = $(prefix)/lib/imgbased/hooks.d/
 pyimagebaseddir = $(pythondir)/imgbased
 
@@ -36,4 +40,6 @@ dist_doc_DATA = \
 
 EXTRA_DIST = \
   README.md \
-  imgbased.spec
+  imgbased.spec \
+  $(TESTS) \
+  tests/common.sh
