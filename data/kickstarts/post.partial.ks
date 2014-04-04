@@ -29,6 +29,16 @@ echo .
 #echo "Enable cockpit"
 #systemctl enable cockpit.service || :
 
+echo "Build imgbase"
+pushd .
+yum install -y make git
+mkdir -p /var/tmp/imgbased-build
+cd /var/tmp/imgbased-build
+git clone git@github.com:fabiand/imgbased.git
+./autogen.sh
+make install
+popd
+
 echo "Enable FDO Bootloader Spec"
 echo "echo '# Import BLS entries'" > /etc/grub.d/42_bls
 echo "echo bls_import" >> /etc/grub.d/42_bls
@@ -44,7 +54,7 @@ echo "Getty fixes"
 sed -i '/^#NAutoVTs=.*/ a\
 NAutoVTs=0' /etc/systemd/logind.conf
 
-# fix missing console device
+echo "Fix missing console device"
 /bin/mknod /dev/console c 5 1
 
 echo "Cleaning old yum repodata."
