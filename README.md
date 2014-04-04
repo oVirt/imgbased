@@ -16,15 +16,20 @@ In a nutshell this works by:
  * for each *layer* a boot entry is created which can be used to boot in a
    specific layer
 
+For more details see below.
+
+
 Build the tool
 --------------
 
 How to build the tools.
 
+    sudo yum install -y make autoconf automake python
     git clean -fdx
     ./autogen.sh
     make dist
     rpmbuild -ta imgbased-*.tar.xz
+
 
 Build an image
 --------------
@@ -45,12 +50,27 @@ the correct LVm layout to get started with this tool.
     curl -O http://${mirror-url}/releases/20/Fedora/x86_64/os/images/boot.iso
 
     # Kickoff the image creation
-    livemedia-creator \
-      --make-fsimage \
-      --iso boot.iso \
-      --ks data/kickstarts/runtime-layout.ks \
-      --vcpus 4 \
-      --image-name imgbased.img
+    make runtime-layout.img
+
+    # And run the image
+    qemu-kvm -hda runtime-layout.img -smp 4 -m 1024 -net user -net nic
+
+
+Using `imgbase` in the image
+--------------------------
+
+The `imgbase` tool is installed within the example image from the previous
+section.
+It can be used to create new *layers* and install new *bases*.
+
+    # List existing layers and bases
+    imgbase list
+
+    # Add a new layer on the latest base or latest layer of the latest base
+    imgbase layer --add
+
+    # Add a new base
+    imgbase base --add $IMGFILE
 
 
 High-Level Things

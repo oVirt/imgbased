@@ -42,6 +42,14 @@ dist_doc_DATA = \
 %.ks: %.template.ks
 	./data/kickstarts/flatten.py "$<" > "$@"
 
+boot.iso:
+	echo "Please fetch any boot.iso from the desired Fedora release"
+
+%.img: data/kickstarts/%.ks
+	sudo -E livemedia-creator --make-disk --ks "$<" --iso boot.iso \
+	    --vcpus 4 --image-name "$@"
+	sudo mv "/var/tmp/$@" .
+
 rpm: dist
 	rpmbuild -ta $(DIST_ARCHIVES)
 

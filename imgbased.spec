@@ -9,8 +9,9 @@ Source0:        %{name}-%{version}.tar.xz
 
 BuildArch:      noarch
 
-#BuildRequires:  
-#Requires:       
+BuildRequires:       make
+BuildRequires:       automake autoconf
+BuildRequires:       python
 
 
 %description
