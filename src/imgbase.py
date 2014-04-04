@@ -131,8 +131,10 @@ class ImageLayers(object):
 
     def _lvs(self):
         log.debug("Querying for LVs")
-        return sorted(n.strip() for n in
-                      self.call(["lvs", "--noheadings", "-o", "lv_name"]))
+        cmd = ["lvs", "--noheadings", "-o", "lv_name"]
+        lvs = [n.strip() for n in self.call(cmd).split("\n")]
+        log.debug("Found lvs: %s" % lvs)
+        return sorted(lvs)
 
     def _lvs_tree(self, lvs=None):
         """
