@@ -272,15 +272,18 @@ class ImageLayers(object):
     def add_base(self, infile, version=None, lvs=None):
         new_base_lv = self._next_base(version=version, lvs=lvs)
         cmd = ["dd", "conv=sparse", "of=%s" % new_base_lv]
+        kwargs = {}
+
         if type(infile) is file:
             log.debug("Reading base from stdin")
-            pass
+            kwargs["stdin"] = infile
         elif type(infile) in [str, unicode]:
             log.debug("Reading base from file: %s" % infile)
             cmd.append("if=%s" % infile)
         else:
             raise RuntimeError("Unknown infile: %s" % infile)
-        subprocess.check_call(cmd, stdi, name=Nonen=infile)
+
+        subprocess.check_call(cmd, **kwargs)
 
 
 class ImageBuilder(object):
