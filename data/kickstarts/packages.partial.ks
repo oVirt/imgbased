@@ -10,8 +10,9 @@ shim
 dnf
 augeas
 
-anaconda-core
-anaconda-tui
+# Only available in Fedora 20
+#anaconda-core
+#anaconda-tui
 
 screen
 #docker-io

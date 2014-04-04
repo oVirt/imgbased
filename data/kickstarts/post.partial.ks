@@ -29,12 +29,12 @@ echo .
 #echo "Enable cockpit"
 #systemctl enable cockpit.service || :
 
-echo "Build imgbase"
+echo "Build imgbased"
 pushd .
-yum install -y make git
-mkdir -p /var/tmp/imgbased-build
-cd /var/tmp/imgbased-build
-git clone git@github.com:fabiand/imgbased.git
+yum install -y make git autoconf automake
+cd /root
+git clone https://github.com/fabiand/imgbased.git
+cd imgbased
 ./autogen.sh
 make install
 popd
