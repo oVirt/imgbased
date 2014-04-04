@@ -33,12 +33,12 @@ import sys
 def call(*args, **kwargs):
     kwargs["close_fds"] = True
 #    log.debug("Calling: %s %s" % (args, kwargs))
-    return subprocess.check_output(*args, **kwargs)
+    return subprocess.check_output(*args, **kwargs).strip()
 
 
 def uuid():
     with open("/proc/sys/kernel/random/uuid") as src:
-        return src.read().replace("-", "")
+        return src.read().replace("-", "").strip()
 
 
 def format_to_pattern(fmt):
@@ -60,10 +60,12 @@ def format_to_pattern(fmt):
 
 
 class Hooks(object):
+    p = None
     hooksdir = "/usr/lib/imgbased/hooks.d/"
     hooks = None
 
-    def __init__(self):
+    def __init__(self, p):
+        self.p = p
         self.hooks = {}
 
     def connect(self, name, cb):
@@ -84,7 +86,7 @@ class Hooks(object):
         for handler in os.listdir(self.hooksdir):
             script = os.path.join(self.hooksdir, handler)
             log.debug("Triggering: %s (%s)" % (script, args))
-            self.call([script] + args)
+            self.p.call([script] + list(args))
 
 
 class ImageLayers(object):
@@ -99,6 +101,7 @@ class ImageLayers(object):
     layerformat = "Image-%d.%d"
 
     class Image(object):
+        p = None
         version = None
         release = None
         layers = None
@@ -107,19 +110,26 @@ class ImageLayers(object):
         def name(self):
             return str(self)
 
-        def __init__(self, v=None, r=None):
+        @property
+        def path(self):
+            return self.p.call(["lvs", "--noheadings", "-olv_path",
+                                "%s/%s" % (self.p.vg, self.name)])
+
+
+        def __init__(self, p, v=None, r=None):
+            self.p = p
             self.version = v
             self.release = r
             self.layers = []
 
         def __str__(self):
-            return ImageLayers.layerformat % (self.version, self.release)
+            return self.p.layerformat % (self.version, self.release)
 
         def __repr__(self):
             return "<%s %s/>" % (self, self.layers or "")
 
     def __init__(self):
-        self.hooks = Hooks()
+        self.hooks = Hooks(self)
 
     def call(self, *args, **kwargs):
         log.debug("Calling: %s %s" % (args, kwargs))
@@ -163,7 +173,8 @@ class ImageLayers(object):
         sorted_lvs = sorted(sorted_lvs)
 
         lst = []
-        for img in (ImageLayers.Image(*v) for v in sorted_lvs):
+        imgs = (ImageLayers.Image(self, *v) for v in sorted_lvs)
+        for img in imgs:
             if img.release == 0:
                 lst.append(img)
             else:
@@ -237,11 +248,11 @@ class ImageLayers(object):
         """
         try:
             base = self._last_base(lvs)
-            base.version = version or base.version + 1
+            base.version = version or int(base.version) + 1
             base.release = 0
             base.layers = []
         except IndexError:
-            base = ImageLayers.Image(version or 0, 0)
+            base = ImageLayers.Image(self, version or 0, 0)
         return base
 
     def _last_layer(self, base=None, lvs=None):
@@ -268,18 +279,21 @@ class ImageLayers(object):
 
         >>> layers = ImageLayers()
 
-        >>> lvs = []
+        >>> lvs = ["Image-0.0"]
         >>> layers._next_layer(lvs=lvs)
-        Traceback (most recent call last):
-        ...
-        IndexError: list index out of range
+        <Image-0.1 />
 
         >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
         >>> layers._next_layer(lvs=lvs)
         <Image-13.2 />
         """
-        layer = self._last_layer(base, lvs)
-        layer.release += 1
+        try:
+            layer = self._last_layer(base, lvs)
+            layer.release = int(layer.release) + 1
+            layer.layers = []
+        except IndexError:
+            base = self._last_base(lvs)
+            layer = ImageLayers.Image(self, base.version, 1)
         return layer
 
     def _add_layer(self, previous_layer, new_layer):
@@ -301,6 +315,10 @@ class ImageLayers(object):
         log.info("Adding a boot entry for the new layer")
         eid = uuid()
         edir = self.bls_dir
+
+        if not os.path.isdir(edir):
+            os.makedirs(edir)
+
         efile = os.path.join(edir, "%s.conf" % eid)
 
         def grep_boot(pat):
@@ -316,7 +334,7 @@ class ImageLayers(object):
 
         log.debug("Entry: %s" % entry)
         if not self.dry:
-            with open(efile) as dst:
+            with open(efile, "w+") as dst:
                 dst.write("\n".join(entry))
 
         tmpdir = self.call(["mktemp", "-d"])
@@ -352,13 +370,20 @@ class ImageLayers(object):
         """Add a new layer which can be booted from the boot menu
         """
         log.info("Adding a new layer which can be booted from the bootloader")
-        last_layer = self._last_layer().name
-        new_layer = self._next_layer().name
+        try:
+            last_layer = self._last_layer()
+            log.debug("Last layer: %s" % last_layer)
+        except IndexError:
+            last_layer = self._last_base()
+            log.debug("Last layer is a base: %s" % last_layer)
+        new_layer = self._next_layer()
 
-        self._add_layer("%s/%s" % (self.vg, last_layer),
-                        "%s/%s" % (self.vg, new_layer))
+        log.debug("New layer: %s" % last_layer)
+
+        self._add_layer("%s/%s" % (self.vg, last_layer.name),
+                        "%s/%s" % (self.vg, new_layer.name))
         self._add_boot_entry("%s/%s" % (self.vg, new_layer),
-                             "/dev/mapper/%s-%s" % (self.vg, new_layer))
+                             new_layer.path)
 
     def add_base(self, infile, size, version=None, lvs=None):
         """Add a new base LV

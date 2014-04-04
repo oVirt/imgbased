@@ -69,8 +69,14 @@ It can be used to create new *layers* and install new *bases*.
     # Add a new layer on the latest base or latest layer of the latest base
     imgbase layer --add
 
+    # And with more infos
+    imgbase --debug layer --add
+
     # Add a new base
     imgbase base --add $IMGFILE
+
+There is also a dry-modey (`imgbase --dry ...`) which just outputs the
+commands to run.
 
 
 High-Level Things
