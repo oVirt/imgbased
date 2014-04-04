@@ -42,6 +42,12 @@ def uuid():
         return src.read().replace("-", "")
 
 
+def blkid(filename):
+    cmd = ["blkid"]
+    cmd.append(filename)
+    return call(cmd)
+
+
 def format_to_pattern(fmt):
     """Take a format string and make a pattern from it
     https://docs.python.org/2/library/re.html#simulating-scanf
@@ -263,8 +269,18 @@ class ImageLayers(object):
         self._add_boot_entry("%s/%s" % (self.vg, new_layer),
                              "/dev/mapper/%s-%s" % (self.vg, new_layer))
 
-    def add_base(self, infile):
-        raise NotImplementedError()
+    def add_base(self, infile, version=None, lvs=None):
+        new_base_lv = self._next_base(version=version, lvs=lvs)
+        cmd = ["dd", "conv=sparse", "of=%s" % new_base_lv]
+        if type(infile) is file:
+            log.debug("Reading base from stdin")
+            pass
+        elif type(infile) in [str, unicode]:
+            log.debug("Reading base from file: %s" % infile)
+            cmd.append("if=%s" % infile)
+        else:
+            raise RuntimeError("Unknown infile: %s" % infile)
+        subprocess.check_call(cmd, stdi, name=Nonen=infile)
 
 
 class ImageBuilder(object):
