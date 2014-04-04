@@ -1,7 +1,6 @@
 
 SHELL := /bin/bash
 
-SUBDIRS =
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/tap-driver.sh
@@ -37,13 +36,29 @@ dist_doc_DATA = \
   data/kickstarts/packages.partial.ks \
   data/kickstarts/header.partial.ks \
   data/kickstarts/post.partial.ks \
+  docs/imgbase.8.asc
+
+doc_DATA = \
   $(DERIVED_KS)
+
+man8_MANS = docs/imgbase.8
+
+boot.iso:
+	echo "Please fetch any boot.iso from the desired Fedora release"
+
+doc: $(manpages)
+
+docs/imgbase.8: docs/imgbase.asc
 
 %.ks: %.template.ks
 	./data/kickstarts/flatten.py "$<" > "$@"
 
-boot.iso:
-	echo "Please fetch any boot.iso from the desired Fedora release"
+%: %.xml
+	xsltproc -o $@ -nonet \
+	http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
+
+%.xml: %.asc
+	asciidoc -d manpage -b docbook -o $@ $<
 
 %.img: data/kickstarts/%.ks
 	sudo -E livemedia-creator --make-disk --ks "$<" --iso boot.iso \

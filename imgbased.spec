@@ -12,6 +12,7 @@ BuildArch:      noarch
 
 BuildRequires:       make
 BuildRequires:       automake autoconf
+BuildRequires:       asciidoc
 BuildRequires:       python
 BuildRequires:       pylint python-pep8 pyflakes
 
