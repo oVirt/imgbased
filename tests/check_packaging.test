@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+source tests/common.sh
+
+echo 1..3
+tap_reply "1 - passes autogen.sh" "./autogen.sh"
+tap_reply "2 - passes make dist" "make dist"
+tap_reply "3 - passes rpmbuild " "rpmbuild --nocheck -ta *.tar.xz"
