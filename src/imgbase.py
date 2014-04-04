@@ -22,7 +22,6 @@
 #
 import logging
 log = logging.getLogger("imgbase")
-logging.basicConfig(level=logging.DEBUG)
 import argparse
 import os
 import glob
@@ -40,12 +39,6 @@ def call(*args, **kwargs):
 def uuid():
     with open("/proc/sys/kernel/random/uuid") as src:
         return src.read().replace("-", "")
-
-
-def blkid(filename):
-    cmd = ["blkid"]
-    cmd.append(filename)
-    return call(cmd)
 
 
 def format_to_pattern(fmt):
@@ -130,25 +123,34 @@ class ImageLayers(object):
 
     def call(self, *args, **kwargs):
         log.debug("Calling: %s %s" % (args, kwargs))
+        stdout = ""
         if not self.dry:
-            return call(*args, **kwargs)
+            stdout = call(*args, **kwargs)
+            log.debug("Returned: %s" % stdout)
+        return stdout
 
     def _lvs(self):
+        log.debug("Querying for LVs")
         return sorted(n.strip() for n in
-                      call(["lvs", "--noheadings", "-o", "lv_name"]))
+                      self.call(["lvs", "--noheadings", "-o", "lv_name"]))
 
     def _lvs_tree(self, lvs=None):
         """
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
-
         >>> layers = ImageLayers()
+
+        >>> lvs = []
+        >>> layers._lvs_tree(lvs)
+        []
+
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
         >>> layers._lvs_tree(lvs)
         [<Image-0.0 />, <Image-2.0 [<Image-2.1 />]/>, <Image-13.0 />]
         """
         laypat = format_to_pattern(self.layerformat)
         sorted_lvs = []
 
-        lvs = lvs or self._lvs()
+        if lvs is None:
+            lvs = self._lvs()
 
         for lv in lvs:
             if not re.match(laypat, lv):
@@ -167,38 +169,91 @@ class ImageLayers(object):
 
         return lst
 
-    def _last_base(self, lvs=None):
-        """
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
+    def layout(self, lvs=None):
+        """List all bases and layers for humans
 
         >>> layers = ImageLayers()
+
+        >>> lvs = []
+        >>> print(layers.layout(lvs))
+        Traceback (most recent call last):
+        ...
+        RuntimeError: No valid layout found. Initialize if needed.
+
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
+        >>> print(layers.layout(lvs))
+        Image-0.0
+        Image-2.0
+          Image-2.1
+        Image-13.0
+        """
+        idx = []
+        for base in self._lvs_tree(lvs):
+            idx.append("%s" % base.name)
+            for layer in base.layers:
+                idx.append("  %s" % layer.name)
+        if not idx:
+            raise RuntimeError("No valid layout found. Initialize if needed.")
+        return "\n".join(idx)
+
+    def _last_base(self, lvs=None):
+        """Determine the last base LV name
+
+        >>> layers = ImageLayers()
+
+        >>> lvs = []
+        >>> layers._last_base(lvs)
+        Traceback (most recent call last):
+        ...
+        IndexError: list index out of range
+
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
         >>> layers._last_base(lvs)
         <Image-13.0 />
         """
         return self._lvs_tree(lvs)[-1]
 
     def _next_base(self, version=None, lvs=None):
-        """
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
+        """Dertermine the name for the next base LV name (based on the scheme)
 
         >>> layers = ImageLayers()
+
+        >>> lvs = []
+        >>> layers._next_base(lvs=lvs)
+        <Image-0.0 />
+
+        >>> lvs = ["Image-0.0"]
+        >>> layers._next_base(lvs=lvs)
+        <Image-1.0 />
+
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
         >>> layers._next_base(lvs=lvs)
         <Image-14.0 />
 
         >>> layers._next_base(version=20140401, lvs=lvs)
         <Image-20140401.0 />
         """
-        base = self._last_base(lvs)
-        base.version = version or base.version + 1
-        base.release = 0
-        base.layers = []
+        try:
+            base = self._last_base(lvs)
+            base.version = version or base.version + 1
+            base.release = 0
+            base.layers = []
+        except IndexError:
+            base = ImageLayers.Image(version or 0, 0)
         return base
 
     def _last_layer(self, base=None, lvs=None):
-        """
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
+        """Determine the LV name of the last layer of a base
 
         >>> layers = ImageLayers()
+
+        >>> lvs = []
+        >>> layers._last_layer(lvs=lvs)
+        Traceback (most recent call last):
+        ...
+        IndexError: list index out of range
+
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
         >>> layers._last_layer(lvs=lvs)
         <Image-13.1 />
         """
@@ -207,10 +262,17 @@ class ImageLayers(object):
         return images[base.name].layers[-1]
 
     def _next_layer(self, base=None, lvs=None):
-        """
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
+        """Determine the LV name of the next layer (based on the scheme)
 
         >>> layers = ImageLayers()
+
+        >>> lvs = []
+        >>> layers._next_layer(lvs=lvs)
+        Traceback (most recent call last):
+        ...
+        IndexError: list index out of range
+
+        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
         >>> layers._next_layer(lvs=lvs)
         <Image-13.2 />
         """
@@ -219,6 +281,8 @@ class ImageLayers(object):
         return layer
 
     def _add_layer(self, previous_layer, new_layer):
+        """Add a new thin LV
+        """
         log.info("Adding a new layer")
         self.call(["lvcreate", "--snapshot", "--name", new_layer,
                    previous_layer])
@@ -228,6 +292,10 @@ class ImageLayers(object):
                    "--setactivationskip", "n", new_layer])
 
     def _add_boot_entry(self, name, rootlv):
+        """Add a new BLS based boot entry and update the layers /etc/fstab
+
+        http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec/
+        """
         log.info("Adding a boot entry for the new layer")
         eid = uuid()
         edir = self.bls_dir
@@ -259,7 +327,28 @@ class ImageLayers(object):
         self.call(["umount", rootlv])
         self.call(["rmdir", tmpdir])
 
+    def init_layout(self, pvs, poolsize, without_vg=False):
+        """Create the LVM layout needed by this tool
+        """
+        assert (not without_vg and pvs) or (without_vg)
+        assert poolsize > 0
+        if not without_vg:
+            self.call(["vgcreate", self.vg] + pvs)
+        self._create_thinpool(poolsize)
+
+    def _create_thinpool(self, poolsize):
+        assert poolsize > 0
+        self.call(["lvcreate", "--size", "%sM" % poolsize,
+                   "--thin", "%s/%s" % (self.vg, self.thinpool)])
+
+    def _create_thinvol(self, name, volsize):
+        self.call(["lvcreate", "--name", name,
+                   "--virtualsize", str(volsize),
+                   "--thin", "%s/%s" % (self.vg, self.thinpool)])
+
     def add_bootable_layer(self):
+        """Add a new layer which can be booted from the boot menu
+        """
         log.info("Adding a new layer which can be booted from the bootloader")
         last_layer = self._last_layer().name
         new_layer = self._next_layer().name
@@ -269,9 +358,13 @@ class ImageLayers(object):
         self._add_boot_entry("%s/%s" % (self.vg, new_layer),
                              "/dev/mapper/%s-%s" % (self.vg, new_layer))
 
-    def add_base(self, infile, version=None, lvs=None):
-        new_base_lv = self._next_base(version=version, lvs=lvs)
-        cmd = ["dd", "conv=sparse", "of=%s" % new_base_lv]
+    def add_base(self, infile, size, version=None, lvs=None):
+        """Add a new base LV
+        """
+        assert infile
+        assert size > 0
+
+        cmd = ["dd", "conv=sparse"]
         kwargs = {}
 
         if type(infile) is file:
@@ -283,27 +376,15 @@ class ImageLayers(object):
         else:
             raise RuntimeError("Unknown infile: %s" % infile)
 
-        subprocess.check_call(cmd, **kwargs)
+        new_base_lv = self._next_base(version=version, lvs=lvs)
+        log.debug("New base will be: %s" % new_base_lv)
+        cmd.append("of=%s" % new_base_lv)
 
+        self._create_thinvol(new_base_lv, size)
 
-class ImageBuilder(object):
-    ksdir = "/usr/share/doc/imgbased/"
-
-    ksnames = ["runtime-layout", "rootfs"]
-
-    def index(self):
-        return self.ksnames
-
-    def build(self, ksname):
-        if not ksname in self.ksnames:
-            raise RuntimeError("Unknown image: %s" % ksname)
-
-        call(["livemedia-creator",
-              "--make-diskimage",
-              "--ks", "%s.ks" % ksname,
-              "--iso", "boot.iso",
-              "--vcpus", "4",
-              "--image-name", "%s.img" % ksname])
+        self.debug("Running: %s %s" % (cmd, kwargs))
+        if not self.dry:
+            subprocess.check_call(cmd, **kwargs)
 
 
 if __name__ == '__main__':
@@ -312,11 +393,26 @@ if __name__ == '__main__':
 
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--dry", action="store_true")
+    parser.add_argument("--vg", help="Volume Group to use", default="HostVG")
+
+    layout_parser = subparsers.add_parser("layout",
+                                          help="List all bases and layers")
+    init_group = layout_parser.add_argument_group("Initialization arguments")
+    init_group.add_argument("--init", action="store_true", default=False,
+                            help="Create the initial Volume Group")
+    init_group.add_argument("--size", type=int,
+                            help="Size of the thinpool (in MB)")
+    init_group.add_argument("pv", nargs="*", metavar="PV", type=file,
+                            help="LVM PVs to use")
+    init_group.add_argument("--without-vg", action="store_true", default=False,
+                            help="If a Volume Group shall be created")
 
     base_parser = subparsers.add_parser("base",
                                         help="Runtime base handling")
     base_parser.add_argument("--add", action="store_true",
                              help="Add a base layer from a file or stdin")
+    base_parser.add_argument("--size", type=int,
+                             help="(Virtual) Size of the thin volume")
     base_parser.add_argument("image", nargs="?", type=argparse.FileType('r'),
                              default=sys.stdin,
                              help="File or stdin to use")
@@ -326,11 +422,10 @@ if __name__ == '__main__':
     layer_parser.add_argument("--add", action="store_true",
                               default=False, help="Add a new layer")
 
-    image_parser = subparsers.add_parser("image", help="Image creation")
-    image_parser.add_argument("--create", dest="image_create",
-                              help="Create an image")
-
     args = parser.parse_args()
+
+    lvl = logging.DEBUG if args.debug else logging.INFO
+    logging.basicConfig(level=lvl)
 
     log.debug("Arguments: %s" % args)
 
@@ -338,17 +433,24 @@ if __name__ == '__main__':
     # Get started
     #
     imgbase = ImageLayers()
+    imgbase.vg = args.vg
     imgbase.debug = args.debug
     imgbase.dry = args.dry
 
-    if args.command == "layer":
+    if args.command == "layout":
+        if args.init:
+            if not args.size or not args.pv:
+                raise RuntimeError("--size and PVs required")
+            imgbase.init_layout(args.pv, args.size, args.without_vg)
+        else:
+            print(imgbase.layout())
+
+    elif args.command == "layer":
         if args.add:
             imgbase.add_bootable_layer()
 
     elif args.command == "base":
         if args.add:
-            imgbase.add_base(args.image)
-
-    elif args.command == "image":
-        if args.image_create:
-            pass
+            if not args.size or not args.image:
+                raise RuntimeError("--size and image required")
+            imgbase.add_base(args.image, args.size)
