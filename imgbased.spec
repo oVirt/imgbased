@@ -1,6 +1,7 @@
+
 Name:           imgbased
 Version:        0.1
-Release:        0.1%{?dist}
+Release:        %{?_release}%{?!_release:0.1}%{?dist}
 Summary:        Tools to work with an image based rootfs
 
 License:        GPLv2+
@@ -12,6 +13,7 @@ BuildArch:      noarch
 BuildRequires:       make
 BuildRequires:       automake autoconf
 BuildRequires:       python
+BuildRequires:       pylint python-pep8 pyflakes
 
 
 %description

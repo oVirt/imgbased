@@ -115,7 +115,6 @@ class ImageLayers(object):
             return self.p.call(["lvs", "--noheadings", "-olv_path",
                                 "%s/%s" % (self.p.vg, self.name)])
 
-
         def __init__(self, p, v=None, r=None):
             self.p = p
             self.version = v

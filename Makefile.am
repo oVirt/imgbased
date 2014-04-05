@@ -50,8 +50,9 @@ boot.iso:
 	    --vcpus 4 --image-name "$@"
 	sudo mv "/var/tmp/$@" .
 
+rpm:DEF_RELEASE=--define "_release 0.$$(date +%Y%m%d%H%M)git$$(git log -n1 --format=%h)"
 rpm: dist
-	rpmbuild -ta $(DIST_ARCHIVES)
+	rpmbuild $(DEF_RELEASE) -ta $(DIST_ARCHIVES)
 
 CLEANFILES = $(DERIVED_KS)
 
