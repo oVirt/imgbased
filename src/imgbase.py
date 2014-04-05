@@ -89,11 +89,45 @@ class Hooks(object):
             self.p.call([script] + list(args))
 
 
+class Bootloader(object):
+    """Fixme can probably use new-kernel-pkg
+    """
+    p = None
+    bls_dir = "/boot/loader/entries"
+
+    def __init__(self, p):
+        self.p = p
+
+    def add_boot_entry(self, name, rootlv):
+        eid = uuid()
+        edir = self.bls_dir
+
+        if not os.path.isdir(edir):
+            os.makedirs(edir)
+
+        efile = os.path.join(edir, "%s.conf" % eid)
+
+        def grep_boot(pat):
+            return sorted(glob.glob("/boot/%s" % pat))[-1]
+
+        linux = grep_boot("vmlinuz-*.x86_64")
+        initramfs = grep_boot("initramfs-*.x86_64.img")
+
+        entry = ["title %s" % name,
+                 "linux %s" % linux,
+                 "initrd %s" % initramfs,
+                 "options rd.lvm.lv=%s root=%s console=ttyS0" % (name, rootlv)]
+
+        log.debug("Entry: %s" % entry)
+        if not self.p.dry:
+            with open(efile, "w+") as dst:
+                dst.write("\n".join(entry))
+
+
 class ImageLayers(object):
     debug = False
     dry = False
 
-    bls_dir = "/boot/loader/entries"
     hooks = None
 
     vg = "HostVG"
@@ -312,29 +346,8 @@ class ImageLayers(object):
         http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec/
         """
         log.info("Adding a boot entry for the new layer")
-        eid = uuid()
-        edir = self.bls_dir
 
-        if not os.path.isdir(edir):
-            os.makedirs(edir)
-
-        efile = os.path.join(edir, "%s.conf" % eid)
-
-        def grep_boot(pat):
-            return sorted(glob.glob("/boot/%s" % pat))[-1]
-
-        linux = grep_boot("vmlinuz-*.x86_64")
-        initramfs = grep_boot("initramfs-*.x86_64.img")
-
-        entry = ["title %s" % name,
-                 "linux %s" % linux,
-                 "initrd %s" % initramfs,
-                 "options rd.lvm.lv=%s root=%s console=ttyS0" % (name, rootlv)]
-
-        log.debug("Entry: %s" % entry)
-        if not self.dry:
-            with open(efile, "w+") as dst:
-                dst.write("\n".join(entry))
+        Bootloader(self).add_boot_entry(name, rootlv)
 
         tmpdir = self.call(["mktemp", "-d"])
         self.call(["mkdir", "-p", tmpdir])
@@ -413,6 +426,8 @@ class ImageLayers(object):
             subprocess.check_call(cmd, **kwargs)
 
         self.call(["lvchange", "--permission", "r"])
+
+        self.hooks.trigger("new-base-added", "/", tmpdir)
 
 
 if __name__ == '__main__':
