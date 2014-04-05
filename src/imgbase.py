@@ -412,6 +412,8 @@ class ImageLayers(object):
         if not self.dry:
             subprocess.check_call(cmd, **kwargs)
 
+        self.call(["lvchange", "--permission", "r"])
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="imgbased")
