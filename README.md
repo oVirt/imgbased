@@ -101,7 +101,8 @@ Features
     * ext4 FS with discard option (frees space after file removal)
  * LiveCD is only the delivery method
     * rootfs image is used at runtime
-
+ * More distro agnostic than LiveCD
+    * dracut, lvm (with thin volumes) and ext4 are the requirements
 
 Drawbacks
 ---------
@@ -115,6 +116,8 @@ Drawbacks
     * When a new base image is installed, the persistence of configuration
       (and other) files from the previous base happens by copying the files.
       Previously bind mounts were used to achieve this.
+ * Runtime space requirements are higher compared to LiveCD runtime
+    * The LiveCD based delivery will be comparable in size.
 
 
 LVM Structure
@@ -135,6 +138,9 @@ Assumptions about the host:
        |
        |
        + Base-1 (LV, ro)
+       |\
+       | \
+       |  + Base-1.1 (LV, rw)
        :
 
 With a boot entry for each Base-\* this allows the user to boot into each
