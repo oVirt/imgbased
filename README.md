@@ -37,8 +37,8 @@ Build an image
 The repository also contains some example kickstarts which create an image with
 the correct LVm layout to get started with this tool.
 
-> Note: The image will not contain the *imgbased* package, you will need to
-> install this manually
+> Note: The `imgbase` tool is automatically installe inside the image during
+> creation.
 
     # Lorax provides livemedia-creator
     sudo yum install -y lorax
