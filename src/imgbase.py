@@ -417,7 +417,7 @@ class ImageLayers(object):
 
         new_base_lv = self._next_base(version=version, lvs=lvs)
         log.debug("New base will be: %s" % new_base_lv)
-        cmd.append("of=%s" % new_base_lv)
+        cmd.append("of=%s" % new_base_lv.path)
 
         self._create_thinvol(new_base_lv, size)
 
@@ -427,7 +427,7 @@ class ImageLayers(object):
 
         self.call(["lvchange", "--permission", "r"])
 
-        self.hooks.trigger("new-base-added", "/", tmpdir)
+        self.hooks.trigger("new-base-added", new_base_lv.name)
 
 
 if __name__ == '__main__':
