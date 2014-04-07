@@ -59,6 +59,35 @@ def format_to_pattern(fmt):
     return pat
 
 
+class Bin(object):
+    dry = False
+    def call(self, *args, **kwargs):
+        log.debug("Calling: %s %s" % (args, kwargs))
+        stdout = ""
+        if not self.dry:
+            stdout = call(*args, **kwargs)
+            log.debug("Returned: %s" % stdout)
+        return stdout.strip()
+
+    def lvs(self, args, **kwargs):
+        return self.call(["lvs"] + args, **kwargs)
+
+    def lvcreate(self, args, **kwargs):
+        return self.call(["lvcreate"] + args, **kwargs)
+
+    def vgcreate(self, args, **kwargs):
+        return self.call(["vgcreate"] + args, **kwargs)
+
+    def lvchange(self, args, **kwargs):
+        return self.call(["lvchange"] + args, **kwargs)
+
+    def find(self, args, **kwargs):
+        return self.call(["find"] + args, **kwargs)
+
+    def diff(self, args, **kwargs):
+        return self.call(["diff"] + args, **kwargs)
+
+
 class Hooks(object):
     p = None
     hooksdir = "/usr/lib/imgbased/hooks.d/"
@@ -86,7 +115,7 @@ class Hooks(object):
         for handler in os.listdir(self.hooksdir):
             script = os.path.join(self.hooksdir, handler)
             log.debug("Triggering: %s (%s)" % (script, args))
-            self.p.call([script] + list(args))
+            self.p.run.call([script] + list(args))
 
 
 class Bootloader(object):
@@ -134,6 +163,8 @@ class ImageLayers(object):
     thinpool = "ImagePool"
     layerformat = "Image-%d.%d"
 
+    run = None
+
     class Image(object):
         p = None
         version = None
@@ -146,8 +177,8 @@ class ImageLayers(object):
 
         @property
         def path(self):
-            return self.p.call(["lvs", "--noheadings", "-olv_path",
-                                "%s/%s" % (self.p.vg, self.name)])
+            return self.p.run.lvs(["--noheadings", "-olv_path",
+                                   "%s/%s" % (self.p.vg, self.name)])
 
         def __init__(self, p, v=None, r=None):
             self.p = p
@@ -163,19 +194,12 @@ class ImageLayers(object):
 
     def __init__(self):
         self.hooks = Hooks(self)
-
-    def call(self, *args, **kwargs):
-        log.debug("Calling: %s %s" % (args, kwargs))
-        stdout = ""
-        if not self.dry:
-            stdout = call(*args, **kwargs)
-            log.debug("Returned: %s" % stdout)
-        return stdout
+        self.run = Bin()
 
     def _lvs(self):
         log.debug("Querying for LVs")
-        cmd = ["lvs", "--noheadings", "-o", "lv_name"]
-        lvs = [n.strip() for n in self.call(cmd).split("\n")]
+        cmd = ["--noheadings", "-o", "lv_name"]
+        lvs = [n.strip() for n in self.run.lvs(cmd).split("\n")]
         log.debug("Found lvs: %s" % lvs)
         return sorted(lvs)
 
@@ -333,12 +357,12 @@ class ImageLayers(object):
         """Add a new thin LV
         """
         log.info("Adding a new layer")
-        self.call(["lvcreate", "--snapshot", "--name", new_layer,
-                   previous_layer])
-        self.call(["lvchange", "--activate", "y",
-                   "--setactivationskip", "n", previous_layer])
-        self.call(["lvchange", "--activate", "y",
-                   "--setactivationskip", "n", new_layer])
+        self.run.lvcreate(["--snapshot", "--name", new_layer,
+                           previous_layer])
+        self.run.lvchange(["--activate", "y",
+                           "--setactivationskip", "n", previous_layer])
+        self.run.lvchange(["--activate", "y",
+                           "--setactivationskip", "n", new_layer])
 
     def _add_boot_entry(self, name, rootlv):
         """Add a new BLS based boot entry and update the layers /etc/fstab
@@ -349,15 +373,15 @@ class ImageLayers(object):
 
         Bootloader(self).add_boot_entry(name, rootlv)
 
-        tmpdir = self.call(["mktemp", "-d"])
-        self.call(["mkdir", "-p", tmpdir])
-        self.call(["mount", rootlv, tmpdir])
+        tmpdir = self.run.call(["mktemp", "-d"])
+        self.run.call(["mkdir", "-p", tmpdir])
+        self.run.call(["mount", rootlv, tmpdir])
         log.info("Updating fstab of new layer")
-        self.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" % rootlv,
-                   "%s/etc/fstab" % tmpdir])
+        self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" % rootlv,
+                       "%s/etc/fstab" % tmpdir])
         self.hooks.trigger("new-layer-added", "/", tmpdir)
-        self.call(["umount", rootlv])
-        self.call(["rmdir", tmpdir])
+        self.run.call(["umount", rootlv])
+        self.run.call(["rmdir", tmpdir])
 
     def init_layout(self, pvs, poolsize, without_vg=False):
         """Create the LVM layout needed by this tool
@@ -365,18 +389,18 @@ class ImageLayers(object):
         assert (not without_vg and pvs) or (without_vg)
         assert poolsize > 0
         if not without_vg:
-            self.call(["vgcreate", self.vg] + pvs)
+            self.run.vgcreate([self.vg] + pvs)
         self._create_thinpool(poolsize)
 
     def _create_thinpool(self, poolsize):
         assert poolsize > 0
-        self.call(["lvcreate", "--size", "%sM" % poolsize,
-                   "--thin", "%s/%s" % (self.vg, self.thinpool)])
+        self.run.lvcreate(["--size", "%sM" % poolsize,
+                           "--thin", "%s/%s" % (self.vg, self.thinpool)])
 
     def _create_thinvol(self, name, volsize):
-        self.call(["lvcreate", "--name", name,
-                   "--virtualsize", str(volsize),
-                   "--thin", "%s/%s" % (self.vg, self.thinpool)])
+        self.run.lvcreate(["--name", name,
+                           "--virtualsize", str(volsize),
+                           "--thin", "%s/%s" % (self.vg, self.thinpool)])
 
     def add_bootable_layer(self):
         """Add a new layer which can be booted from the boot menu
@@ -425,7 +449,7 @@ class ImageLayers(object):
         if not self.dry:
             subprocess.check_call(cmd, **kwargs)
 
-        self.call(["lvchange", "--permission", "r"])
+        self.run.lvchange(["--permission", "r"])
 
         self.hooks.trigger("new-base-added", new_base_lv.name)
 
