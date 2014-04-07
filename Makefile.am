@@ -28,19 +28,19 @@ EXTRA_DIST = \
 DERIVED_KS = data/kickstarts/rootfs.ks \
   data/kickstarts/runtime-layout.ks
 
-dist_doc_DATA = \
-  data/kickstarts/flatten.py \
-  data/kickstarts/rootfs.template.ks \
-  data/kickstarts/runtime-layout.template.ks \
-  data/kickstarts/repositories.partial.ks \
-  data/kickstarts/packages.partial.ks \
-  data/kickstarts/header.partial.ks \
-  data/kickstarts/post.partial.ks \
-  docs/imgbase.asc \
-  docs/imgbase.8.asc
-
 doc_DATA = \
   $(DERIVED_KS)
+
+dist_doc_DATA = \
+  data/kickstarts/flatten.py \
+  data/kickstarts/template/rootfs.ks \
+  data/kickstarts/template/runtime-layout.ks \
+  data/kickstarts/partial/repositories.ks \
+  data/kickstarts/partial/packages.ks \
+  data/kickstarts/partial/header.ks \
+  data/kickstarts/partial/post.ks \
+  docs/imgbase.asc \
+  docs/imgbase.8.asc
 
 man8_MANS = docs/imgbase.8
 
@@ -53,7 +53,7 @@ doc: $(manpages)
 
 docs/imgbase.8: docs/imgbase.8.asc
 
-%.ks: %.template.ks
+%.ks: template/%.ks
 	./data/kickstarts/flatten.py "$<" > "$@"
 
 %: %.xml
