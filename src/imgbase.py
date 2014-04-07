@@ -85,7 +85,7 @@ class Mounted(object):
         if not os.path.exists(self.tmpdir):
             self.run.call(["mkdir", "-p", self.tmpdir])
 
-        cmd  = ["mount"]
+        cmd = ["mount"]
         if options:
             cmd.append(options)
         cmd += [self.source, self.tmpdir]
