@@ -73,7 +73,10 @@ It can be used to create new *layers* and install new *bases*.
     imgbase --debug layer --add
 
     # Add a new base
-    imgbase base --add $IMGFILE
+    # The `--size` argument specifies the size of the underlying 
+    # logical volume. It must be at least the size of the filesystem
+    # contained in `$IMGFILE`.
+    imgbase base --add --size 1G $IMGFILE
 
 There is also a dry-modey (`imgbase --dry ...`) which just outputs the
 commands to run.
