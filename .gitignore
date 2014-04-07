@@ -15,3 +15,8 @@ tests/*.trs
 tests/*.log
 test-suite.log
 *.pyc
+*.img
+*.iso
+tap-driver.sh
+py-compile
+*.log
