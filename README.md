@@ -79,6 +79,13 @@ There is also a dry-modey (`imgbase --dry ...`) which just outputs the
 commands to run.
 
 
+Purpose
+-------
+
+Provide a more flexible solution for [oVirt Node](http://www.ovirt.org/Node).
+Mainly a way where we can re-use existing technologies like anaconda.
+
+
 High-Level Things
 -----------------
 
