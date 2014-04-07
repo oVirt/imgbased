@@ -59,8 +59,49 @@ def format_to_pattern(fmt):
     return pat
 
 
+class Mounted(object):
+    source = None
+    options = None
+    _target = None
+
+    run = None
+    tmpdir = None
+
+    @property
+    def target(self):
+        return self._target or self.tmpdir
+
+    def __init__(self, source, options=None, target=None):
+        self.run = Bin()
+        self.source = source
+        self.options = options
+        self._target = target
+
+    def __enter__(self):
+        options = "-o%s" % self.options if self.options else None
+        self.tmpdir = self._target or \
+            self.run.call(["mktemp", "-d", "--tmpdir", "mnt.XXXXX"])
+
+        if not os.path.exists(self.tmpdir):
+            self.run.call(["mkdir", "-p", self.tmpdir])
+
+        cmd  = ["mount"]
+        if options:
+            cmd.append(options)
+        cmd += [self.source, self.tmpdir]
+        self.run.call(cmd)
+
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self.run.call(["umount", self.source])
+        if not self._target:
+            self.run.call(["rmdir", self.tmpdir])
+
+
 class Bin(object):
     dry = False
+
     def call(self, *args, **kwargs):
         log.debug("Calling: %s %s" % (args, kwargs))
         stdout = ""
@@ -373,15 +414,11 @@ class ImageLayers(object):
 
         Bootloader(self).add_boot_entry(name, rootlv)
 
-        tmpdir = self.run.call(["mktemp", "-d"])
-        self.run.call(["mkdir", "-p", tmpdir])
-        self.run.call(["mount", rootlv, tmpdir])
-        log.info("Updating fstab of new layer")
-        self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" % rootlv,
-                       "%s/etc/fstab" % tmpdir])
-        self.hooks.trigger("new-layer-added", "/", tmpdir)
-        self.run.call(["umount", rootlv])
-        self.run.call(["rmdir", tmpdir])
+        with Mounted(rootlv) as mount:
+            log.info("Updating fstab of new layer")
+            self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
+                           rootlv, "%s/etc/fstab" % mount.target])
+            self.hooks.trigger("new-layer-added", "/", mount.target)
 
     def init_layout(self, pvs, poolsize, without_vg=False):
         """Create the LVM layout needed by this tool
@@ -499,10 +536,11 @@ if __name__ == '__main__':
     layout_parser = subparsers.add_parser("layout",
                                           help="List all bases and layers")
     layout_group = layout_parser.add_mutually_exclusive_group()
-    layout_group.add_argument("--free-space", action="store_true", default=False,
-                            help="How much space there is in the thinpool (in MB)")
+    layout_group.add_argument("--free-space", action="store_true",
+                              default=False,
+                              help="How much space there is in the thinpool")
     layout_group.add_argument("--init", action="store_true", default=False,
-                            help="Create the initial Volume Group")
+                              help="Create the initial Volume Group")
     space_group = layout_parser.add_argument_group("Free space arguments")
     space_group.add_argument("--units", default="m",
                              help="Units to be used for free space")
@@ -512,7 +550,7 @@ if __name__ == '__main__':
     init_group.add_argument("pv", nargs="*", metavar="PV", type=file,
                             help="LVM PVs to use")
     init_group.add_argument("--without-vg", action="store_true", default=False,
-                            help="Do not create a Volume Group on initialization")
+                            help="Do not create a Volume Group")
 
     base_parser = subparsers.add_parser("base",
                                         help="Runtime base handling")
