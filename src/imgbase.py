@@ -453,6 +453,35 @@ class ImageLayers(object):
 
         self.hooks.trigger("new-base-added", new_base_lv.name)
 
+    def free_space(self, units="m"):
+        """Free space in the thinpool for bases and layers
+        """
+        log.debug("Calculating free space in thinpool %s" % self.thinpool)
+        args = ["--noheadings", "--nosuffix", "--units", units,
+                "--options", "data_percent,lv_size",
+                "%s/%s" % (self.vg, self.thinpool)]
+        stdout = self.run.lvs(args).replace(",", ".").strip()
+        used_percent, size = re.split("\s+", stdout)
+        log.debug("Used: %s%% from %s" % (used_percent, size))
+        free = float(size)
+        free -= float(size) * float(used_percent) / 100.00
+        return free
+
+    def diff(self, left, right, mode="tree"):
+        """
+
+        Args:
+            left: Base or layer
+            right: Base or layer
+            mode: tree, content, unified
+        """
+        raise NotImplemented()
+
+    def verify(self, base):
+        """Verify that a base has not been changed
+        """
+        raise NotImplemented()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="imgbased")
@@ -469,15 +498,21 @@ if __name__ == '__main__':
 
     layout_parser = subparsers.add_parser("layout",
                                           help="List all bases and layers")
-    init_group = layout_parser.add_argument_group("Initialization arguments")
-    init_group.add_argument("--init", action="store_true", default=False,
+    layout_group = layout_parser.add_mutually_exclusive_group()
+    layout_group.add_argument("--free-space", action="store_true", default=False,
+                            help="How much space there is in the thinpool (in MB)")
+    layout_group.add_argument("--init", action="store_true", default=False,
                             help="Create the initial Volume Group")
+    space_group = layout_parser.add_argument_group("Free space arguments")
+    space_group.add_argument("--units", default="m",
+                             help="Units to be used for free space")
+    init_group = layout_parser.add_argument_group("Initialization arguments")
     init_group.add_argument("--size", type=int,
                             help="Size of the thinpool (in MB)")
     init_group.add_argument("pv", nargs="*", metavar="PV", type=file,
                             help="LVM PVs to use")
     init_group.add_argument("--without-vg", action="store_true", default=False,
-                            help="If a Volume Group shall be created")
+                            help="Do not create a Volume Group on initialization")
 
     base_parser = subparsers.add_parser("base",
                                         help="Runtime base handling")
@@ -511,11 +546,15 @@ if __name__ == '__main__':
     imgbase.debug = args.debug
     imgbase.dry = args.dry
 
+    Bin.dry = args.dry
+
     if args.command == "layout":
         if args.init:
             if not args.size or not args.pv:
                 raise RuntimeError("--size and PVs required")
             imgbase.init_layout(args.pv, args.size, args.without_vg)
+        elif args.free_space:
+            print(imgbase.free_space(args.units))
         else:
             print(imgbase.layout())
 
