@@ -36,6 +36,7 @@ dist_doc_DATA = \
   data/kickstarts/packages.partial.ks \
   data/kickstarts/header.partial.ks \
   data/kickstarts/post.partial.ks \
+  docs/imgbase.asc \
   docs/imgbase.8.asc
 
 doc_DATA = \
@@ -48,7 +49,7 @@ boot.iso:
 
 doc: $(manpages)
 
-docs/imgbase.8: docs/imgbase.asc
+docs/imgbase.8: docs/imgbase.8.asc
 
 %.ks: %.template.ks
 	./data/kickstarts/flatten.py "$<" > "$@"

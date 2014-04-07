@@ -54,6 +54,7 @@ make %{?_smp_mflags}
 %{_sbindir}/imgbase
 %{_prefix}/lib/%{name}/hooks.d/
 %{python2_sitelib}/%{name}/
+%{_mandir}/man8/imgbase.8*
 
 
 %files kickstarts
