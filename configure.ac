@@ -1,10 +1,12 @@
 AC_INIT([imgbased], [0.1], [fabiand@fedoraproject.org])
 
 AC_PREFIX_DEFAULT([/usr])
-AM_MAINTAINER_MODE([enable])
-AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules tar-pax no-dist-gzip dist-xz subdir-objects])
+AC_CONFIG_AUX_DIR([build-aux])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_PROG_AWK
+
+AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules tar-pax no-dist-gzip dist-xz subdir-objects])
+AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
 
 AC_SUBST([FEDORA],[[`rpm --eval '%{fedora}'|sed 's/[^0-9]//g'`]])

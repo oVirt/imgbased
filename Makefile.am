@@ -2,7 +2,7 @@
 SHELL := /bin/bash
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
-                  $(top_srcdir)/tap-driver.sh
+                  $(top_srcdir)/build-aux/tap-driver.sh
 TESTS = tests/check_python.test tests/check_packaging.test
 
 hooksdir = $(prefix)/lib/imgbased/hooks.d/

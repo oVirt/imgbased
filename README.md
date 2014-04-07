@@ -22,6 +22,8 @@ For more details see below.
 Build the tool
 --------------
 
+[![Build Status](https://travis-ci.org/fabiand/imgbased.svg)](https://travis-ci.org/fabiand/imgbased)
+
 How to build the tools.
 
     sudo yum install -y make autoconf automake python
