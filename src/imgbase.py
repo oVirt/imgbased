@@ -431,7 +431,7 @@ class ImageLayers(object):
 
     def _create_thinpool(self, poolsize):
         assert poolsize > 0
-        self.run.lvcreate(["--size", "%sM" % poolsize,
+        self.run.lvcreate(["--size", str(poolsize),
                            "--thin", "%s/%s" % (self.vg, self.thinpool)])
 
     def _create_thinvol(self, name, volsize):
@@ -478,17 +478,17 @@ class ImageLayers(object):
 
         new_base_lv = self._next_base(version=version, lvs=lvs)
         log.debug("New base will be: %s" % new_base_lv)
+        self._create_thinvol(new_base_lv.name, size)
+
         cmd.append("of=%s" % new_base_lv.path)
-
-        self._create_thinvol(new_base_lv, size)
-
-        self.debug("Running: %s %s" % (cmd, kwargs))
+        log.debug("Running: %s %s" % (cmd, kwargs))
         if not self.dry:
             subprocess.check_call(cmd, **kwargs)
 
-        self.run.lvchange(["--permission", "r"])
+        self.run.lvchange(["--permission", "r",
+                           "%s/%s" % (self.vg, new_base_lv.name)])
 
-        self.hooks.trigger("new-base-added", new_base_lv.name)
+        self.hooks.trigger("new-base-added", new_base_lv.path)
 
     def free_space(self, units="m"):
         """Free space in the thinpool for bases and layers
@@ -545,7 +545,7 @@ if __name__ == '__main__':
     space_group.add_argument("--units", default="m",
                              help="Units to be used for free space")
     init_group = layout_parser.add_argument_group("Initialization arguments")
-    init_group.add_argument("--size", type=int,
+    init_group.add_argument("--size",
                             help="Size of the thinpool (in MB)")
     init_group.add_argument("pv", nargs="*", metavar="PV", type=file,
                             help="LVM PVs to use")
@@ -556,7 +556,7 @@ if __name__ == '__main__':
                                         help="Runtime base handling")
     base_parser.add_argument("--add", action="store_true",
                              help="Add a base layer from a file or stdin")
-    base_parser.add_argument("--size", type=int,
+    base_parser.add_argument("--size",
                              help="(Virtual) Size of the thin volume")
     base_parser.add_argument("image", nargs="?", type=argparse.FileType('r'),
                              default=sys.stdin,
