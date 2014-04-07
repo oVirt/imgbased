@@ -1,7 +1,6 @@
 
 SHELL := /bin/bash
 
-
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/tap-driver.sh
 TESTS = tests/check_python.test tests/check_packaging.test
@@ -53,6 +52,12 @@ doc: $(manpages)
 
 docs/imgbase.8: docs/imgbase.8.asc
 
+rpm:DEF_RELEASE=--define "_release 0.$$(date +%Y%m%d%H%M)git$$(git log -n1 --format=%h)"
+rpm: dist
+	rpmbuild $(DEF_RELEASE) -ta $(DIST_ARCHIVES)
+
+CLEANFILES = $(DERIVED_KS)
+
 %.ks: template/%.ks
 	./data/kickstarts/flatten.py "$<" > "$@"
 
@@ -67,10 +72,4 @@ docs/imgbase.8: docs/imgbase.8.asc
 	sudo -E livemedia-creator --make-disk --ks "$<" --iso boot.iso \
 	    --vcpus 4 --image-name "$@"
 	sudo mv "/var/tmp/$@" .
-
-rpm:DEF_RELEASE=--define "_release 0.$$(date +%Y%m%d%H%M)git$$(git log -n1 --format=%h)"
-rpm: dist
-	rpmbuild $(DEF_RELEASE) -ta $(DIST_ARCHIVES)
-
-CLEANFILES = $(DERIVED_KS)
 
