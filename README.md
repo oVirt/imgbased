@@ -53,6 +53,7 @@ the correct LVm layout to get started with this tool.
     make runtime-layout.img
 
     # And run the image
+    # Default password for root: r
     qemu-kvm -hda runtime-layout.img -smp 4 -m 1024 -net user -net nic
 
 
@@ -78,7 +79,7 @@ It can be used to create new *layers* and install new *bases*.
     # contained in `$IMGFILE`.
     imgbase base --add --size 1G $IMGFILE
 
-There is also a dry-modey (`imgbase --dry ...`) which just outputs the
+There is also a dry-mode (`imgbase --debug --dry ...`) which just outputs the
 commands to run.
 
 
