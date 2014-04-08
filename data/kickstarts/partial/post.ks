@@ -39,6 +39,10 @@ cd imgbased
 make install
 popd
 
+echo "Install image-minimizer"
+curl -O https://git.fedorahosted.org/cgit/lorax.git/plain/src/bin/image-minimizer
+install -m775 image-minimizer /usr/bin
+
 echo "Enable FDO Bootloader Spec"
 echo "echo '# Import BLS entries'" > /etc/grub.d/42_bls
 echo "echo bls_import" >> /etc/grub.d/42_bls
