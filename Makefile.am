@@ -52,7 +52,7 @@ man8_MANS = docs/imgbase.8
 doc: $(doc_DATA) $(dist_doc_DATA) $(man8-MANS)
 
 check:
-	[[ "$(IMAGE)" ]] && $(MAKE) check-functional
+	[[ "$(IMAGE)" ]] && $(MAKE) check-functional || :
 
 check-functional: $(IMAGE)
 	[[ -f $(IMAGE) ]]
