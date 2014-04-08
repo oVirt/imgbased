@@ -49,6 +49,13 @@ man8_MANS = docs/imgbase.8
 
 doc: $(doc_DATA) $(dist_doc_DATA) $(man8-MANS)
 
+check:
+	[[ "$(IMAGE)" ]] && $(MAKE) check-functional
+
+check-functional: $(IMAGE)
+	[[ -f $(IMAGE) ]]
+	VIRTEXPECT_IMAGE=$(IMAGE) nosetests -v tests/functional/*.py
+
 boot.iso:
 	echo "Please fetch any boot.iso from the desired Fedora release"
 

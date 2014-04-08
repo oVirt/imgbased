@@ -54,7 +54,10 @@ the correct LVm layout to get started with this tool.
     # Kickoff the image creation
     make runtime-layout.img
 
-    # And run the image
+    # Do some automatic sanity testing on the image:
+    make check-functional IMAGE=runtime-layout.img
+
+    # Or run the image yourself
     # Default password for root: r
     qemu-kvm -hda runtime-layout.img -smp 4 -m 1024 -net user -net nic
 
