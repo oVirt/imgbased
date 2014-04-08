@@ -3,7 +3,7 @@
 # https://www.gnu.org/software/automake/manual/html_node/Use-TAP-with-the-Automake-test-harness.html#Use-TAP-with-the-Automake-test-harness
 # 
 
-source tests/common.sh
+source tests/package/common.sh
 
 echo 1..4
 tap_reply "1 - passes pyflakes" "find . -name \*.py | xargs pyflakes"

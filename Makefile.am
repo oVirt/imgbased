@@ -3,7 +3,7 @@ SHELL := /bin/bash
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/build-aux/tap-driver.sh
-TESTS = tests/check_python.test tests/check_packaging.test
+TESTS = tests/package/check_python.test tests/package/check_packaging.test
 
 hooksdir = $(prefix)/lib/imgbased/hooks.d/
 pyimagebaseddir = $(pythondir)/imgbased
@@ -22,7 +22,7 @@ EXTRA_DIST = \
   README.md \
   imgbased.spec \
   $(TESTS) \
-  tests/common.sh
+  tests/package/common.sh
 
 DERIVED_KS = data/kickstarts/rootfs.ks \
   data/kickstarts/runtime-layout.ks
