@@ -160,3 +160,19 @@ With a boot entry for each Base-\* this allows the user to boot into each
 Base-LV.
 Changes are inherited from each Base-\* and can also be persisted using the
 Config LV.
+
+
+LiveCD Payload
+--------------
+
+The image is the (in future) intended to be also used as a paylod for LiveCD
+ISOs and to be deployed via PXE.
+Because of this we want to minimize the image even further. For this
+[virt-sparsify](http://libguestfs.org/virt-sparsify.1.html) and squashfs
+can be used to simulate the size of the image when it is used as a payload.
+
+    # To get an idea of the minimized size use
+    make runtime-layout.squash
+
+The LiveCD will be created the livemedia-creator which is part of
+[lorax](https://git.fedorahosted.org/cgit/lorax.git/).

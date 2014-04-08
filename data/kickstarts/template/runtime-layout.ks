@@ -17,4 +17,4 @@ logvol / --vgname=HostVG --size=2048 --name=Image-0.0 --thin --poolname=ImagePoo
 %include ../partial/repositories.ks
 %include ../partial/packages.ks
 %include ../partial/post.ks
-
+%include ../partial/minimization.ks

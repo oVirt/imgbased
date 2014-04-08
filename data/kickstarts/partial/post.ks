@@ -64,25 +64,6 @@ echo "Fix missing console device"
 echo "Cleaning old yum repodata."
 yum clean all
 
-# clean up installation logs"
-rm -rf /var/log/yum.log
-rm -rf /var/lib/yum/*
-rm -rf /var/cache/yum/*
-rm -rf /root/install.log
-rm -rf /root/install.log.syslog
-rm -rf /root/anaconda-ks.cfg
-rm -rf /var/log/anaconda*
-
-echo "Removing some dirs"
-rm -rf /usr/share/doc
-rm -rf /usr/share/locale/*
-#rm -rf /usr/lib/locale/*
-
-rm -rf /usr/lib/modules/*/kernel/drivers/media
-rm -rf /usr/lib/modules/*/kernel/drivers/net/wireless
-depmod -a
-
-
 echo "Fixing SELinux contexts."
 touch /var/log/cron
 touch /var/log/boot.log

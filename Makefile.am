@@ -27,6 +27,13 @@ EXTRA_DIST = \
 DERIVED_KS = data/kickstarts/rootfs.ks \
   data/kickstarts/runtime-layout.ks
 
+PARTIAL_KS = \
+  data/kickstarts/partial/repositories.ks \
+  data/kickstarts/partial/packages.ks \
+  data/kickstarts/partial/header.ks \
+  data/kickstarts/partial/post.ks \
+  data/kickstarts/partial/minimization.ks
+
 doc_DATA = \
   $(DERIVED_KS)
 
@@ -34,10 +41,7 @@ dist_doc_DATA = \
   data/kickstarts/flatten.py \
   data/kickstarts/template/rootfs.ks \
   data/kickstarts/template/runtime-layout.ks \
-  data/kickstarts/partial/repositories.ks \
-  data/kickstarts/partial/packages.ks \
-  data/kickstarts/partial/header.ks \
-  data/kickstarts/partial/post.ks \
+  $(PARTIAL_KS) \
   docs/imgbase.asc \
   docs/imgbase.8.asc
 
@@ -58,7 +62,7 @@ rpm: dist
 
 CLEANFILES = $(DERIVED_KS)
 
-%.ks: template/%.ks
+%.ks: template/%.ks $(PARTIAL_KS)
 	./data/kickstarts/flatten.py "$<" > "$@"
 
 %: %.xml
@@ -73,3 +77,8 @@ CLEANFILES = $(DERIVED_KS)
 	    --vcpus 4 --image-name "$@"
 	sudo mv "/var/tmp/$@" .
 
+%.squash: %.img
+	sudo -E virt-sparsify "$<" "$<.sparse"
+	mksquashfs "$<.sparse" "$@" -comp xz
+	ls -shal "$<" "$<.sparse" "$@"
+	sudo rm "$<.sparse"
