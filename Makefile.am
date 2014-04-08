@@ -22,7 +22,9 @@ EXTRA_DIST = \
   README.md \
   imgbased.spec \
   $(TESTS) \
-  tests/package/common.sh
+  tests/package/common.sh \
+  tests/functional/sanity.py \
+  tests/functional/virtexpect.py
 
 DERIVED_KS = data/kickstarts/rootfs.ks \
   data/kickstarts/runtime-layout.ks
