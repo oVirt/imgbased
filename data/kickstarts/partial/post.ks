@@ -36,7 +36,7 @@ cd /root
 git clone https://github.com/fabiand/imgbased.git
 cd imgbased
 ./autogen.sh
-make install
+make install-exec
 popd
 
 echo "Install image-minimizer"
