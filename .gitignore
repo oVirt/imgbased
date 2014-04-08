@@ -21,3 +21,5 @@ tap-driver.sh
 py-compile
 *.log
 *.8
+*.trs
+data/kickstarts/*.ks
