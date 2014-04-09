@@ -1,14 +1,17 @@
+
+import os
 import unittest
 
 from virtexpect import NodeInstance
+
+IMAGE = os.environ["VIRTEXPECT_IMAGE"]
 
 
 class TestSanity(unittest.TestCase):
     """Do some sanity testing on the image
     """
     def test_boot(self):
-        return
-        with NodeInstance() as node:
+        with NodeInstance(IMAGE) as node:
             node.login()
 
 
@@ -16,7 +19,7 @@ class TestImgbase(unittest.TestCase):
     """Do sanity testing of the imgbase tool
     """
     def test_imgbase(self):
-        with NodeInstance() as node:
+        with NodeInstance(IMAGE) as node:
             child = node.child
             node.login()
 

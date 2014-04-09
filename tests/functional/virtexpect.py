@@ -6,27 +6,33 @@ handled with pexpect.
 """
 import pexpect
 import sys
-import os
 import logging
 
 
 class Instance(object):
     log = None
     image = None
-    qemu_cmd = "qemu-kvm -snapshot -hda %s \
-        -m 1024 -serial stdio -net user -net nic"
 
     child = None
 
-    def __init__(self):
-        self.image = os.environ["VIRTEXPECT_IMAGE"]
+    def __init__(self, image):
+        assert image
+        self.image = image
         self.log = logging.getLogger(__name__)
 
     def spawn(self):
-        child = pexpect.spawn(self.qemu_cmd % self.image)
+        child = pexpect.spawn(self.qemu_cmd(self.image))
         child.logfile = sys.stdout
         return child
 
+    def qemu_cmd(self, image):
+        cmd = "qemu-kvm"
+        cmd += " -m 1024 -serial stdio -net user -net nic"
+        cmd += " -snapshot -hda %s" % image
+        cmd += " -watchdog-action poweroff"
+        #cmd += " -virtfs fsdriver,id=bar01,path=%s,
+        #mount_tag=hostos,security_model=none" % shared_path
+        return cmd
 
 class NodeInstance(Instance):
     """Makes more assumptions
