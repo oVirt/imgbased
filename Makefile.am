@@ -1,5 +1,6 @@
 
 SHELL := /bin/bash
+LMC ?= $(shell which livemedia-creator)
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/build-aux/tap-driver.sh
@@ -82,9 +83,22 @@ CLEANFILES = $(DERIVED_KS)
 	asciidoc -d manpage -b docbook -o $@ $<
 
 %.img: data/kickstarts/%.ks
-	sudo -E livemedia-creator --make-disk --ks "$<" --iso boot.iso \
-	    --vcpus 4 --image-name "$@"
+	sudo -E $(LMC) --make-disk \
+          --ks "$<" \
+          --iso boot.iso --vcpus 4 \
+          --image-name "$@"
 	sudo mv "/var/tmp/$@" .
+
+%.fs: data/kickstarts/%.ks
+	sudo -E $(LMC) --make-fsimage \
+          --ks "$<" \
+          --iso boot.iso --vcpus 4 \
+          --image-name "$@"
+	sudo mv "/var/tmp/$@" .
+
+%.iso: %.fs
+	sudo -E $(LMC) --make-iso \
+          --disk-image "$@"
 
 %.squash: %.img
 	sudo -E virt-sparsify "$<" "$<.sparse"
