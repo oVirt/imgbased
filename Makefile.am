@@ -98,7 +98,8 @@ CLEANFILES = $(DERIVED_KS)
 
 %.iso: %.fs
 	sudo -E $(LMC) --make-iso \
-          --disk-image "$@"
+          --fs-image "$<" \
+	  --image-name "$@"
 
 %.squash: %.img
 	sudo -E virt-sparsify "$<" "$<.sparse"
