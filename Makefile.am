@@ -55,7 +55,7 @@ doc: $(doc_DATA) $(dist_doc_DATA) $(man8-MANS)
 check:
 	[[ "$(IMAGE)" ]] && $(MAKE) check-functional || :
 
-check-functional: $(IMAGE)
+check-functional:
 	[[ -f $(IMAGE) ]]
 	VIRTEXPECT_IMAGE=$(IMAGE) nosetests -v tests/functional/*.py
 
