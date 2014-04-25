@@ -9,6 +9,8 @@ TESTS = tests/package/check_python.test tests/package/check_packaging.test
 hooksdir = $(prefix)/lib/imgbased/hooks.d/
 pyimagebaseddir = $(pythondir)/imgbased
 
+vpath $(srcdir)
+
 dist_sbin_SCRIPTS = \
   data/imgbase
 
@@ -57,12 +59,13 @@ check:
 
 check-functional:
 	[[ -f $(IMAGE) ]]
-	VIRTEXPECT_IMAGE=$(IMAGE) nosetests -v tests/functional/*.py
+	VIRTEXPECT_IMAGE=$(IMAGE) nosetests -v $(srcdir)/tests/functional/*.py
 
 boot.iso:
-	echo "Please fetch any boot.iso from the desired Fedora release"
+	[[ -f "$(srcdir)/$@" ]] && ln -s ($(srcdir)/$@)
+	[[ ! -f $@ ]] && { echo "Please fetch any boot.iso from the desired Fedora release" ; exit 1 ; }
 
-doc: $(manpages)
+doc: $(man8_MANS)
 
 docs/imgbase.8: docs/imgbase.8.asc
 
@@ -73,26 +76,28 @@ rpm: dist
 CLEANFILES = $(DERIVED_KS)
 
 %.ks: template/%.ks $(PARTIAL_KS)
-	./data/kickstarts/flatten.py "$<" > "$@"
+	mkdir -p $$(dirname "$@")
+	$(srcdir)/data/kickstarts/flatten.py "$<" > "$@"
 
 %: %.xml
 	xsltproc -o $@ -nonet \
 	http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
 
 %.xml: %.asc
+	mkdir -p $$(dirname $@)
 	asciidoc -d manpage -b docbook -o $@ $<
 
 %.img: data/kickstarts/%.ks
 	sudo -E $(LMC) --make-disk \
           --ks "$<" \
-          --iso boot.iso --vcpus 4 \
+          --iso $(abs_builddir)/boot.iso --vcpus 4 \
           --image-name "$@"
 	sudo mv "/var/tmp/$@" .
 
 %.fs: data/kickstarts/%.ks
 	sudo -E $(LMC) --make-fsimage \
           --ks "$<" \
-          --iso boot.iso --vcpus 4 \
+          --iso $(abs_builddir)/boot.iso --vcpus 4 \
           --image-name "$@"
 	sudo mv "/var/tmp/$@" .
 
