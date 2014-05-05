@@ -69,20 +69,26 @@ The `imgbase` tool is installed within the example image from the previous
 section.
 It can be used to create new *layers* and install new *bases*.
 
+    # To create the assumed LVM layout
+    imgbase layout --init
+
     # List existing layers and bases
-    imgbase list
-
-    # Add a new layer on the latest base or latest layer of the latest base
-    imgbase layer --add
-
-    # And with more infos
-    imgbase --debug layer --add
+    imgbase layout
 
     # Add a new base
     # The `--size` argument specifies the size of the underlying 
     # logical volume. It must be at least the size of the filesystem
     # contained in `$IMGFILE`.
     imgbase base --add --size 1G $IMGFILE
+
+    # Get the latest base (which will be used for subsequent layers)
+    imgbase base --latest
+
+    # Add a new layer on the latest base or latest layer of the latest base
+    imgbase layer --add
+
+    # And with more infos
+    imgbase --debug layer --add
 
 There is also a dry-mode (`imgbase --debug --dry ...`) which just outputs the
 commands to run.
