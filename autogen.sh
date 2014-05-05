@@ -45,11 +45,6 @@ THEDIR=`pwd`
 	  exit 1
   }
 
-  if test -z "$*"; then
-	  echo "I am going to run ./configure with no arguments - if you wish "
-	  echo "to pass any to it, please specify them on the $0 command line."
-  fi
-
   aclocal
 
   # Run autoheader only if needed
@@ -57,7 +52,6 @@ THEDIR=`pwd`
 
   automake --add-missing
   autoconf
-  ./configure "$@"
 )
 
 if test "x$OBJ_DIR" != x; then

@@ -13,7 +13,6 @@ install:
 
 script:
  - "./autogen.sh"
- - "mkdir build ; cd build"
- - "../configure"
+ - "./configure"
  - "make check"
  - "make dist"
