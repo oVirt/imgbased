@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#
+# Keep changes between layers by keeping their delta
+#
+# Similar to the persistence hook this hook is for keeping changes
+# between different layers (either on the same or different bases).
+#
+# This hook works a bit different, because not the whole file is copied
+# between the layer A and layer A+1, but only the delta between
+# base-of(layer A) and layer A is applied to layer A+1.
+# So basically a 'git rebase'.
+#
+
+HOOK=$1
+shift 1
+ARGS=$@
+
+FILE_LIST_DIR=/config/rebase.d/*
+
+FILE_LISTS=$(test -d $FILE_LIST_DIR && ls $FILE_LIST_DIR | sort -n)
+
+err() { echo ERR: $@ >&2 ; exit 1 ; }
+
+echo "Rebase handler for: '$HOOK' '$ARGS'"
+echo "  Filelist: $FILE_LISTS"
+
+if [[ "$HOOK" = "new-layer-added" ]];
+then
+    echo "Handling $HOOK"
+    OLD_ROOT=$1
+    NEW_ROOT=$2
+    echo "  Old root: $OLD_ROOT"
+    echo "  New root: $NEW_ROOT"
+
+    [[ -z $OLD_ROOT || -z $NEW_ROOT ]] && { err "  old or new root missing" ; }
+    [[ ! -e $FILE_LIST ]] && { err "  No files persisted" ; }
+
+    OLD_ROOT_DEV=$(findmnt $OLD_ROOT)
+    OLD_ROOT_BASE=$(imgbase base --of-layer $OLD_ROOT_DEV)
+
+    OLDBASEDIR=$(mktemp -d)
+    mount $OLD_ROOT_BASE $OLDBASEDIR
+    echo "  Old base at: $OLDBASEDIR"
+
+    echo "  Rebasing files from '$OLD_BASE' and '$OLD_ROOT' to '$NEW_ROOT'"
+    cat $FILE_LISTS | while read FILE;
+    do
+      # Create a diff between old base and layer and apply it to (new base and) layer
+      diff -u $OLDBASEDIR/$FILE $OLD_ROOT/$FILE | patch --batch --dry-run $NEW_ROOT/$FILE
+    done
+
+    umount $OLDBASEDIR
+    popd
+fi

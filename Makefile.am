@@ -19,7 +19,8 @@ dist_pyimagebased_PYTHON = \
   src/imgbase.py
 
 dist_hooks_SCRIPTS = \
-  data/hooks/persistence
+  data/hooks/persistence \
+  data/hooks/rebase
 
 EXTRA_DIST = \
   README.md \
