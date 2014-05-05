@@ -233,6 +233,12 @@ class ImageLayers(object):
         def __repr__(self):
             return "<%s %s/>" % (self, self.layers or "")
 
+        def is_base(self):
+            return self.release == 0
+
+        def is_layer(self):
+            return not self.is_base()
+
     def __init__(self):
         self.hooks = Hooks(self)
         self.run = Bin()
@@ -250,7 +256,9 @@ class ImageLayers(object):
 
         >>> lvs = []
         >>> layers._lvs_tree(lvs)
-        []
+        Traceback (most recent call last):
+        ...
+        RuntimeError: No bases found: []
 
         >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
         >>> layers._lvs_tree(lvs)
@@ -278,7 +286,15 @@ class ImageLayers(object):
             else:
                 lst[-1].layers.append(img)
 
+        if len(lst) == 0:
+            raise RuntimeError("No bases found: %s" % lvs)
+
         return lst
+
+    def _parse_scheme(self, name):
+        laypat = format_to_pattern(self.layerformat)
+        version, release = re.search(laypat, name).groups()
+        return ImageLayers.Image(self, int(version), int(release))
 
     def layout(self, lvs=None):
         """List all bases and layers for humans
@@ -292,19 +308,25 @@ class ImageLayers(object):
         RuntimeError: No valid layout found. Initialize if needed.
 
         >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
+        >>> lvs += ["Image-2.2"]
         >>> print(layers.layout(lvs))
         Image-0.0
         Image-2.0
-          Image-2.1
+         ├╼ Image-2.1
+         └╼ Image-2.2
         Image-13.0
         """
         idx = []
-        for base in self._lvs_tree(lvs):
+        try:
+            tree = self._lvs_tree(lvs)
+        except RuntimeError:
+            raise RuntimeError("No valid layout found. Initialize if needed.")
+
+        for base in tree:
             idx.append("%s" % base.name)
             for layer in base.layers:
-                idx.append("  %s" % layer.name)
-        if not idx:
-            raise RuntimeError("No valid layout found. Initialize if needed.")
+                c = "└" if layer is base.layers[-1] else "├"
+                idx.append(" %s╼ %s" % (c, layer.name))
         return "\n".join(idx)
 
     def _last_base(self, lvs=None):
@@ -316,7 +338,7 @@ class ImageLayers(object):
         >>> layers._last_base(lvs)
         Traceback (most recent call last):
         ...
-        IndexError: list index out of range
+        RuntimeError: No bases found: []
 
         >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
         >>> layers._last_base(lvs)
@@ -349,7 +371,7 @@ class ImageLayers(object):
             base.version = version or int(base.version) + 1
             base.release = 0
             base.layers = []
-        except IndexError:
+        except RuntimeError:
             base = ImageLayers.Image(self, version or 0, 0)
         return base
 
@@ -362,7 +384,7 @@ class ImageLayers(object):
         >>> layers._last_layer(lvs=lvs)
         Traceback (most recent call last):
         ...
-        IndexError: list index out of range
+        RuntimeError: No bases found: []
 
         >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
         >>> layers._last_layer(lvs=lvs)
@@ -504,6 +526,27 @@ class ImageLayers(object):
         free -= float(size) * float(used_percent) / 100.00
         return free
 
+    def latest_base(self):
+        return self._last_base()
+
+    def latest_layer(self):
+        return self._last_layer()
+
+    def base_of_layer(self, layer):
+        base = None
+        args = ["--noheadings", "--options", "origin"]
+        get_origin = lambda l: self.run.lvs(args +
+                                            ["%s/%s" % (self.vg, l)])
+
+        while base is None and layer is not None:
+            layer = get_origin(layer)
+            if self._parse_scheme(layer).is_base():
+                base = layer
+
+        if not base:
+            raise RuntimeError("No base found for: %s" % layer)
+        return base
+
     def diff(self, left, right, mode="tree"):
         """
 
@@ -558,6 +601,10 @@ if __name__ == '__main__':
                              help="Add a base layer from a file or stdin")
     base_parser.add_argument("--size",
                              help="(Virtual) Size of the thin volume")
+    base_parser.add_argument("--latest", action="store_true",
+                             help="Get the most recently added base")
+    base_parser.add_argument("--of-layer", metavar="LAYER",
+                             help="Get the base of layer LAYER")
     base_parser.add_argument("image", nargs="?", type=argparse.FileType('r'),
                              default=sys.stdin,
                              help="File or stdin to use")
@@ -566,6 +613,8 @@ if __name__ == '__main__':
                                          help="Runtime layer handling")
     layer_parser.add_argument("--add", action="store_true",
                               default=False, help="Add a new layer")
+    layer_parser.add_argument("--latest", action="store_true",
+                              help="Get the latest layer")
 
     args = parser.parse_args()
 
@@ -599,9 +648,15 @@ if __name__ == '__main__':
     elif args.command == "layer":
         if args.add:
             imgbase.add_bootable_layer()
+        elif args.latest:
+            print (imgbase.latest_layer())
 
     elif args.command == "base":
         if args.add:
             if not args.size or not args.image:
                 raise RuntimeError("--size and image required")
             imgbase.add_base(args.image, args.size)
+        elif args.latest:
+            print (imgbase.latest_base())
+        elif args.of_layer:
+            print (str(imgbase.base_of_layer(args.of_layer)))
