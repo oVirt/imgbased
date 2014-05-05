@@ -5,20 +5,28 @@ shift 1
 ARGS=$@
 
 FILE_LIST=/config/files
+FILE_LIST_DIR=/config/files.d/*
+
+FILE_LISTS="$FILE_LIST $(test -d $FILE_LIST_DIR && ls $FILE_LIST_DIR)"
+
+err() { echo ERR: $@ >&2 ; exit 1 ; }
 
 echo "Persistence handler for: '$HOOK' '$ARGS'"
-echo "  Filelist: $FILE_LIST"
+echo "  Filelist: $FILE_LISTS"
 
 if [[ "$HOOK" = "new-layer-added" ]];
 then
     echo "Handling $HOOK"
     OLD_ROOT=$1
     NEW_ROOT=$2
+    echo "  Old root: $OLD_ROOT"
+    echo "  New root: $NEW_ROOT"
 
-    [[ ! -e $FILE_LIST ]] && { echo "  No files persisted" ; exit 1 ; }
+    [[ -z $OLD_ROOT || -z $NEW_ROOT ]] && { err "  old or new root missing" ; }
+    [[ ! -e $FILE_LIST ]] && { err "  No files persisted" ; }
 
     echo "  Copying persisted files fom '$OLD_ROOT' to '$NEW_ROOT'"
     pushd "$OLD_ROOT"
-    echo cpio -p -uvd "$NEW_ROOT" < $FILE_LIST;
+    echo egrep "^[^#]" $FILE_LISTS ! cpio -p -uvd "$NEW_ROOT";
     popd
 fi
