@@ -138,25 +138,48 @@ class Hooks(object):
         self.p = p
         self.hooks = {}
 
+        # A default wildcard hook is to also trigger
+        # filesystem based hooks
+        self.hooks[None] = [self._trigger_fs]
+
+    def create(self, name):
+        """Create a hook
+
+        Arguments:
+          name: Name of the hook to create
+        """
+        self.hooks[name] = []
+
     def connect(self, name, cb):
-        self.hooks.setdefault(name, set()).add(cb)
+        """Connect a callback to a hook
 
-    def trigger(self, name, *args):
-        self._trigger_fs(name, *args)
-        self._trigger(name, *args)
+        Arguments:
+          name: Name of the hook to connect to
+          cb: Callback to call
+        """
+        assert name in self.hooks, "Unknown hook: %s" % name
+        self.hooks[name] += cb
 
-    def _trigger(self, name, *args):
-        for cb in self.hooks.get(name, set()):
+    def emit(self, name, *args):
+        """Trigger a specific hook
+
+        Arguments:
+          name: Name of the hook to trigger
+          args: Additional args to pass to the callback
+        """
+        for cb in self.hooks.get(None, list()) + self.hooks.get(name, set()):
             log.debug("Triggering: %s (%s)" % (cb, args))
             cb(*args)
 
     def _trigger_fs(self, name, *args):
+        """Trigger internal/pythonic hooks
+        """
         if not os.path.exists(self.hooksdir):
             return
         for handler in os.listdir(self.hooksdir):
             script = os.path.join(self.hooksdir, handler)
-            log.debug("Triggering: %s (%s)" % (script, args))
-            self.p.run.call([script] + list(args))
+            log.debug("Triggering: %s (%s %s)" % (script, name, args))
+            self.p.run.call([script, name] + list(args))
 
 
 class Bootloader(object):
@@ -241,6 +264,8 @@ class ImageLayers(object):
 
     def __init__(self):
         self.hooks = Hooks(self)
+        self.hooks.create("new-layer-added")
+        self.hooks.create("new-base-added")
         self.run = Bin()
 
     def _lvs(self):
@@ -440,7 +465,7 @@ class ImageLayers(object):
             log.info("Updating fstab of new layer")
             self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
                            rootlv, "%s/etc/fstab" % mount.target])
-            self.hooks.trigger("new-layer-added", "/", mount.target)
+            self.hooks.emit("new-layer-added", "/", mount.target)
 
     def init_layout(self, pvs, poolsize, without_vg=False):
         """Create the LVM layout needed by this tool
@@ -510,7 +535,7 @@ class ImageLayers(object):
         self.run.lvchange(["--permission", "r",
                            "%s/%s" % (self.vg, new_base_lv.name)])
 
-        self.hooks.trigger("new-base-added", new_base_lv.path)
+        self.hooks.emit("new-base-added", new_base_lv.path)
 
     def free_space(self, units="m"):
         """Free space in the thinpool for bases and layers
