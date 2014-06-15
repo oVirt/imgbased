@@ -1,6 +1,7 @@
 
 SHELL := /bin/bash
 LMC ?= $(shell which livemedia-creator)
+BOOTISO ?= $(abs_builddir)/boot.iso
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/build-aux/tap-driver.sh
@@ -91,14 +92,14 @@ CLEANFILES = $(DERIVED_KS)
 %.img: data/kickstarts/%.ks
 	sudo -E $(LMC) --make-disk \
           --ks "$<" \
-          --iso $(abs_builddir)/boot.iso --vcpus 4 \
+          --iso $(BOOTISO) --vcpus 4 \
           --image-name "$@"
 	sudo mv "/var/tmp/$@" .
 
 %.fs: data/kickstarts/%.ks
 	sudo -E $(LMC) --make-fsimage \
           --ks "$<" \
-          --iso $(abs_builddir)/boot.iso --vcpus 4 \
+          --iso $(BOOTISO) --vcpus 4 \
           --image-name "$@"
 	sudo mv "/var/tmp/$@" .
 
