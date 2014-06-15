@@ -2,25 +2,30 @@
 #
 # Packages
 #
-%packages --excludedocs --nobase
+%packages --excludedocs
 @core
+
+# In F21 --nocore is available, then we use this list
+# to provide the minimal set of packages
+#kernel
+#systemd
+#bash
+#NetworkManager
+#yum
+
+# Only available in Fedora 20+
+#anaconda-core
+#anaconda-tui
+#cockpit
+
 vim-minimal
 grub2-efi
 shim
-dnf
 augeas
-
-# Only available in Fedora 20
-#anaconda-core
-#anaconda-tui
 
 screen
 #docker-io
 #openvswitch
-
-# See: https://admin.fedoraproject.org/updates/FEDORA-2014-2081/cockpit-0.2-0.4.20140204git5e1faad.fc20
-#cockpit
-
 
 # Some things from @core we can do without inside the container
 -biosdevname
