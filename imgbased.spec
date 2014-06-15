@@ -18,7 +18,9 @@ BuildRequires:       pylint python-pep8 pyflakes
 
 
 %description
-TBD
+This tool enforces a special usage pattern for LVM.
+Basically this is about having read-only bases and writable
+layers atop.
 
 
 %package kickstarts
@@ -29,7 +31,9 @@ Requires:       lorax
 
 
 %description kickstarts
-TBD
+This is a collection of kickstarts to create images to test
+the tool.
+And also provides other kickstarts for reference.
 
 
 %prep
