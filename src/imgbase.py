@@ -130,25 +130,62 @@ class Bin(object):
 
 
 class Hooks(object):
+    """A quite simple hook mechanism, with some enforcement
+
+     >>> hooks = Hooks(None)
+
+     Before hooks can be used, they need to be created.
+     Just trying to connect to or emit then, results in an exception:
+
+     >>> hooks.connect("on-foo", lambda x, y: (y, x))
+     Traceback (most recent call last):
+     AssertionError: Unknown hook: on-foo
+
+     >>> hooks.emit("on-foo")
+     Traceback (most recent call last):
+     AssertionError: Unknown hook: on-foo
+
+     To create a hook you need to provide a name, and an argument
+     specification, to document what kind of data the callback will get.
+
+     >>> hooks.create("on-foo", ("time", "place"))
+
+     Once created, you can attach a callback to a hook:
+
+     >>> def concat_and_print(a, b):
+     ...     print(a, b)
+
+     >>> hooks.connect("on-foo", concat_and_print)
+
+     And can also emit them:
+     >>> hooks.emit("on-foo", "today", "here")
+     ('today', 'here')
+
+    """
+
     p = None
     hooksdir = "/usr/lib/imgbased/hooks.d/"
     hooks = None
+    _argspecs = None
 
     def __init__(self, p):
         self.p = p
         self.hooks = {}
+        self._argspecs = {}
 
         # A default wildcard hook is to also trigger
         # filesystem based hooks
-        self.hooks[None] = [self._trigger_fs]
+        if p:
+            self.hooks[None] = [self._trigger_fs]
 
-    def create(self, name):
+    def create(self, name, argspec=None):
         """Create a hook
 
         Arguments:
           name: Name of the hook to create
         """
         self.hooks[name] = []
+        self._argspecs[name] = argspec
 
     def connect(self, name, cb):
         """Connect a callback to a hook
@@ -157,8 +194,12 @@ class Hooks(object):
           name: Name of the hook to connect to
           cb: Callback to call
         """
+        argspec = self._argspecs.get(name, None)
+
         assert name in self.hooks, "Unknown hook: %s" % name
-        self.hooks[name] += cb
+        assert cb.func_code.co_argcount == len(argspec), \
+            "Args for '%s' do not match signature: %s" % (name, argspec)
+        self.hooks[name].append(cb)
 
     def emit(self, name, *args):
         """Trigger a specific hook
@@ -167,6 +208,10 @@ class Hooks(object):
           name: Name of the hook to trigger
           args: Additional args to pass to the callback
         """
+        argspec = self._argspecs.get(name, None)
+        assert name in self.hooks, "Unknown hook: %s" % name
+        assert len(args) == len(argspec), "Number of arguments does not match"
+
         for cb in self.hooks.get(None, list()) + self.hooks.get(name, set()):
             log.debug("Triggering: %s (%s)" % (cb, args))
             cb(*args)
@@ -264,8 +309,10 @@ class ImageLayers(object):
 
     def __init__(self):
         self.hooks = Hooks(self)
-        self.hooks.create("new-layer-added")
-        self.hooks.create("new-base-added")
+        self.hooks.create("new-layer-added",
+                          ("old-target", "new-lv", "new-target"))
+        self.hooks.create("new-base-added",
+                          ("new-lv",))
         self.run = Bin()
 
     def _lvs(self):
@@ -465,7 +512,7 @@ class ImageLayers(object):
             log.info("Updating fstab of new layer")
             self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
                            rootlv, "%s/etc/fstab" % mount.target])
-            self.hooks.emit("new-layer-added", "/", mount.target)
+            self.hooks.emit("new-layer-added", "/", rootlv, mount.target)
 
     def init_layout(self, pvs, poolsize, without_vg=False):
         """Create the LVM layout needed by this tool
