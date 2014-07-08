@@ -7,8 +7,8 @@ TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/build-aux/tap-driver.sh
 TESTS = tests/package/check_python.test tests/package/check_packaging.test
 
-hooksdir = $(prefix)/lib/imgbased/hooks.d/
-pyimagebaseddir = $(pythondir)/imgbased
+hooksdir = $(pkgdatadir)/hooks.d/
+pyimagebaseddir = $(pythondir)/$(PACKAGE_NAME)
 
 vpath $(srcdir)
 

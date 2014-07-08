@@ -50,7 +50,7 @@ make %{?_smp_mflags}
 
 
 %check
-%{__make} check TESTS="tests/check_python.test"
+%{__make} check TESTS="tests/package/check_python.test"
 
 
 %files
