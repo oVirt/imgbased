@@ -56,7 +56,7 @@ make %{?_smp_mflags}
 %files
 %doc README.md
 %{_sbindir}/imgbase
-%{_prefix}/lib/%{name}/hooks.d/
+%{_datadir}/%{name}/hooks.d/
 %{python2_sitelib}/%{name}/
 %{_mandir}/man8/imgbase.8*
 
