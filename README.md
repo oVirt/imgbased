@@ -152,18 +152,18 @@ Assumptions about the host:
     +--+ Config (LV)
     |
     +--+ Base-0 (LV, ro)
-       |\
-       | \
-       |  + Base-0.1 (LV, rw)
-       |  |
-       |  + Base-0.2 (LV, rw)
-       |
-       |
-       + Base-1 (LV, ro)
-       |\
-       | \
-       |  + Base-1.1 (LV, rw)
-       :
+    |   \
+    |    \
+    |     + Base-0.1 (LV, rw)
+    |     |
+    |     + Base-0.2 (LV, rw)
+    |   
+    |   
+    +--+ Base-1 (LV, ro)
+    |   \
+    |    \
+    |     + Base-1.1 (LV, rw)
+    :     :
 
 With a boot entry for each Base-\* this allows the user to boot into each
 Base-LV.
