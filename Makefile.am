@@ -22,7 +22,7 @@ LMC_ARGS += --tmp="$(TMPDIR)"
 
 
 $(BOOTISO):
-	$(CURL) -L -O http://download.fedoraproject.org/pub/fedora/linux/releases/$(RELEASEVER)/Fedora/$(ARCH)/os/images/$(BOOTISO)
+	$(CURL) -L -O http://download.fedoraproject.org/pub/fedora/linux/releases/$(RELEASEVER)/Fedora/$(ARCH)/iso/$(BOOTISO)
 
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
@@ -85,10 +85,6 @@ check-functional:
 	[[ -f $(IMAGE) ]]
 	VIRTEXPECT_IMAGE=$(IMAGE) nosetests -v $(srcdir)/tests/functional/*.py
 
-boot.iso:
-	[[ -f "$(srcdir)/$@" ]] && ln -s ($(srcdir)/$@)
-	[[ ! -f $@ ]] && { echo "Please fetch any boot.iso from the desired Fedora release" ; exit 1 ; }
-
 doc: $(man8_MANS)
 
 docs/imgbase.8: docs/imgbase.8.asc
@@ -111,7 +107,7 @@ data/kickstarts/%.ks: data/kickstarts/template/%.ks $(PARTIAL_KS)
 	mkdir -p $$(dirname $@)
 	asciidoc -d manpage -b docbook -o $@ $<
 
-%.raw: data/kickstarts/%.ks
+%.raw: data/kickstarts/%.ks $(BOOTISO)
 	mkdir $(TMPDIR)
 	chmod a+rwX $(TMPDIR)
 	$(SUDO) $(LMC) --make-disk \
