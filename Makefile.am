@@ -110,7 +110,7 @@ data/kickstarts/%.ks: data/kickstarts/template/%.ks $(PARTIAL_KS)
 %.raw: data/kickstarts/%.ks $(BOOTISO)
 	mkdir $(TMPDIR)
 	chmod a+rwX $(TMPDIR)
-	$(SUDO) $(LMC) --make-disk \
+	$(SUDO) $(LMC) $(LMC_ARGS) --make-disk \
           --ks "$<" \
           --iso $(BOOTISO) \
           --image-name "$@"
