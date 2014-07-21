@@ -54,7 +54,7 @@ make %{?_smp_mflags}
 
 
 %files
-%doc README.md
+%doc README.md LICENSE
 %{_sbindir}/imgbase
 %{_datadir}/%{name}/hooks.d/
 %{python2_sitelib}/%{name}/

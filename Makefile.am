@@ -16,7 +16,7 @@ RELEASEVER := 20
 BOOTISO ?= Fedora-$(RELEASEVER)-$(ARCH)-netinst.iso
 
 # LMC options
-TMPDIR := build-$(shell date +%Y%m%d%H%M%S)
+TMPDIR := result-$(shell date +%Y%m%d%H%M%S)
 LMC_ARGS = --ram=$(VM_RAM) --vcpus=$(VM_CPUS)
 LMC_ARGS += --tmp="$(TMPDIR)"
 
