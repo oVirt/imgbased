@@ -47,7 +47,8 @@ dist_hooks_SCRIPTS = \
 
 EXTRA_DIST = \
   README.md \
-  imgbased.spec \
+  LICENSE \
+  packaging/rpm/imgbased.spec \
   $(TESTS) \
   tests/package/common.sh \
   tests/functional/sanity.py \
