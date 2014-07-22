@@ -22,13 +22,13 @@
 #
 import logging
 import os
-import glob
 import subprocess
 import re
 import tempfile
 import functools
 import difflib
 from .hooks import Hooks
+from . import bootloader
 
 
 def log():
@@ -51,11 +51,6 @@ def call(*args, **kwargs):
     kwargs["close_fds"] = True
     log().debug("Calling: %s %s" % (args, kwargs))
     return subprocess.check_output(*args, **kwargs).strip()
-
-
-def uuid():
-    with open("/proc/sys/kernel/random/uuid") as src:
-        return src.read().replace("-", "").strip()
 
 
 def format_to_pattern(fmt):
@@ -143,44 +138,6 @@ class ExternalBinary(object):
         return self.call(["find"] + args, **kwargs)
 
 
-class Bootloader(object):
-    """Fixme can probably use new-kernel-pkg
-    """
-    p = None
-    bls_dir = "/boot/loader/entries"
-
-    def __init__(self, p):
-        self.p = p
-
-    def add_boot_entry(self, name, rootlv):
-        eid = uuid()
-        edir = self.bls_dir
-
-        if not os.path.isdir(edir):
-            os.makedirs(edir)
-
-        efile = os.path.join(edir, "%s.conf" % eid)
-
-        def grep_boot(pat):
-            # sorted: Just the last/highest entry
-            highest = sorted(glob.glob("/boot/%s" % pat))[-1]
-            # Just the filename
-            return os.path.basename(highest)
-
-        linux = grep_boot("vmlinuz-*.x86_64")
-        initramfs = grep_boot("initramfs-*.x86_64.img")
-
-        entry = ["title %s" % name,
-                 "linux /%s" % linux,
-                 "initrd /%s" % initramfs,
-                 "options rd.lvm.lv=%s root=%s console=ttyS0" % (name, rootlv)]
-
-        log().debug("Entry: %s" % entry)
-        if not self.p.dry:
-            with open(efile, "w+") as dst:
-                dst.write("\n".join(entry))
-
-
 class ImageLayers(object):
     debug = False
     dry = False
@@ -192,6 +149,8 @@ class ImageLayers(object):
     layerformat = "Image-%d.%d"
 
     run = None
+
+    bootloader = None
 
     class Image(object):
         p = None
@@ -234,6 +193,7 @@ class ImageLayers(object):
         self.hooks.create("new-base-added",
                           ("new-lv",))
         self.run = ExternalBinary()
+        self.bootloader = bootloader.BlsBootloader(self)
 
     def _lvs(self):
         log().debug("Querying for LVs")
@@ -429,7 +389,7 @@ class ImageLayers(object):
         """
         log().info("Adding a boot entry for the new layer")
 
-        Bootloader(self).add_boot_entry(name, rootlv)
+        self.bootloader.add_boot_entry(name, rootlv)
 
         with mounted(rootlv) as mount:
             log().info("Updating fstab of new layer")
