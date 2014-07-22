@@ -16,3 +16,6 @@ script:
  - "./configure"
  - "make check"
  - "make dist"
+
+notifications:
+  irc: "chat.freenode.net#ovirt-node"
