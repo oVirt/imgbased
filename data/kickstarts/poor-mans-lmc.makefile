@@ -33,8 +33,16 @@ initrd.img:
 squashfs.img:
 	$(CURL) $(FEDORA_URL)/LiveOS/squashfs.img
 
-run-install: vmlinuz initrd.img squashfs.img
-	python -m SimpleHTTPServer 8042 & echo $$! > spawned_pids
+run-install: PYPORT:=$(shell echo "50000 + ( $$RANDOM % 15000 )" | bc)
+run-install: vmlinuz initrd.img squashfs.img $(KICKSTART)
+	python -m SimpleHTTPServer $(PYPORT) & echo $$! > spawned_pids
 	qemu-img create -f qcow2 $(DISK_NAME) $(DISK_SIZE)
-	$(QEMU) -vnc 0.0.0.0:7 -serial stdio -smp $(VM_SMP) -m $(VM_RAM) -hda $(DISK_NAME) -kernel vmlinuz -initrd initrd.img -append "console=ttyS0 inst.repo=$(FEDORA_URL) inst.ks=http://10.0.2.2:8042/$(KICKSTART) root=live:http://10.0.2.2:8042/squashfs.img" ; \
+	$(QEMU) \
+		-vnc 0.0.0.0:7 \
+		-serial stdio \
+		-smp $(VM_SMP) -m $(VM_RAM) \
+		-hda $(DISK_NAME) \
+		-kernel vmlinuz \
+		-initrd initrd.img \
+		-append "console=ttyS0 inst.repo=$(FEDORA_URL) inst.ks=http://10.0.2.2:$(PYPORT)/$(KICKSTART) root=live:http://10.0.2.2:$(PYPORT)/squashfs.img" ; \
 	kill $$(cat spawned_pids)
