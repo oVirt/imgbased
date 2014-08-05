@@ -33,7 +33,7 @@ initrd.img:
 squashfs.img:
 	$(CURL) $(FEDORA_URL)/LiveOS/squashfs.img
 
-run-install: PYPORT:=$(shell echo "50000 + ( $$RANDOM % 15000 )" | bc)
+run-install: PYPORT:=$(shell echo $$(( 50000 + $$RANDOM % 15000 )) )
 run-install: vmlinuz initrd.img squashfs.img $(KICKSTART)
 	python -m SimpleHTTPServer $(PYPORT) & echo $$! > spawned_pids
 	qemu-img create -f qcow2 $(DISK_NAME) $(DISK_SIZE)
