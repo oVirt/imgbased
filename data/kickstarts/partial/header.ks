@@ -11,5 +11,6 @@ network --bootproto=dhcp
 rootpw --plaintext r
 firstboot --disable
 
-reboot
+#reboot
+poweroff
 
