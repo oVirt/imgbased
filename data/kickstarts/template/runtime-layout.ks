@@ -21,5 +21,7 @@ sed -i "/ExecStart/ s/$/ --autologin root/" /lib/systemd/system/*getty*.service
 
 %include ../partial/repositories.ks
 %include ../partial/packages.ks
+%include ../partial/packages-testing.ks
 %include ../partial/post.ks
+%include ../partial/post-testing.ks
 %include ../partial/minimization.ks

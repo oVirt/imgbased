@@ -23,3 +23,5 @@ py-compile
 *.8
 *.trs
 data/kickstarts/*.ks
+*.qcow2
+*.xml

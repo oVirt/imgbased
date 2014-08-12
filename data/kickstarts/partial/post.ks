@@ -32,19 +32,6 @@ echo .
 #echo "Enable cockpit"
 #systemctl enable cockpit.service || :
 
-echo "Build imgbased"
-pushd .
-yum install -y make git autoconf automake
-yum install -y asciidoc yum-plugin-remove-with-leaves
-cd /root
-git clone https://github.com/fabiand/imgbased.git
-cd imgbased
-./autogen.sh
-./configure
-make install
-#yum remove -y --remove-leaves asciidoc
-popd
-
 echo "Install image-minimizer"
 curl -O https://git.fedorahosted.org/cgit/lorax.git/plain/src/bin/image-minimizer
 install -m775 image-minimizer /usr/bin
