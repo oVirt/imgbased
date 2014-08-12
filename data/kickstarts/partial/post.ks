@@ -40,6 +40,7 @@ cd /root
 git clone https://github.com/fabiand/imgbased.git
 cd imgbased
 ./autogen.sh
+./configure
 make install
 #yum remove -y --remove-leaves asciidoc
 popd
