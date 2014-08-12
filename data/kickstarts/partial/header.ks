@@ -8,7 +8,7 @@ timezone --utc Etc/UTC
 auth --enableshadow --passalgo=sha512
 selinux --enforcing
 network --bootproto=dhcp
-rootpw --plaintext r
+rootpw THISISJUSTADUMMY
 firstboot --disable
 
 #reboot
