@@ -92,3 +92,20 @@ class NodeInstance(Instance):
     def logout(self):
         self.child.sendline('exit')
         self.child.expect('(?i)login:')
+
+
+class NodeInstanceShell(NodeInstance):
+    def __init__(self, image, shared_path, command):
+        Instance.__init__(self, image, shared_path)
+        self.spawn()
+
+#        self.instance.child.expect("Booting")
+        self.child.expect("(?i)# ")
+        self.mount_hostos()
+        self.enter_shared_path()
+        self.child.sendline(command)
+        self.child.expect("(?i)# ")
+
+if __name__ == "__main__":
+    image, shared_path, command = sys.argv[1:4]
+    shell = NodeInstanceShell(image, shared_path, command)
