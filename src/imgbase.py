@@ -246,14 +246,17 @@ class Bootloader(object):
         efile = os.path.join(edir, "%s.conf" % eid)
 
         def grep_boot(pat):
-            return sorted(glob.glob("/boot/%s" % pat))[-1]
+            # sorted: Just the last/highest entry
+            highest = sorted(glob.glob("/boot/%s" % pat))[-1]
+            # Just the filename
+            return os.basename(highest)
 
         linux = grep_boot("vmlinuz-*.x86_64")
         initramfs = grep_boot("initramfs-*.x86_64.img")
 
         entry = ["title %s" % name,
-                 "linux %s" % linux,
-                 "initrd %s" % initramfs,
+                 "linux /%s" % linux,
+                 "initrd /%s" % initramfs,
                  "options rd.lvm.lv=%s root=%s console=ttyS0" % (name, rootlv)]
 
         log.debug("Entry: %s" % entry)
