@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import sh
 import unittest
+
 
 class TestSanity(unittest.TestCase):
     def test_imgbase(self):

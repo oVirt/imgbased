@@ -9,6 +9,7 @@ import sys
 import re
 import os
 
+
 class Instance(object):
     child = None
     mount_tag = "hostos"
@@ -27,7 +28,7 @@ class Instance(object):
                "-hda", image,
                "-watchdog-action", "poweroff",
                "-virtfs",
-               "local,id=hostos,path=%s,mount_tag=%s,security_model=none" % 
+               "local,id=hostos,path=%s,mount_tag=%s,security_model=none" %
                (shared_path, self.mount_tag),
                ]
 
@@ -39,7 +40,7 @@ class Instance(object):
     def wait(self, pattern):
         while True:
             for src, dst in [(self.child.stdout, sys.stdout)]:
-#                             (self.child.stderr, sys.stderr)]:
+                #             (self.child.stderr, sys.stderr)]:
                 line = src.readline()
                 dst.write(line)
                 src.flush()
@@ -69,4 +70,3 @@ if __name__ == "__main__":
     shell.mount_hostos()
     shell.sendline(command)
     shell.wait("Power down")
-

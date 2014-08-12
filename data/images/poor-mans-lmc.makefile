@@ -5,7 +5,7 @@
 # $ make run-install
 #
 
-KICKSTART ?= data/kickstarts/runtime-layout.ks
+KICKSTART ?= kickstarts/runtime-layout.ks
 
 DISK_NAME ?= hda.qcow2
 DISK_SIZE ?= 10G

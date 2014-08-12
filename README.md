@@ -43,19 +43,16 @@ the correct LVm layout to get started with this tool.
 > creation.
 
     # Lorax provides livemedia-creator
-    sudo yum install -y lorax
+    pkcon install -y qemu-kvm
 
     # First create the kickstarts
     make dist
 
-    # A boot iso is required by lorax, use Fedora 20
-    curl -O http://${mirror-url}/releases/20/Fedora/x86_64/os/images/boot.iso
-
     # Kickoff the image creation
-    make runtime-layout.img
+    make build
 
     # Do some automatic sanity testing on the image:
-    make check-functional IMAGE=runtime-layout.img
+    make check
 
     # Or run the image yourself
     # Default password for root: r
