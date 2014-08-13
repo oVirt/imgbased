@@ -21,7 +21,7 @@ poweroff
 
 
 clearpart --all --initlabel
-bootloader --append="console=ttyS0" --timeout=1
+bootloader --append="console=ttyS0 quiet trulyquiet" --timeout=1
 
 part biosboot --size=1
 part /boot --size=512 --fstype ext4 --label=Boot --asprimary

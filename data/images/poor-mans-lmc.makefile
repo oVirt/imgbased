@@ -45,5 +45,5 @@ run-install: vmlinuz initrd.img squashfs.img $(KICKSTART)
 		-hda $(DISK_NAME) \
 		-kernel vmlinuz \
 		-initrd initrd.img \
-		-append "console=ttyS0 inst.repo=$(FEDORA_URL) inst.ks=http://10.0.2.2:$(PYPORT)/$(KICKSTART) root=live:http://10.0.2.2:$(PYPORT)/squashfs.img $(QEMU_APPEND)" ; \
+		-append "console=ttyS0 inst.repo=$(FEDORA_URL) inst.ks=http://10.0.2.2:$(PYPORT)/$(KICKSTART) root=live:http://10.0.2.2:$(PYPORT)/squashfs.img quiet $(QEMU_APPEND)" ; \
 	kill $$(cat spawned_pids)
