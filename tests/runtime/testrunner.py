@@ -38,14 +38,20 @@ class Instance(object):
                                       stderr=subprocess.PIPE)
 
     def wait(self, pattern):
+        """We need to read bytewise, because prompts are nto ended with a \n
+        """
+        line = ""
         while True:
             for src, dst in [(self.child.stdout, sys.stdout)]:
                 #             (self.child.stderr, sys.stderr)]:
-                line = src.readline()
-                dst.write(line)
+                char = src.read(1)
+                line += char
+                dst.write(char)
                 src.flush()
                 if pattern and re.search(pattern, line):
                     return
+                if char == "\n":
+                    line = ""
 
     def tail(self):
         return self.wait(None)
@@ -60,13 +66,13 @@ class Instance(object):
                                                       self.guestpath_to_host)
         cmd += " && cd %s" % self.guestpath_to_host
 
-        self.wait("~]#")
         self.sendline(cmd)
 
 
 if __name__ == "__main__":
     image, shared_path, command = sys.argv[1:4]
     shell = Instance(image, shared_path)
+    shell.wait("~]#")
     shell.mount_hostos()
     shell.sendline(command)
     shell.wait("Power down")
