@@ -5,8 +5,8 @@ TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/build-aux/tap-driver.sh
 TESTS = tests/package/check_python.test tests/package/check_packaging.test
 
-IMAGE ?= runtime-layout
-TESTIMAGE ?= $(IMAGE).qcow2
+IMAGE = runtime-layout
+TESTIMAGE = $(IMAGE).qcow2
 
 hooksdir = $(pkgdatadir)/hooks.d/
 pyimagebaseddir = $(pythondir)/$(PACKAGE_NAME)

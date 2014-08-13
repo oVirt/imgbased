@@ -5,20 +5,20 @@
 # $ make run-install
 #
 
-KICKSTART ?= kickstarts/runtime-layout.ks
+KICKSTART = kickstarts/runtime-layout.ks
 
-DISK_NAME ?= hda.qcow2
-DISK_SIZE ?= 10G
+DISK_NAME = hda.qcow2
+DISK_SIZE = 10G
 
-VM_RAM ?= 2048
-VM_SMP ?= 4
+VM_RAM = 2048
+VM_SMP = 4
 
-QEMU ?= qemu-kvm
-QEMU_APPEND ?=
-CURL ?= curl -L -O
+QEMU = qemu-kvm
+QEMU_APPEND =
+CURL = curl -L -O
 
-FEDORA_RELEASEVER ?= 20
-FEDORA_URL ?= http://download.fedoraproject.org/pub/fedora/linux/releases/$(FEDORA_RELEASEVER)/Fedora/x86_64/os/
+FEDORA_RELEASEVER = 20
+FEDORA_URL = http://download.fedoraproject.org/pub/fedora/linux/releases/$(FEDORA_RELEASEVER)/Fedora/x86_64/os/
 
 SHELL = /bin/bash
 
