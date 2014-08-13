@@ -1,7 +1,7 @@
 
 check-local:
 	[ -f $(IMAGE) ]
-	python testrunner.py $(IMAGE) $(PWD) "make check-local-inner ; init 0"
+	python -u testrunner.py $(IMAGE) $(PWD) "make check-local-inner ; init 0"
 
 #
 # This target is run inside the VM
