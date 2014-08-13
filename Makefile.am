@@ -72,6 +72,16 @@ check:
 check-runtime: $(TESTIMAGE)
 	cd tests/runtime && make check-local IMAGE=$(abs_srcdir)/$(TESTIMAGE)
 
+#
+# Sparsify an image
+#
+sparse: INTIMAGE = intermediate-$(SRCIMAGE)
+sparse: DSTIMAGE = sparse-$(SRCIMAGE)
+sparse: $(SRCIMAGE)
+	virt-sparsify --compress $(SRCIMAGE) $(INTIMAGE)
+	mv -v $(INTIMAGE) $(DSTIMAGE)
+
+
 doc: $(man8_MANS)
 
 docs/imgbase.8: docs/imgbase.8.asc
