@@ -249,7 +249,7 @@ class Bootloader(object):
             # sorted: Just the last/highest entry
             highest = sorted(glob.glob("/boot/%s" % pat))[-1]
             # Just the filename
-            return os.basename(highest)
+            return os.path.basename(highest)
 
         linux = grep_boot("vmlinuz-*.x86_64")
         initramfs = grep_boot("initramfs-*.x86_64.img")
