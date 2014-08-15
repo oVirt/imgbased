@@ -73,7 +73,7 @@ class Mounted(object):
         return self._target or self.tmpdir
 
     def __init__(self, source, options=None, target=None):
-        self.run = Bin()
+        self.run = ExternalBinary()
         self.source = source
         self.options = options
         self._target = target
@@ -100,7 +100,7 @@ class Mounted(object):
             self.run.call(["rmdir", self.tmpdir])
 
 
-class Bin(object):
+class ExternalBinary(object):
     dry = False
 
     def call(self, *args, **kwargs):
@@ -219,7 +219,7 @@ class ImageLayers(object):
                           ("old-target", "new-lv", "new-target"))
         self.hooks.create("new-base-added",
                           ("new-lv",))
-        self.run = Bin()
+        self.run = ExternalBinary()
 
     def _lvs(self):
         log.debug("Querying for LVs")
@@ -611,7 +611,7 @@ if __name__ == '__main__':
     imgbase.debug = args.debug
     imgbase.dry = args.dry
 
-    Bin.dry = args.dry
+    ExternalBinary.dry = args.dry
 
     if args.command == "layout":
         if args.init:
