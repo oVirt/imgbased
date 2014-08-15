@@ -34,6 +34,6 @@ AM_CONDITIONAL(TARGET_SYSTEMD, test 0$RHEL -ge 7 || test 0$FEDORA -ge 16 || test
 AM_PATH_PYTHON
 
 AC_CONFIG_FILES([Makefile
-                 src/config.py])
+                 src/imgbased/config.py])
 
 AC_OUTPUT

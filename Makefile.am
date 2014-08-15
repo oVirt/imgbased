@@ -17,7 +17,7 @@ dist_sbin_SCRIPTS = \
   scripts/imgbase
 
 dist_pyimagebased_PYTHON = \
-  src/*.py
+  src/imgbased/*.py
 
 dist_hooks_SCRIPTS = \
   data/hooks/persistence \
