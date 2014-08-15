@@ -23,7 +23,7 @@
 
 PACKAGE_NAME = 'imgbased'
 PACKAGE_VERSION = '0.1'
-REVISION = '4984794'
+REVISION = '86369e1'
 imgbasehooksdir = '@PKGDATADIR@'
 
 
