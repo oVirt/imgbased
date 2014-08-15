@@ -23,4 +23,9 @@
 
 PACKAGE_NAME = '@PACKAGE_NAME@'
 PACKAGE_VERSION = '@PACKAGE_VERSION@'
+REVISION = '@REVISION@'
 imgbasehooksdir = '@PKGDATADIR@'
+
+
+def version():
+    return "%s %s %s" % (PACKAGE_NAME, PACKAGE_VERSION, REVISION)

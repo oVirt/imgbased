@@ -13,6 +13,7 @@ AC_SUBST([FEDORA],[[`rpm --eval '%{fedora}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([RHEL], [[`rpm --eval '%{rhel}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([CENTOS], [[`rpm --eval '%{centos}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([PLATFORM])
+AC_SUBST([REVISION], [m4_esyscmd_s([git describe --always])])
 
 if test "$FEDORA"; then
     PLATFORM=Fedora$FEDORA
