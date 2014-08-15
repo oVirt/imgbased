@@ -1,14 +1,21 @@
 
+RUNTIMEDIR=tests/runtime
+
+#
+# This target will start the VM
+# Within the VM it will call check-local-inner
+#
 check-local:
 	[ -f $(IMAGE) ]
-	python -u testrunner.py $(IMAGE) $(PWD) "set -x ; make check-local-inner 2>&1 | tee check-local-inner.log ; init 0"
+	python -u $(RUNTIMEDIR)/testrunner.py $(IMAGE) $(PWD) "set -x ; make -f $(RUNTIMEDIR)/Makefile check-local-inner 2>&1 | tee check-local-inner.log ; init 0"
 
 #
 # This target is run inside the VM
+# It will go into the runtime dir and run those tests
 #
 check-local-inner:
 	nm-online
-	cd /root/imgbased && git pull && ./autogen.sh && ./configure && make install
+	git describe --always
+	make install
 	pwd
-	ls
-	nosetests --verbose --no-byte-compile --with-xunit
+	cd $(RUNTIMEDIR) && nosetests --verbose --no-byte-compile --with-xunit

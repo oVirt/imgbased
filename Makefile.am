@@ -69,7 +69,7 @@ check:
 # Intentioanlly no dependency on build
 #
 check-runtime: $(TESTIMAGE)
-	cd tests/runtime && make check-local IMAGE=$(abs_srcdir)/$(TESTIMAGE)
+	make -f tests/runtime/Makefile check-local IMAGE=$(abs_srcdir)/$(TESTIMAGE)
 
 #
 # Sparsify an image
