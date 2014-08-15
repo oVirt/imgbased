@@ -9,4 +9,4 @@ echo 1..4
 tap_reply "1 - passes pyflakes" "find . -name \*.py | xargs pyflakes"
 tap_reply "2 - passes pep8" "find . -name \*.py | xargs pep8 -v"
 tap_reply "3 - passes pylint # SKIP" "find . -name \*.py | xargs echo pylint"
-tap_reply "4 - passes doctests" "find . -name \*.py | xargs -n 1 python -m doctest"
+tap_reply "4 - passes doctests" "nosetests --with-doctest src/ -vv"
