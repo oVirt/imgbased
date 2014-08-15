@@ -25,3 +25,4 @@ py-compile
 data/kickstarts/*.ks
 *.qcow2
 *.xml
+*/config.py
