@@ -21,8 +21,11 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 import logging
-log = logging.getLogger("imgbase")
 import os
+
+
+def log():
+    return logging.getLogger("imgbase")
 
 
 class Hooks(object):
@@ -109,7 +112,7 @@ class Hooks(object):
         assert len(args) == len(argspec), "Number of arguments does not match"
 
         for cb in self.hooks.get(None, list()) + self.hooks.get(name, set()):
-            log.debug("Triggering: %s (%s)" % (cb, args))
+            log().debug("Triggering: %s (%s)" % (cb, args))
             cb(*args)
 
     def _trigger_fs(self, name, *args):
@@ -119,5 +122,5 @@ class Hooks(object):
             return
         for handler in os.listdir(self.hooksdir):
             script = os.path.join(self.hooksdir, handler)
-            log.debug("Triggering: %s (%s %s)" % (script, name, args))
+            log().debug("Triggering: %s (%s %s)" % (script, name, args))
             self.p.run.call([script, name] + list(args))
