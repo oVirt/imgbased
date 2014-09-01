@@ -25,11 +25,26 @@ import os
 import glob
 import subprocess
 import re
+import tempfile
+import functools
+import difflib
 from .hooks import Hooks
 
 
 def log():
     return logging.getLogger()
+
+
+def memoize(obj):
+    cache = obj.cache = {}
+
+    @functools.wraps(obj)
+    def memoizer(*args, **kwargs):
+        key = str(args) + str(kwargs)
+        if key not in cache:
+            cache[key] = obj(*args, **kwargs)
+        return cache[key]
+    return memoizer
 
 
 def call(*args, **kwargs):
@@ -61,7 +76,7 @@ def format_to_pattern(fmt):
     return pat
 
 
-class Mounted(object):
+class mounted(object):
     source = None
     options = None
     _target = None
@@ -127,9 +142,6 @@ class ExternalBinary(object):
     def find(self, args, **kwargs):
         return self.call(["find"] + args, **kwargs)
 
-    def diff(self, args, **kwargs):
-        return self.call(["diff"] + args, **kwargs)
-
 
 class Bootloader(object):
     """Fixme can probably use new-kernel-pkg
@@ -192,6 +204,7 @@ class ImageLayers(object):
             return str(self)
 
         @property
+        @memoize
         def path(self):
             return self.p.run.lvs(["--noheadings", "-olv_path",
                                    "%s/%s" % (self.p.vg, self.name)])
@@ -418,8 +431,8 @@ class ImageLayers(object):
 
         Bootloader(self).add_boot_entry(name, rootlv)
 
-        with Mounted(rootlv) as mount:
-            log.info("Updating fstab of new layer")
+        with mounted(rootlv) as mount:
+            log().info("Updating fstab of new layer")
             self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
                            rootlv, "%s/etc/fstab" % mount.target])
             self.hooks.emit("new-layer-added", "/", rootlv, mount.target)
@@ -538,7 +551,20 @@ class ImageLayers(object):
             right: Base or layer
             mode: tree, content, unified
         """
-        raise NotImplemented()
+        log().info("Diff '%s' between '%s' and '%s'" % (left, right, mode))
+
+        imgl = self.image_from_name(left)
+        imgr = self.image_from_name(right)
+
+        with mounted(imgl.path) as mountl, \
+                mounted(imgr.path) as mountr:
+            if mode == "tree":
+                l = self.run.find(["-ls"], cwd=mountl.target).splitlines(True)
+                r = self.run.find(["-ls"], cwd=mountr.target).splitlines(True)
+                udiff = difflib.unified_diff(r, l, fromfile=left, tofile=right, n=0)
+                return (l for l in udiff if not l.startswith("@"))
+            else:
+                raise RuntimeError("Unknown diff mode: %s" % mode)
 
     def verify(self, base):
         """Verify that a base has not been changed

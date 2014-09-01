@@ -87,6 +87,16 @@ if __name__ == '__main__':
     layer_parser.add_argument("--latest", action="store_true",
                               help="Get the latest layer")
 
+    layer_parser = subparsers.add_parser("diff",
+                                         help="Compare layers and bases")
+    layer_parser.add_argument("image", nargs=2,
+                              help="Base/Layer to compare")
+
+    layer_parser = subparsers.add_parser("nspawn",
+                                         help="Start a container in a layer")
+    layer_parser.add_argument("image",
+                              help="Base/Layer to use")
+
     args = parser.parse_args()
 
     lvl = logging.DEBUG if args.debug else logging.INFO
@@ -133,3 +143,7 @@ if __name__ == '__main__':
             print (imgbase.latest_base())
         elif args.of_layer:
             print (str(imgbase.base_of_layer(args.of_layer)))
+
+    elif args.command == "diff":
+        if len(args.image) == 2:
+            sys.stdout.writelines(imgbase.diff(*args.image))
