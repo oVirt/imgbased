@@ -147,3 +147,7 @@ if __name__ == '__main__':
     elif args.command == "diff":
         if len(args.image) == 2:
             sys.stdout.writelines(imgbase.diff(*args.image))
+
+    elif args.command == "nspawn":
+        if args.image:
+            imgbase.nspawn(args.image)

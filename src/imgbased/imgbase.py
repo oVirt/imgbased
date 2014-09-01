@@ -570,3 +570,16 @@ class ImageLayers(object):
         """Verify that a base has not been changed
         """
         raise NotImplemented()
+
+    def nspawn(self, layer, cmd=""):
+        """Spawn a container off the root of layer layer
+        """
+        log().info("Adding a boot entry for the new layer")
+
+        img = self.image_from_name(layer)
+        with mounted(img.path) as mount:
+            log().info("Changing root into layer %s" % img)
+            cmds = [cmd] if cmd else []
+            subprocess.call(["systemd-nspawn", "-D", mount.target,
+                             "-M", layer, "--read-only"] + cmds)
+# vim: sw=4 et
