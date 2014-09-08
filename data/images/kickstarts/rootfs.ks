@@ -16,7 +16,8 @@ network --bootproto=dhcp
 rootpw --plaintext r
 firstboot --disable
 
-reboot
+#reboot
+poweroff
 
 
 clearpart --all --initlabel
