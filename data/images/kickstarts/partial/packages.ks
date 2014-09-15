@@ -17,6 +17,7 @@
 #anaconda-core
 #anaconda-tui
 #cockpit
+lvm2
 
 vim-minimal
 grub2-efi
