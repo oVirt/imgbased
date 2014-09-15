@@ -36,8 +36,30 @@ initrd.img:
 squashfs.img:
 	$(CURL) $(FEDORA_ANACONDA_URL)/LiveOS/squashfs.img
 
+define TREEINFO
+[general]
+name = Fedora-$(FEDORA_RELEASEVER)
+family = Fedora
+variant = Fedora
+version = $(FEDORA_RELEASEVER)
+packagedir =
+arch = x86_64
+
+[stage2]
+mainimage = squashfs.img
+
+[images-x86_64]
+kernel = vmlinuz
+initrd = initrd.img
+endef
+
+.PHONY: .treeinfo
+export TREEINFO
+.treeinfo:
+	echo -e "$$TREEINFO" > $@
+
 run-install: PYPORT:=$(shell echo $$(( 50000 + $$RANDOM % 15000 )) )
-run-install: vmlinuz initrd.img squashfs.img $(KICKSTART)
+run-install: vmlinuz initrd.img squashfs.img .treeinfo $(KICKSTART)
 	python -m SimpleHTTPServer $(PYPORT) & echo $$! > spawned_pids
 	qemu-img create -f qcow2 $(DISK_NAME) $(DISK_SIZE)
 	$(QEMU) \
@@ -47,5 +69,5 @@ run-install: vmlinuz initrd.img squashfs.img $(KICKSTART)
 		-hda $(DISK_NAME) \
 		-kernel vmlinuz \
 		-initrd initrd.img \
-		-append "console=ttyS0 inst.repo=$(FEDORA_URL) inst.ks=http://10.0.2.2:$(PYPORT)/$(KICKSTART) root=live:http://10.0.2.2:$(PYPORT)/squashfs.img quiet $(QEMU_APPEND)" ; \
+		-append "console=ttyS0 inst.repo=$(FEDORA_URL) inst.ks=http://10.0.2.2:$(PYPORT)/$(KICKSTART) inst.stage2=http://10.0.2.2:$(PYPORT)/ quiet $(QEMU_APPEND)" ; \
 	kill $$(cat spawned_pids)
