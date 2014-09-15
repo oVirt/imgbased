@@ -18,7 +18,9 @@ QEMU_APPEND =
 CURL = curl -L -O
 
 FEDORA_RELEASEVER = 20
+FEDORA_ANACONDA_RELEASEVER = 21
 FEDORA_URL = http://download.fedoraproject.org/pub/fedora/linux/releases/$(FEDORA_RELEASEVER)/Fedora/x86_64/os/
+FEDORA_ANACONDA_URL = http://download.fedoraproject.org/pub/fedora/linux/development/$(FEDORA_ANACONDA_RELEASEVER)/x86_64/os/
 
 SHELL = /bin/bash
 
@@ -26,13 +28,13 @@ SHELL = /bin/bash
 .INTERMEDIATE: spawned_pids
 
 vmlinuz:
-	$(CURL) $(FEDORA_URL)/isolinux/vmlinuz
+	$(CURL) $(FEDORA_ANACONDA_URL)/isolinux/vmlinuz
 
 initrd.img:
-	$(CURL) $(FEDORA_URL)/isolinux/initrd.img
+	$(CURL) $(FEDORA_ANACONDA_URL)/isolinux/initrd.img
 
 squashfs.img:
-	$(CURL) $(FEDORA_URL)/LiveOS/squashfs.img
+	$(CURL) $(FEDORA_ANACONDA_URL)/LiveOS/squashfs.img
 
 run-install: PYPORT:=$(shell echo $$(( 50000 + $$RANDOM % 15000 )) )
 run-install: vmlinuz initrd.img squashfs.img $(KICKSTART)
