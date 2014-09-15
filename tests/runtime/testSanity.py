@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim: et ts=4 sw=4 sts=4
 
 import unittest
 import sh
@@ -11,7 +12,7 @@ sh.ErrorReturnCode.truncate_cap = 999999
 log = logging.info
 
 
-class TestSanity(unittest.TestCase):
+class TestImgbased(unittest.TestCase):
     def test_imgbase(self):
         from sh import imgbase, lvm
 
@@ -32,3 +33,19 @@ class TestSanity(unittest.TestCase):
 
         log(imgbase.layer("--add"))
         assert "Image-0.1" in imgbase.layout()
+
+
+class TestEnvironment(unittest.TestCase):
+    def test_selinux_denials(self):
+        """Looking for SELinux AVC denials
+        """
+        from sh import ausearch, grep, getenforce
+        assert getenforce().strip() == "Enforcing"
+        #assert not grep("denied", "/var/log/audit.log")
+
+    def test_relevant_packages(self):
+        """Looking for mandatory packages
+        """
+        from sh import which
+        for app in ["df", "du", "diff", "lvm"]:
+            assert which(app)
