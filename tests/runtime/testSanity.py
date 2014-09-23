@@ -39,9 +39,9 @@ class TestEnvironment(unittest.TestCase):
     def test_selinux_denials(self):
         """Looking for SELinux AVC denials
         """
-        from sh import ausearch, grep, getenforce
+        from sh import getenforce
         assert getenforce().strip() == "Enforcing"
-        #assert not grep("denied", "/var/log/audit.log")
+        # assert not grep("denied", "/var/log/audit.log")
 
     def test_relevant_packages(self):
         """Looking for mandatory packages
