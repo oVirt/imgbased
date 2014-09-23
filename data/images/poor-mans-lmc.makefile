@@ -17,14 +17,14 @@ QEMU = qemu-kvm
 QEMU_APPEND =
 CURL = curl -L -O
 
-FEDORA_RELEASEVER = 20
+FEDORA_RELEASE_URL = http://download.fedoraproject.org/pub/fedora/linux/releases/$(FEDORA_RELEASEVER)/Fedora/x86_64/os/
+FEDORA_DEVELOPMENT_URL = http://download.fedoraproject.org/pub/fedora/linux/development/$(FEDORA_ANACONDA_RELEASEVER)/x86_64/os/
+
+FEDORA_RELEASEVER = 21
 FEDORA_ANACONDA_RELEASEVER = 21
-FEDORA_URL = http://download.fedoraproject.org/pub/fedora/linux/releases/$(FEDORA_RELEASEVER)/Fedora/x86_64/os/
+FEDORA_URL = $(FEDORA_DEVELOPMENT_URL)
 FEDORA_ANACONDA_URL = $(FEDORA_URL)
 
-ifneq ($(FEDORA_RELEASEVER), $(FEDORA_ANACONDA_RELEASEVER))
-FEDORA_ANACONDA_URL = http://download.fedoraproject.org/pub/fedora/linux/development/$(FEDORA_ANACONDA_RELEASEVER)/x86_64/os/
-endif
 
 SHELL = /bin/bash
 
@@ -63,11 +63,12 @@ export TREEINFO
 	echo -e "$$TREEINFO" > $@
 
 run-install: PYPORT:=$(shell echo $$(( 50000 + $$RANDOM % 15000 )) )
+run-install: VNCPORT:=$(shell echo $$(( $$RANDOM % 1000 )) )
 run-install: vmlinuz initrd.img squashfs.img .treeinfo $(KICKSTART)
 	python -m SimpleHTTPServer $(PYPORT) & echo $$! > spawned_pids
 	qemu-img create -f qcow2 $(DISK_NAME) $(DISK_SIZE)
 	$(QEMU) \
-		-vnc 0.0.0.0:7 \
+		-vnc 0.0.0.0:$(VNCPORT) \
 		-serial stdio \
 		-smp $(VM_SMP) -m $(VM_RAM) \
 		-hda $(DISK_NAME) \
