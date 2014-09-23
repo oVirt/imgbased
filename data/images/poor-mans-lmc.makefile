@@ -15,16 +15,20 @@ VM_SMP = 4
 
 QEMU = qemu-kvm
 QEMU_APPEND =
-CURL = curl -L -O
+CURL = curl -L -O --fail
 
-FEDORA_RELEASE_URL = http://download.fedoraproject.org/pub/fedora/linux/releases/$(FEDORA_RELEASEVER)/Fedora/x86_64/os/
-FEDORA_DEVELOPMENT_URL = http://download.fedoraproject.org/pub/fedora/linux/development/$(FEDORA_ANACONDA_RELEASEVER)/x86_64/os/
+FEDORA_RELEASE_URL = http://download.fedoraproject.org/pub/fedora/linux/releases/REL/Fedora/x86_64/os/
+FEDORA_DEVELOPMENT_URL = http://download.fedoraproject.org/pub/fedora/linux/development/REL/x86_64/os/
 
-FEDORA_RELEASEVER = 21
-FEDORA_ANACONDA_RELEASEVER = 21
-FEDORA_URL = $(FEDORA_DEVELOPMENT_URL)
-FEDORA_ANACONDA_URL = $(FEDORA_URL)
+RELEASEVER = 21
+ANACONDA_RELEASEVER = $(RELEASEVER)
 
+F19 = $(subst REL,19,$(FEDORA_RELEASE_URL))
+F20 = $(subst REL,20,$(FEDORA_RELEASE_URL))
+F21 = $(subst REL,21,$(FEDORA_DEVELOPMENT_URL))
+
+FEDORA_URL = $(F$(RELEASEVER))
+FEDORA_ANACONDA_URL = $(F$(ANACONDA_RELEASEVER))
 
 SHELL = /bin/bash
 
@@ -42,10 +46,11 @@ squashfs.img:
 
 define TREEINFO
 [general]
-name = Fedora-$(FEDORA_RELEASEVER)
+name = Fedora-$(RELEASEVER)
 family = Fedora
 variant = Fedora
-version = $(FEDORA_RELEASEVER)
+version = $(RELEASEVER)
+# anaconda version: $(ANACONDA_RELEASEVER)
 packagedir =
 arch = x86_64
 

@@ -85,6 +85,9 @@ screen
 #
 %post --erroronfail
 
+echo "Unlocking root account"
+passwd --unlock --delete root
+
 # setup systemd to boot to the right runlevel
 echo "Setting default runlevel to multiuser text mode"
 rm -f /etc/systemd/system/default.target
@@ -109,18 +112,6 @@ echo .
 
 #echo "Enable cockpit"
 #systemctl enable cockpit.service || :
-
-echo "Build imgbased"
-pushd .
-yum install -y make git autoconf automake
-yum install -y asciidoc yum-plugin-remove-with-leaves
-cd /root
-git clone https://github.com/fabiand/imgbased.git
-cd imgbased
-./autogen.sh
-make install
-#yum remove -y --remove-leaves asciidoc
-popd
 
 echo "Install image-minimizer"
 curl -O https://git.fedorahosted.org/cgit/lorax.git/plain/src/bin/image-minimizer
