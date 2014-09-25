@@ -1,66 +1,82 @@
-#
-# This kickstart covers the installation of the rootfs.
-# This kickstart transfers the rootfs to the prepared disks.
-#
-# Basically this is the kickstart used by the installer.
-#
 
+
+##
+## Including ../partial/header.ks
+##
+
+#
+# Header
+#
+lang en_US.UTF-8
+keyboard us
+timezone --utc Etc/UTC
+auth --enableshadow --passalgo=sha512
+selinux --permissive
+network --bootproto=dhcp
+rootpw THISISJUSTADUMMY
+firstboot --disable
+
+#reboot
+poweroff
+
+
+##
+## Including ../partial/storage.ks
+##
 clearpart --all --initlabel
-bootloader --append="console=ttyS0" --timeout=1
+bootloader --append="console=ttyS0 quiet" --timeout=1
 
 part biosboot --size=1
 part /boot --size=512 --fstype ext4 --label=Boot --asprimary
 
-part pv.01 --size 4096
+part pv.01 --size 5000
 volgroup HostVG pv.01
 logvol /config --vgname=HostVG --size=64 --name=Config --fstype=ext4
-logvol / --vgname=HostVG --size=2048 --name=Image-0.0 --fstype=ext4 --fsoptions=discard
-#logvol swap --vgname=HostVG --fstype=swap
-
-# Point to rootfs (also used for LiveCD to deploy)
-liveimg --url=http://10.0.0.2/runtime-layout.img
-
+logvol none --vgname=HostVG --size=4000 --name=ImagePool --thinpool --chunksize=128 --metadatasize=4
+logvol / --vgname=HostVG --size=3000 --name=Image-0.0 --thin --poolname=ImagePool --fstype=ext4 --fsoptions=discard
+logvol swap --vgname=HostVG --fstype=swap
 
 ##
-## Including ../partial/imgbased.ks
+## Including ../partial/firstboot.ks
+##
+
+
+firstboot --reconfig
+
+%packages
+initial-setup
+%end
+
+##
+## Including ../partial/post-testing.ks
 ##
 
 #
-# Install imgbased
+# Build most recent imagbased for testing
 #
 %post --erroronfail
 echo "Build imgbased"
-pushd .
-yum install -y make git autoconf automake
-yum install -y asciidoc yum-plugin-remove-with-leaves
+yum remove -y imgbased
 cd /root
 git clone https://github.com/fabiand/imgbased.git
 cd imgbased
 ./autogen.sh
+./configure
 make install
-#yum remove -y --remove-leaves asciidoc
-popd
-
-echo "Enable FDO Bootloader Spec (needed by imgbased)"
-echo "echo '# Import BLS entries'" > /etc/grub.d/42_bls
-echo "echo bls_import" >> /etc/grub.d/42_bls
-chmod a+x /etc/grub.d/42_bls
-
-# Update grub2 cfg
-grub2-mkconfig -o /boot/grub2/grub.cfg
-#grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
-
-
 %end
 
-%post --erroronfail
-echo "FIXME Creating writeable overlay"
-# imgbased
+#
+# Now custom parts
+#
+
+# Install from an image/tarball
+liveimg --url=@ROOTFS_URL@
+
+# Create a layer after installation
+%post
+imgbase layer --add
 %end
 
-
-%post --erroronfail
-yum install -y anaconda
-systemctl enable anaconda.service anaconda-tmux@.service anaconda-direct.service anaconda-shell@.service
-%end
+# Reboto after installation
+reboot
 

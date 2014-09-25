@@ -58,6 +58,7 @@ build: data/images/$(TESTIMAGE)
 data/images/%.qcow2:
 	cd data/images && make run-install DISK_NAME=$(TESTIMAGE) KICKSTART=kickstarts/$(IMAGE).ks
 
+
 #
 # Run simple and advanced test
 #

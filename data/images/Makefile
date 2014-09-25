@@ -1,4 +1,6 @@
 
+PARTIAL_KS=$(wildcard kickstarts/partial/*.ks)
+
 all: run-install
 	echo Done
 
@@ -9,6 +11,7 @@ grow:
 	qemu-img resize "$@" $(VM_GROWSIZE)
 
 kickstarts/%.ks: kickstarts/template/%.ks $(PARTIAL_KS)
+	echo partials: $(PARTIAL_KS)
 	mkdir -p $$(dirname "$@")
 	kickstarts/flatten.py "$<" > "$@"
 
