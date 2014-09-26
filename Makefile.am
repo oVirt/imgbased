@@ -31,16 +31,10 @@ EXTRA_DIST = \
   tests/package/common.sh \
   tests/runtime/*.py
 
-DERIVED_KS = data/images/kickstarts/*.ks
-
-PARTIAL_KS = data/images/kickstarts/partial/*.ks
-
-doc_DATA = \
-  $(DERIVED_KS)
+PARTIAL_KS = $(wildcard data/images/kickstarts/*/*.ks)
 
 dist_doc_DATA = \
   data/images/kickstarts/flatten.py \
-  $(DERIVED_KS) \
   $(PARTIAL_KS) \
   docs/imgbase.asc \
   docs/imgbase.8.asc
