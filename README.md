@@ -49,7 +49,7 @@ the correct LVm layout to get started with this tool.
     make dist
 
     # Kickoff the image creation
-    make build
+    make image-build
 
     # Do some automatic sanity testing on the image:
     make check

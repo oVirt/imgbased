@@ -46,7 +46,7 @@ doc: $(doc_DATA) $(dist_doc_DATA) $(man8-MANS)
 #
 # Build the test image
 #
-build: data/images/$(TESTIMAGE)
+image-build: data/images/$(TESTIMAGE)
 	mv data/images/$(TESTIMAGE) $(srcdir)
 
 data/images/%.qcow2:
@@ -62,7 +62,7 @@ rootfs.qcow2:
 rootfs.tar.xz: rootfs.qcow2
 	guestfish -i -a $< tar-out / $@ compress:xz
 
-install: rootfs.tar.xz
+image-install: rootfs.tar.xz
 	python -m SimpleHTTPServer &
 	sed -i "s#@ROOTFS_URL@#http://10.0.2.2:8000/rootfs.tar.xz#" data/images/kickstarts/installation.ks
 	qemu-img create -f qcow2 tgt.qcow2 20G
