@@ -2,7 +2,7 @@
 %include ../partial/header.ks
 %include ../partial/storage.ks
 %include ../partial/firstboot.ks
-%include ../partial/post-testing.ks
+%include ../partial/testing.ks
 
 #
 # Now custom parts

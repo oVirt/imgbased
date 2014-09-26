@@ -1,4 +1,6 @@
 
+poweroff
+
 %include ../partial/header.ks
 
 %include ../partial/storage.ks
@@ -12,5 +14,5 @@ sed -i "/ExecStart/ s/$/ --autologin root/" /lib/systemd/system/*getty*.service
 %include ../partial/packages.ks
 %include ../partial/packages-testing.ks
 %include ../partial/post.ks
-%include ../partial/post-testing.ks
+%include ../partial/testing.ks
 %include ../partial/minimization.ks

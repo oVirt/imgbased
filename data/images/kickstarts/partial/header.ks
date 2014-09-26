@@ -9,8 +9,8 @@ auth --enableshadow --passalgo=sha512
 selinux --permissive
 network --bootproto=dhcp
 rootpw THISISJUSTADUMMY
-firstboot --disable
 
+# Left to the template:
 #reboot
-poweroff
+#poweroff
 
