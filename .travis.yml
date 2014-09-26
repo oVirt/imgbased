@@ -14,8 +14,8 @@ install:
 script:
  - "./autogen.sh"
  - "./configure"
- - "make check"
  - "make dist"
+ - "make check -j5"
 
 notifications:
   irc: "chat.freenode.net#ovirt-node"
