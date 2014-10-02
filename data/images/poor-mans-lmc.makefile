@@ -5,6 +5,7 @@
 # $ make run-install
 #
 # https://git.fedorahosted.org/cgit/anaconda.git/tree/docs/boot-options.txt
+SHELL = /bin/bash
 
 KICKSTART = kickstarts/runtime-layout.ks
 
@@ -18,59 +19,33 @@ QEMU = qemu-kvm
 QEMU_APPEND =
 CURL = curl -L -O --fail
 
-FEDORA_RELEASE_URL = http://download.fedoraproject.org/pub/fedora/linux/releases/REL/Fedora/x86_64/os/
-FEDORA_DEVELOPMENT_URL = http://download.fedoraproject.org/pub/fedora/linux/development/REL/x86_64/os/
-
-RELEASEVER = 21
-ANACONDA_RELEASEVER = $(RELEASEVER)
-
-F19 = $(subst REL,19,$(FEDORA_RELEASE_URL))
-F20 = $(subst REL,20,$(FEDORA_RELEASE_URL))
-F21 = $(subst REL,21,$(FEDORA_DEVELOPMENT_URL))
-
-FEDORA_URL = $(F$(RELEASEVER))
-FEDORA_ANACONDA_URL = $(F$(ANACONDA_RELEASEVER))
-
-SHELL = /bin/bash
+FEDORA_URL=https://alt.fedoraproject.org/pub/alt/stage/current/Server/x86_64/os/
 
 
 .INTERMEDIATE: spawned_pids
 
 vmlinuz:
-	$(CURL) $(FEDORA_ANACONDA_URL)/isolinux/vmlinuz
+	$(CURL) $(FEDORA_URL)/isolinux/vmlinuz
 
 initrd.img:
-	$(CURL) $(FEDORA_ANACONDA_URL)/isolinux/initrd.img
+	$(CURL) $(FEDORA_URL)/isolinux/initrd.img
 
 squashfs.img:
-	$(CURL) $(FEDORA_ANACONDA_URL)/LiveOS/squashfs.img
-
-define TREEINFO
-[general]
-name = Fedora-$(RELEASEVER)
-family = Fedora
-variant = Fedora
-version = $(RELEASEVER)
-# anaconda version: $(ANACONDA_RELEASEVER)
-packagedir =
-arch = x86_64
-
-[stage2]
-mainimage = squashfs.img
-
-[images-x86_64]
-kernel = vmlinuz
-initrd = initrd.img
-endef
+	$(CURL) $(FEDORA_URL)/LiveOS/squashfs.img
 
 .PHONY: .treeinfo
-export TREEINFO
 .treeinfo:
-	echo -e "$$TREEINFO" > $@
+	$(CURL) $(FEDORA_URL)/$@ > $@
+	echo Adjusting squashfs image path, so anaconda finds it
+	# Anaconda uses the .treeinfo file to find stuff
+	sed -i \
+		"s/=.*squashfs\.img/= squashfs.img/" \
+		$@
+	cat $@
 
 run-install: PYPORT:=$(shell echo $$(( 50000 + $$RANDOM % 15000 )) )
 run-install: VNCPORT:=$(shell echo $$(( $$RANDOM % 1000 )) )
-run-install: vmlinuz initrd.img squashfs.img .treeinfo $(KICKSTART)
+run-install: .treeinfo vmlinuz initrd.img squashfs.img $(KICKSTART)
 	python -m SimpleHTTPServer $(PYPORT) & echo $$! > spawned_pids
 	qemu-img create -f qcow2 $(DISK_NAME) $(DISK_SIZE)
 	$(QEMU) \
