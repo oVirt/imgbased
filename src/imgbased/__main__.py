@@ -25,6 +25,19 @@ import argparse
 import sys
 from . import config
 from .imgbase import ImageLayers, ExternalBinary
+from .hooks import Hooks
+from . import plugins
+
+
+class Application(object):
+    def __init__(self):
+        self.imgbase = ImageLayers()
+
+        self.hooks = Hooks()
+        self.hooks.create("pre-arg-parse", ("parser", "subparser"))
+        self.hooks.create("pre-arg-parse", ("parser", "subparser"))
+
+    plugins.init(imgbase, hooks)
 
 
 def log():
@@ -37,6 +50,7 @@ if __name__ == '__main__':
                         version=config.version())
 
     subparsers = parser.add_subparsers(title="Sub-commands", dest="command")
+    hooks.emit("pre-arg-parse", parser, subparsers)
 
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--dry", action="store_true")
@@ -109,7 +123,6 @@ if __name__ == '__main__':
     #
     # Get started
     #
-    imgbase = ImageLayers()
     imgbase.vg = args.vg
     imgbase.thinpool = args.thinpool
     imgbase.layerformat = args.layerformat

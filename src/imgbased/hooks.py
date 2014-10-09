@@ -67,7 +67,7 @@ class Hooks(object):
     hooks = None
     _argspecs = None
 
-    def __init__(self, p):
+    def __init__(self, p=None):
         self.p = p
         self.hooks = {}
         self._argspecs = {}
