@@ -9,10 +9,12 @@ def init(imgbase, hooks):
 
 
 def add_argparse(parser, subparsers):
-    s = subparsers.add_parser("update",
-                              help="Update from upstream Jenkins")
+    s = subparsers.add_parser("remote",
+                              help="Fetch images from remote sources")
     s.add_argument("--nightly", action="store_true", help="Nightly image")
     s.add_argument("--stable", action="store_true", help="Stable image")
+
+    # FIXME pull from jenkins based on config file
 
 
 def check_argparse(args):
