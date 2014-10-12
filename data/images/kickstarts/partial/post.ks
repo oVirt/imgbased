@@ -40,6 +40,13 @@ echo "Enable FDO Bootloader Spec"
 echo "echo '# Import BLS entries'" > /etc/grub.d/42_bls
 echo "echo bls_import" >> /etc/grub.d/42_bls
 chmod a+x /etc/grub.d/42_bls
+
+echo "Enable Syslinux configuration"
+echo "echo '# Import syslinux entries'" > /etc/grub.d/42_syslinux
+echo "echo syslinux_configfile syslinux.cfg" >> /etc/grub.d/42_syslinux
+chmod a+x /etc/grub.d/42_syslinux
+
+
 # Update grub2 cfg
 grub2-mkconfig -o /boot/grub2/grub.cfg
 #grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg

@@ -21,13 +21,32 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 import logging
-log = logging.getLogger("imgbase")
 import argparse
 import sys
 from . import config
 from .imgbase import ImageLayers, ExternalBinary
+from .hooks import Hooks
+from . import plugins
+from .utils import log
+
+
+class Application(object):
+    imgbase = None
+    hooks = None
+
+    def __init__(self):
+        self.imgbase = ImageLayers()
+
+        self.hooks = Hooks(context=self)
+        self.hooks.create("pre-arg-parse", ("parser", "subparser"))
+        self.hooks.create("post-arg-parse", ("parser_args",))
+
+        plugins.init(self)
+
 
 if __name__ == '__main__':
+    app = Application()
+
     parser = argparse.ArgumentParser(description="imgbase")
     parser.add_argument("--version", action="version",
                         version=config.version())
@@ -83,22 +102,25 @@ if __name__ == '__main__':
     layer_parser.add_argument("--latest", action="store_true",
                               help="Get the latest layer")
 
+    app.hooks.emit("pre-arg-parse", parser, subparsers)
+
     args = parser.parse_args()
 
     lvl = logging.DEBUG if args.debug else logging.INFO
+    print logging.getLogger().handlers
     logging.basicConfig(level=lvl)
+    print logging.getLogger().handlers
 
-    log.debug("Arguments: %s" % args)
+    log().debug("Arguments: %s" % args)
 
     #
     # Get started
     #
-    imgbase = ImageLayers()
-    imgbase.vg = args.vg
-    imgbase.thinpool = args.thinpool
-    imgbase.layerformat = args.layerformat
-    imgbase.debug = args.debug
-    imgbase.dry = args.dry
+    app.imgbase.vg = args.vg
+    app.imgbase.thinpool = args.thinpool
+    app.imgbase.layerformat = args.layerformat
+    app.imgbase.debug = args.debug
+    app.imgbase.dry = args.dry
 
     ExternalBinary.dry = args.dry
 
@@ -106,24 +128,29 @@ if __name__ == '__main__':
         if args.init:
             if not args.size or not args.pv:
                 raise RuntimeError("--size and PVs required")
-            imgbase.init_layout(args.pv, args.size, args.without_vg)
+            app.imgbase.init_layout(args.pv, args.size, args.without_vg)
         elif args.free_space:
-            print(imgbase.free_space(args.units))
+            print(app.imgbase.free_space(args.units))
         else:
-            print(imgbase.layout())
+            print(app.imgbase.layout())
 
     elif args.command == "layer":
         if args.add:
-            imgbase.add_bootable_layer()
+            app.imgbase.add_bootable_layer()
         elif args.latest:
-            print (imgbase.latest_layer())
+            print (app.imgbase.latest_layer())
 
     elif args.command == "base":
         if args.add:
             if not args.size or not args.image:
                 raise RuntimeError("--size and image required")
-            imgbase.add_base(args.image, args.size)
+            app.imgbase.add_base(args.image, args.size)
         elif args.latest:
-            print (imgbase.latest_base())
+            print (app.imgbase.latest_base())
         elif args.of_layer:
-            print (str(imgbase.base_of_layer(args.of_layer)))
+            print (str(app.imgbase.base_of_layer(args.of_layer)))
+
+    #
+    # Now let the plugins check if they need to run something
+    #
+    app.hooks.emit("post-arg-parse", args)

@@ -26,3 +26,9 @@ data/kickstarts/*.ks
 *.qcow2
 *.xml
 */config.py
+spawned_pids
+.treeinfo
+vmlinuz
+initrd.img
+squashfs.img
+config.py

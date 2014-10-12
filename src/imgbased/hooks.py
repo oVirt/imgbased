@@ -20,15 +20,15 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import logging
-log = logging.getLogger("imgbase")
-import os
+from .utils import log
 
 
 class Hooks(object):
     """A quite simple hook mechanism, with some enforcement
 
-     >>> hooks = Hooks(None)
+    Hoos are created with a context to pass around informations:
+
+     >>> hooks = Hooks(context='the-ctx')
 
      Before hooks can be used, they need to be created.
      Just trying to connect to or emit then, results in an exception:
@@ -48,14 +48,14 @@ class Hooks(object):
 
      Once created, you can attach a callback to a hook:
 
-     >>> def concat_and_print(a, b):
-     ...     print(a, b)
+     >>> def concat_and_print(ctx, a, b):
+     ...     print(ctx, a, b)
 
      >>> hooks.connect("on-foo", concat_and_print)
 
      And can also emit them:
      >>> hooks.emit("on-foo", "today", "here")
-     ('today', 'here')
+     ('the-ctx', 'today', 'here')
 
     """
 
@@ -64,15 +64,10 @@ class Hooks(object):
     hooks = None
     _argspecs = None
 
-    def __init__(self, p):
-        self.p = p
+    def __init__(self, context=None):
+        self.context = context
         self.hooks = {}
         self._argspecs = {}
-
-        # A default wildcard hook is to also trigger
-        # filesystem based hooks
-        if p:
-            self.hooks[None] = [self._trigger_fs]
 
     def create(self, name, argspec=None):
         """Create a hook
@@ -80,6 +75,7 @@ class Hooks(object):
         Arguments:
           name: Name of the hook to create
         """
+        assert name not in self.hooks, "Hook already exists: %s" % name
         self.hooks[name] = []
         self._argspecs[name] = argspec
 
@@ -93,7 +89,7 @@ class Hooks(object):
         argspec = self._argspecs.get(name, None)
 
         assert name in self.hooks, "Unknown hook: %s" % name
-        assert cb.func_code.co_argcount == len(argspec), \
+        assert (cb.func_code.co_argcount - 1) == len(argspec), \
             "Args for '%s' do not match signature: %s" % (name, argspec)
         self.hooks[name].append(cb)
 
@@ -109,15 +105,5 @@ class Hooks(object):
         assert len(args) == len(argspec), "Number of arguments does not match"
 
         for cb in self.hooks.get(None, list()) + self.hooks.get(name, set()):
-            log.debug("Triggering: %s (%s)" % (cb, args))
-            cb(*args)
-
-    def _trigger_fs(self, name, *args):
-        """Trigger internal/pythonic hooks
-        """
-        if not os.path.exists(self.hooksdir):
-            return
-        for handler in os.listdir(self.hooksdir):
-            script = os.path.join(self.hooksdir, handler)
-            log.debug("Triggering: %s (%s %s)" % (script, name, args))
-            self.p.run.call([script, name] + list(args))
+            log().debug("Triggering: %s (%s, %s)" % (cb, self.context, args))
+            cb(self.context, *args)

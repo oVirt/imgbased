@@ -20,150 +20,13 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import logging
-log = logging.getLogger("imgbase")
-import os
-import glob
 import subprocess
+import os
 import re
 from .hooks import Hooks
-
-
-def call(*args, **kwargs):
-    kwargs["close_fds"] = True
-#    log.debug("Calling: %s %s" % (args, kwargs))
-    return subprocess.check_output(*args, **kwargs).strip()
-
-
-def uuid():
-    with open("/proc/sys/kernel/random/uuid") as src:
-        return src.read().replace("-", "").strip()
-
-
-def format_to_pattern(fmt):
-    """Take a format string and make a pattern from it
-    https://docs.python.org/2/library/re.html#simulating-scanf
-
-    >>> fmt = "Bar-%d"
-    >>> pat = format_to_pattern(fmt)
-    >>> pat
-    'Bar-([-+]?\\\\d+)'
-
-    >>> re.search(pat, "Bar-01").groups()
-    ('01',)
-    """
-    pat = fmt
-    pat = pat.replace("%d", r"([-+]?\d+)")
-    pat = pat.replace("%s", r"(\S+)")
-    return pat
-
-
-class Mounted(object):
-    source = None
-    options = None
-    _target = None
-
-    run = None
-    tmpdir = None
-
-    @property
-    def target(self):
-        return self._target or self.tmpdir
-
-    def __init__(self, source, options=None, target=None):
-        self.run = ExternalBinary()
-        self.source = source
-        self.options = options
-        self._target = target
-
-    def __enter__(self):
-        options = "-o%s" % self.options if self.options else None
-        self.tmpdir = self._target or \
-            self.run.call(["mktemp", "-d", "--tmpdir", "mnt.XXXXX"])
-
-        if not os.path.exists(self.tmpdir):
-            self.run.call(["mkdir", "-p", self.tmpdir])
-
-        cmd = ["mount"]
-        if options:
-            cmd.append(options)
-        cmd += [self.source, self.tmpdir]
-        self.run.call(cmd)
-
-        return self
-
-    def __exit__(self, exc_type, exc_value, tb):
-        self.run.call(["umount", self.source])
-        if not self._target:
-            self.run.call(["rmdir", self.tmpdir])
-
-
-class ExternalBinary(object):
-    dry = False
-
-    def call(self, *args, **kwargs):
-        log.debug("Calling: %s %s" % (args, kwargs))
-        stdout = ""
-        if not self.dry:
-            stdout = call(*args, **kwargs)
-            log.debug("Returned: %s" % stdout)
-        return stdout.strip()
-
-    def lvs(self, args, **kwargs):
-        return self.call(["lvs"] + args, **kwargs)
-
-    def lvcreate(self, args, **kwargs):
-        return self.call(["lvcreate"] + args, **kwargs)
-
-    def vgcreate(self, args, **kwargs):
-        return self.call(["vgcreate"] + args, **kwargs)
-
-    def lvchange(self, args, **kwargs):
-        return self.call(["lvchange"] + args, **kwargs)
-
-    def find(self, args, **kwargs):
-        return self.call(["find"] + args, **kwargs)
-
-    def diff(self, args, **kwargs):
-        return self.call(["diff"] + args, **kwargs)
-
-
-class Bootloader(object):
-    """Fixme can probably use new-kernel-pkg
-    """
-    p = None
-    bls_dir = "/boot/loader/entries"
-
-    def __init__(self, p):
-        self.p = p
-
-    def add_boot_entry(self, name, rootlv):
-        eid = uuid()
-        edir = self.bls_dir
-
-        if not os.path.isdir(edir):
-            os.makedirs(edir)
-
-        efile = os.path.join(edir, "%s.conf" % eid)
-
-        def grep_boot(pat):
-            # sorted: Just the last/highest entry
-            highest = sorted(glob.glob("/boot/%s" % pat))[-1]
-            # Just the filename
-            return os.path.basename(highest)
-
-        linux = grep_boot("vmlinuz-*.x86_64")
-        initramfs = grep_boot("initramfs-*.x86_64.img")
-
-        entry = ["title %s" % name,
-                 "linux /%s" % linux,
-                 "initrd /%s" % initramfs,
-                 "options rd.lvm.lv=%s root=%s console=ttyS0" % (name, rootlv)]
-
-        log.debug("Entry: %s" % entry)
-        if not self.p.dry:
-            with open(efile, "w+") as dst:
-                dst.write("\n".join(entry))
+from . import bootloader
+from .utils import memoize, ExternalBinary, format_to_pattern, \
+    mounted, log
 
 
 class ImageLayers(object):
@@ -178,6 +41,8 @@ class ImageLayers(object):
 
     run = None
 
+    bootloader = None
+
     class Image(object):
         p = None
         version = None
@@ -189,6 +54,7 @@ class ImageLayers(object):
             return str(self)
 
         @property
+        @memoize
         def path(self):
             return self.p.run.lvs(["--noheadings", "-olv_path",
                                    "%s/%s" % (self.p.vg, self.name)])
@@ -213,17 +79,36 @@ class ImageLayers(object):
 
     def __init__(self):
         self.hooks = Hooks(self)
+
+        # A default wildcard hook is to also trigger
+        # filesystem based hooks
+        def _trigger_fs(app, name, *args):
+            """Trigger internal/pythonic hooks
+            """
+            if not os.path.exists(self.hooksdir):
+                return
+            for handler in os.listdir(self.hooksdir):
+                script = os.path.join(self.hooksdir, handler)
+                log().debug("Triggering: %s (%s %s)" % (script, name, args))
+                self.context.run.call([script, name] + list(args))
+        self.hooks.create(None, _trigger_fs)
+
+        #
+        # Add availabel hooks
+        #
         self.hooks.create("new-layer-added",
                           ("old-target", "new-lv", "new-target"))
         self.hooks.create("new-base-added",
                           ("new-lv",))
+
         self.run = ExternalBinary()
+        self.bootloader = bootloader.BlsBootloader(self)
 
     def _lvs(self):
-        log.debug("Querying for LVs")
+        log().debug("Querying for LVs")
         cmd = ["--noheadings", "-o", "lv_name"]
         lvs = [n.strip() for n in self.run.lvs(cmd).split("\n")]
-        log.debug("Found lvs: %s" % lvs)
+        log().debug("Found lvs: %s" % lvs)
         return sorted(lvs)
 
     def _lvs_tree(self, lvs=None):
@@ -267,9 +152,13 @@ class ImageLayers(object):
 
         return lst
 
-    def _parse_scheme(self, name):
+    def image_from_name(self, name):
         laypat = format_to_pattern(self.layerformat)
-        version, release = re.search(laypat, name).groups()
+        log().info("Fetching %s from %s" % (laypat, name))
+        match = re.search(laypat, name)
+        if not match:
+            raise RuntimeError("Failed to parse image name: %s" % name)
+        version, release = match.groups()
         return ImageLayers.Image(self, int(version), int(release))
 
     def layout(self, lvs=None):
@@ -310,8 +199,7 @@ class ImageLayers(object):
 
         >>> layers = ImageLayers()
 
-        >>> lvs = []
-        >>> layers._last_base(lvs)
+        >>> layers._last_base([])
         Traceback (most recent call last):
         ...
         RuntimeError: No bases found: []
@@ -327,8 +215,7 @@ class ImageLayers(object):
 
         >>> layers = ImageLayers()
 
-        >>> lvs = []
-        >>> layers._next_base(lvs=lvs)
+        >>> layers._next_base(lvs=[])
         <Image-0.0 />
 
         >>> lvs = ["Image-0.0"]
@@ -395,7 +282,7 @@ class ImageLayers(object):
     def _add_layer(self, previous_layer, new_layer):
         """Add a new thin LV
         """
-        log.info("Adding a new layer")
+        log().info("Adding a new layer")
         self.run.lvcreate(["--snapshot", "--name", new_layer,
                            previous_layer])
         self.run.lvchange(["--activate", "y",
@@ -408,12 +295,12 @@ class ImageLayers(object):
 
         http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec/
         """
-        log.info("Adding a boot entry for the new layer")
+        log().info("Adding a boot entry for the new layer")
 
-        Bootloader(self).add_boot_entry(name, rootlv)
+        self.bootloader.add_boot_entry(name, rootlv)
 
-        with Mounted(rootlv) as mount:
-            log.info("Updating fstab of new layer")
+        with mounted(rootlv) as mount:
+            log().info("Updating fstab of new layer")
             self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
                            rootlv, "%s/etc/fstab" % mount.target])
             self.hooks.emit("new-layer-added", "/", rootlv, mount.target)
@@ -440,16 +327,17 @@ class ImageLayers(object):
     def add_bootable_layer(self):
         """Add a new layer which can be booted from the boot menu
         """
-        log.info("Adding a new layer which can be booted from the bootloader")
+        log().info("Adding a new layer which can be booted from"
+                   " the bootloader")
         try:
             last_layer = self._last_layer()
-            log.debug("Last layer: %s" % last_layer)
+            log().debug("Last layer: %s" % last_layer)
         except IndexError:
             last_layer = self._last_base()
-            log.debug("Last layer is a base: %s" % last_layer)
+            log().debug("Last layer is a base: %s" % last_layer)
         new_layer = self._next_layer()
 
-        log.debug("New layer: %s" % last_layer)
+        log().debug("New layer: %s" % last_layer)
 
         self._add_layer("%s/%s" % (self.vg, last_layer.name),
                         "%s/%s" % (self.vg, new_layer.name))
@@ -466,20 +354,20 @@ class ImageLayers(object):
         kwargs = {}
 
         if type(infile) is file:
-            log.debug("Reading base from stdin")
+            log().debug("Reading base from stdin")
             kwargs["stdin"] = infile
         elif type(infile) in [str, unicode]:
-            log.debug("Reading base from file: %s" % infile)
+            log().debug("Reading base from file: %s" % infile)
             cmd.append("if=%s" % infile)
         else:
             raise RuntimeError("Unknown infile: %s" % infile)
 
         new_base_lv = self._next_base(version=version, lvs=lvs)
-        log.debug("New base will be: %s" % new_base_lv)
+        log().debug("New base will be: %s" % new_base_lv)
         self._create_thinvol(new_base_lv.name, size)
 
         cmd.append("of=%s" % new_base_lv.path)
-        log.debug("Running: %s %s" % (cmd, kwargs))
+        log().debug("Running: %s %s" % (cmd, kwargs))
         if not self.dry:
             subprocess.check_call(cmd, **kwargs)
 
@@ -491,13 +379,13 @@ class ImageLayers(object):
     def free_space(self, units="m"):
         """Free space in the thinpool for bases and layers
         """
-        log.debug("Calculating free space in thinpool %s" % self.thinpool)
+        log().debug("Calculating free space in thinpool %s" % self.thinpool)
         args = ["--noheadings", "--nosuffix", "--units", units,
                 "--options", "data_percent,lv_size",
                 "%s/%s" % (self.vg, self.thinpool)]
         stdout = self.run.lvs(args).replace(",", ".").strip()
         used_percent, size = re.split("\s+", stdout)
-        log.debug("Used: %s%% from %s" % (used_percent, size))
+        log().debug("Used: %s%% from %s" % (used_percent, size))
         free = float(size)
         free -= float(size) * float(used_percent) / 100.00
         return free
@@ -516,24 +404,16 @@ class ImageLayers(object):
 
         while base is None and layer is not None:
             layer = get_origin(layer)
-            if self._parse_scheme(layer).is_base():
+            if self.image_from_name(layer).is_base():
                 base = layer
 
         if not base:
             raise RuntimeError("No base found for: %s" % layer)
         return base
 
-    def diff(self, left, right, mode="tree"):
-        """
-
-        Args:
-            left: Base or layer
-            right: Base or layer
-            mode: tree, content, unified
-        """
-        raise NotImplemented()
-
     def verify(self, base):
         """Verify that a base has not been changed
         """
         raise NotImplemented()
+
+# vim: sw=4 et sts=4
