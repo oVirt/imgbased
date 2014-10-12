@@ -16,6 +16,9 @@ class TestImgbased(unittest.TestCase):
     def test_imgbase(self):
         from sh import imgbase, lvm, touch
 
+        # All subsequent imgbase calls include the debug arg
+        imgbase = imgbase.bake("--debug")
+
         log("Using %s" % imgbase)
         log(imgbase("--version"))
 
@@ -25,9 +28,6 @@ class TestImgbased(unittest.TestCase):
         log(lvm.lvs())
 
         assert "HostVG" in lvm.vgs()
-
-        # All subsequent imgbase calls include the debug arg
-        imgbase = imgbase.bake("--debug")
 
         assert "Image-0.0" in imgbase.layout()
 

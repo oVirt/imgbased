@@ -3,28 +3,26 @@ import subprocess
 
 from ..utils import log
 
-imgbase = None
+
+def init(app):
+    app.hooks.connect("pre-arg-parse", add_argparse)
+    app.hooks.connect("post-arg-parse", check_argparse)
 
 
-def init(imgbase, hooks):
-    imgbase = imgbase
-    hooks.connect("pre-arg-parse", add_argparse)
-    hooks.connect("post-arg-parse", check_argparse)
-
-
-def add_argparse(parser, subparsers):
+def add_argparse(app, parser, subparsers):
     s = subparsers.add_parser("nspawn",
                               help="Boot into an image")
     s.add_argument("IMAGE", help="Image to use")
 
 
-def check_argparse(args):
+def check_argparse(app, args):
+    log().debug("Operating on: %s" % app.imgbase)
     if args.command == "nspawn":
         if args.image:
-            nspawn(args.image)
+            nspawn(app.imgbase, args.image)
 
 
-def nspawn(layer, cmd=""):
+def nspawn(imgbase, layer, cmd=""):
     """Spawn a container off the root of layer layer
     """
     log().info("Adding a boot entry for the new layer")

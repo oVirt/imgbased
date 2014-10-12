@@ -4,29 +4,27 @@ import sys
 
 from ..utils import mounted, log
 
-imgbase = None
+
+def init(app):
+    app.hooks.connect("pre-arg-parse", add_argparse)
+    app.hooks.connect("post-arg-parse", check_argparse)
 
 
-def init(imgbase, hooks):
-    imgbase = imgbase
-    hooks.connect("pre-arg-parse", add_argparse)
-    hooks.connect("post-arg-parse", check_argparse)
-
-
-def add_argparse(parser, subparsers):
+def add_argparse(app, parser, subparsers):
     s = subparsers.add_parser("diff",
                               help="Compare layers and bases")
     s.add_argument("image", nargs=2,
                    help="Base/Layer to compare")
 
 
-def check_argparse(args):
+def check_argparse(app, args):
+    log().debug("Operating on: %s" % app.imgbase)
     if args.command == "diff":
         if len(args.image) == 2:
-            sys.stdout.writelines(imgbase.diff(*args.image))
+            sys.stdout.writelines(diff(app.imgbase, *args.image))
 
 
-def diff(left, right, mode="tree"):
+def diff(imgbase, left, right, mode="tree"):
     """
 
     Args:

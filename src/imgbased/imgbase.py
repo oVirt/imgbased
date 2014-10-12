@@ -20,17 +20,13 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import logging
 import subprocess
+import os
 import re
 from .hooks import Hooks
 from . import bootloader
 from .utils import memoize, ExternalBinary, format_to_pattern, \
-    mounted
-
-
-def log():
-    return logging.getLogger()
+    mounted, log
 
 
 class ImageLayers(object):
@@ -83,10 +79,28 @@ class ImageLayers(object):
 
     def __init__(self):
         self.hooks = Hooks(self)
+
+        # A default wildcard hook is to also trigger
+        # filesystem based hooks
+        def _trigger_fs(app, name, *args):
+            """Trigger internal/pythonic hooks
+            """
+            if not os.path.exists(self.hooksdir):
+                return
+            for handler in os.listdir(self.hooksdir):
+                script = os.path.join(self.hooksdir, handler)
+                log().debug("Triggering: %s (%s %s)" % (script, name, args))
+                self.context.run.call([script, name] + list(args))
+        self.hooks.create(None, _trigger_fs)
+
+        #
+        # Add availabel hooks
+        #
         self.hooks.create("new-layer-added",
                           ("old-target", "new-lv", "new-target"))
         self.hooks.create("new-base-added",
                           ("new-lv",))
+
         self.run = ExternalBinary()
         self.bootloader = bootloader.BlsBootloader(self)
 

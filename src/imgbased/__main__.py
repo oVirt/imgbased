@@ -27,6 +27,7 @@ from . import config
 from .imgbase import ImageLayers, ExternalBinary
 from .hooks import Hooks
 from . import plugins
+from .utils import log
 
 
 class Application(object):
@@ -36,15 +37,11 @@ class Application(object):
     def __init__(self):
         self.imgbase = ImageLayers()
 
-        self.hooks = Hooks()
+        self.hooks = Hooks(context=self)
         self.hooks.create("pre-arg-parse", ("parser", "subparser"))
         self.hooks.create("post-arg-parse", ("parser_args",))
 
-        plugins.init(self.imgbase, self.hooks)
-
-
-def log():
-    return logging.getLogger("imgbase")
+        plugins.init(self)
 
 
 if __name__ == '__main__':
