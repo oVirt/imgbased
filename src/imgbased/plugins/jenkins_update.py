@@ -1,9 +1,11 @@
 
 imgbase = None
 
+
 def init(imgbase, hooks):
     imgbase = imgbase
-    hooks.connect("on-arg-parse", add_argparse)
+    hooks.connect("pre-arg-parse", add_argparse)
+    hooks.connect("post-arg-parse", check_argparse)
 
 
 def add_argparse(parser, subparsers):
@@ -11,3 +13,7 @@ def add_argparse(parser, subparsers):
                               help="Update from upstream Jenkins")
     s.add_argument("--nightly", action="store_true", help="Nightly image")
     s.add_argument("--stable", action="store_true", help="Stable image")
+
+
+def check_argparse(args):
+    pass

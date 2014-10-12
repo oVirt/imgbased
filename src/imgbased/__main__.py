@@ -30,14 +30,17 @@ from . import plugins
 
 
 class Application(object):
+    imgbase = None
+    hooks = None
+
     def __init__(self):
         self.imgbase = ImageLayers()
 
         self.hooks = Hooks()
         self.hooks.create("pre-arg-parse", ("parser", "subparser"))
-        self.hooks.create("pre-arg-parse", ("parser", "subparser"))
+        self.hooks.create("post-arg-parse", ("parser_args",))
 
-    plugins.init(imgbase, hooks)
+        plugins.init(self.imgbase, self.hooks)
 
 
 def log():
@@ -45,12 +48,13 @@ def log():
 
 
 if __name__ == '__main__':
+    app = Application()
+
     parser = argparse.ArgumentParser(description="imgbase")
     parser.add_argument("--version", action="version",
                         version=config.version())
 
     subparsers = parser.add_subparsers(title="Sub-commands", dest="command")
-    hooks.emit("pre-arg-parse", parser, subparsers)
 
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--dry", action="store_true")
@@ -101,15 +105,7 @@ if __name__ == '__main__':
     layer_parser.add_argument("--latest", action="store_true",
                               help="Get the latest layer")
 
-    layer_parser = subparsers.add_parser("diff",
-                                         help="Compare layers and bases")
-    layer_parser.add_argument("image", nargs=2,
-                              help="Base/Layer to compare")
-
-    layer_parser = subparsers.add_parser("nspawn",
-                                         help="Start a container in a layer")
-    layer_parser.add_argument("image",
-                              help="Base/Layer to use")
+    app.hooks.emit("pre-arg-parse", parser, subparsers)
 
     args = parser.parse_args()
 
@@ -123,11 +119,11 @@ if __name__ == '__main__':
     #
     # Get started
     #
-    imgbase.vg = args.vg
-    imgbase.thinpool = args.thinpool
-    imgbase.layerformat = args.layerformat
-    imgbase.debug = args.debug
-    imgbase.dry = args.dry
+    app.imgbase.vg = args.vg
+    app.imgbase.thinpool = args.thinpool
+    app.imgbase.layerformat = args.layerformat
+    app.imgbase.debug = args.debug
+    app.imgbase.dry = args.dry
 
     ExternalBinary.dry = args.dry
 
@@ -135,32 +131,29 @@ if __name__ == '__main__':
         if args.init:
             if not args.size or not args.pv:
                 raise RuntimeError("--size and PVs required")
-            imgbase.init_layout(args.pv, args.size, args.without_vg)
+            app.imgbase.init_layout(args.pv, args.size, args.without_vg)
         elif args.free_space:
-            print(imgbase.free_space(args.units))
+            print(app.imgbase.free_space(args.units))
         else:
-            print(imgbase.layout())
+            print(app.imgbase.layout())
 
     elif args.command == "layer":
         if args.add:
-            imgbase.add_bootable_layer()
+            app.imgbase.add_bootable_layer()
         elif args.latest:
-            print (imgbase.latest_layer())
+            print (app.imgbase.latest_layer())
 
     elif args.command == "base":
         if args.add:
             if not args.size or not args.image:
                 raise RuntimeError("--size and image required")
-            imgbase.add_base(args.image, args.size)
+            app.imgbase.add_base(args.image, args.size)
         elif args.latest:
-            print (imgbase.latest_base())
+            print (app.imgbase.latest_base())
         elif args.of_layer:
-            print (str(imgbase.base_of_layer(args.of_layer)))
+            print (str(app.imgbase.base_of_layer(args.of_layer)))
 
-    elif args.command == "diff":
-        if len(args.image) == 2:
-            sys.stdout.writelines(imgbase.diff(*args.image))
-
-    elif args.command == "nspawn":
-        if args.image:
-            imgbase.nspawn(args.image)
+    #
+    # Now let the plugins check if they need to run something
+    #
+    app.hooks.emit("post-arg-parse", args)

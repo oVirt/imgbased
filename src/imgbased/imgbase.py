@@ -21,121 +21,16 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 import logging
-import os
 import subprocess
 import re
-import tempfile
-import functools
-import difflib
 from .hooks import Hooks
 from . import bootloader
+from .utils import memoize, ExternalBinary, format_to_pattern, \
+    mounted
 
 
 def log():
     return logging.getLogger()
-
-
-def memoize(obj):
-    cache = obj.cache = {}
-
-    @functools.wraps(obj)
-    def memoizer(*args, **kwargs):
-        key = str(args) + str(kwargs)
-        if key not in cache:
-            cache[key] = obj(*args, **kwargs)
-        return cache[key]
-    return memoizer
-
-
-def call(*args, **kwargs):
-    kwargs["close_fds"] = True
-    log().debug("Calling: %s %s" % (args, kwargs))
-    return subprocess.check_output(*args, **kwargs).strip()
-
-
-def format_to_pattern(fmt):
-    """Take a format string and make a pattern from it
-    https://docs.python.org/2/library/re.html#simulating-scanf
-
-    >>> fmt = "Bar-%d"
-    >>> pat = format_to_pattern(fmt)
-    >>> pat
-    'Bar-([-+]?\\\\d+)'
-
-    >>> re.search(pat, "Bar-01").groups()
-    ('01',)
-    """
-    pat = fmt
-    pat = pat.replace("%d", r"([-+]?\d+)")
-    pat = pat.replace("%s", r"(\S+)")
-    return pat
-
-
-class mounted(object):
-    source = None
-    options = None
-    _target = None
-
-    run = None
-    tmpdir = None
-
-    @property
-    def target(self):
-        return self._target or self.tmpdir
-
-    def __init__(self, source, options=None, target=None):
-        self.run = ExternalBinary()
-        self.source = source
-        self.options = options
-        self._target = target
-
-    def __enter__(self):
-        options = "-o%s" % self.options if self.options else None
-        self.tmpdir = self._target or \
-            self.run.call(["mktemp", "-d", "--tmpdir", "mnt.XXXXX"])
-
-        if not os.path.exists(self.tmpdir):
-            self.run.call(["mkdir", "-p", self.tmpdir])
-
-        cmd = ["mount"]
-        if options:
-            cmd.append(options)
-        cmd += [self.source, self.tmpdir]
-        self.run.call(cmd)
-
-        return self
-
-    def __exit__(self, exc_type, exc_value, tb):
-        self.run.call(["umount", self.source])
-        if not self._target:
-            self.run.call(["rmdir", self.tmpdir])
-
-
-class ExternalBinary(object):
-    dry = False
-
-    def call(self, *args, **kwargs):
-        log().debug("Calling: %s %s" % (args, kwargs))
-        stdout = ""
-        if not self.dry:
-            stdout = call(*args, **kwargs)
-            log().debug("Returned: %s" % stdout[0:1024])
-        return stdout.strip()
-
-    def lvs(self, args, **kwargs):
-        return self.call(["lvs"] + args, **kwargs)
-
-    def lvcreate(self, args, **kwargs):
-        return self.call(["lvcreate"] + args, **kwargs)
-
-    def vgcreate(self, args, **kwargs):
-        return self.call(["vgcreate"] + args, **kwargs)
-
-    def lvchange(self, args, **kwargs):
-        return self.call(["lvchange"] + args, **kwargs)
-
-    def find(self, args, **kwargs):
-        return self.call(["find"] + args, **kwargs)
 
 
 class ImageLayers(object):
@@ -290,8 +185,8 @@ class ImageLayers(object):
 
         >>> layers = ImageLayers()
 
-        >>> lvs = []
-        >>> layers._last_base(lvs)
+        >>> layers._last_base([])
+        Traceback (most recent call last):
         ...
         RuntimeError: No bases found: []
 
@@ -306,8 +201,7 @@ class ImageLayers(object):
 
         >>> layers = ImageLayers()
 
-        >>> lvs = []
-        >>> layers._next_base(lvs=lvs)
+        >>> layers._next_base(lvs=[])
         <Image-0.0 />
 
         >>> lvs = ["Image-0.0"]
@@ -503,43 +397,9 @@ class ImageLayers(object):
             raise RuntimeError("No base found for: %s" % layer)
         return base
 
-    def diff(self, left, right, mode="tree"):
-        """
-
-        Args:
-            left: Base or layer
-            right: Base or layer
-            mode: tree, content, unified
-        """
-        log().info("Diff '%s' between '%s' and '%s'" % (left, right, mode))
-
-        imgl = self.image_from_name(left)
-        imgr = self.image_from_name(right)
-
-        with mounted(imgl.path) as mountl, \
-                mounted(imgr.path) as mountr:
-            if mode == "tree":
-                l = self.run.find(["-ls"], cwd=mountl.target).splitlines(True)
-                r = self.run.find(["-ls"], cwd=mountr.target).splitlines(True)
-                udiff = difflib.unified_diff(r, l, fromfile=left, tofile=right, n=0)
-                return (l for l in udiff if not l.startswith("@"))
-            else:
-                raise RuntimeError("Unknown diff mode: %s" % mode)
-
     def verify(self, base):
         """Verify that a base has not been changed
         """
         raise NotImplemented()
 
-    def nspawn(self, layer, cmd=""):
-        """Spawn a container off the root of layer layer
-        """
-        log().info("Adding a boot entry for the new layer")
-
-        img = self.image_from_name(layer)
-        with mounted(img.path) as mount:
-            log().info("Changing root into layer %s" % img)
-            cmds = [cmd] if cmd else []
-            subprocess.call(["systemd-nspawn", "-D", mount.target,
-                             "-M", layer, "--read-only"] + cmds)
-# vim: sw=4 et
+# vim: sw=4 et sts=4
