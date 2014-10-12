@@ -52,6 +52,7 @@ run-install: PYPORT:=$(shell echo $$(( 50000 + $$RANDOM % 15000 )) )
 run-install: VNCPORT:=$(shell echo $$(( $$RANDOM % 1000 )) )
 run-install: .treeinfo vmlinuz initrd.img squashfs.img $(KICKSTART)
 	python -m SimpleHTTPServer $(PYPORT) & echo $$! > spawned_pids
+	sed -i -e "$(SED_KS)" $(KICKSTART)
 	qemu-img create -f qcow2 $(DISK_NAME) $(DISK_SIZE)
 	$(QEMU) \
 		-vnc 0.0.0.0:$(VNCPORT) \

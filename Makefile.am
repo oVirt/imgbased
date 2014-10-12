@@ -56,22 +56,17 @@ data/images/%.qcow2:
 # Now some targets to test the installation part
 #
 rootfs.qcow2:
-	make build IMAGE=rootfs
+	make image-build IMAGE=rootfs
 
 rootfs.tar.xz: rootfs.qcow2
-	guestfish -i -a $< tar-out / $@ compress:xz
+	if [[ -f $< ]]; then echo "Tarball already exists" ; else guestfish -i -a $< tar-out / $@ compress:xz ; fi
+
 
 image-install: rootfs.tar.xz
-	python -m SimpleHTTPServer &
-	sed -i "s#@ROOTFS_URL@#http://10.0.2.2:8000/rootfs.tar.xz#" data/images/kickstarts/installation.ks
-	qemu-img create -f qcow2 tgt.qcow2 20G
-	qemu-kvm \
-		-serial stdio \
-		-smp 4 -m 2048 \
-		-hda tgt.qcow2 \
-		-kernel data/images/vmlinuz \
-		-initrd data/images/initrd.img \
-		-append "inst.ks=http://10.0.2.2:8000/data/images/kickstarts/installation.ks inst.stage2=http://10.0.2.2:8000/ quiet"
+	-rm -f data/images/kickstarts/installation.ks data/images/rootfs.tar.xz
+	-ln -s $$PWD/rootfs.tar.xz data/images/
+	make image-build IMAGE=installation SED_KS="s#@ROOTFS_URL@#http://10.0.2.2:\$$(PYPORT)/rootfs.tar.xz#"
+	mv data/images/installation.qcow2 .
 
 
 #
