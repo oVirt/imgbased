@@ -111,3 +111,6 @@ class ExternalBinary(object):
 
     def find(self, args, **kwargs):
         return self.call(["find"] + args, **kwargs)
+
+    def findmnt(self, args, **kwargs):
+        return self.call(["findmnt"] + args, **kwargs)

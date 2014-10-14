@@ -161,6 +161,11 @@ class ImageLayers(object):
         version, release = match.groups()
         return ImageLayers.Image(self, int(version), int(release))
 
+    def image_from_path(self, path):
+        name = self.run.lvs(["-olv_name", "--noheadings", path])
+        log().info("Found LV '%s' for path '%s'" % (name, path))
+        return self.image_from_name(name)
+
     def layout(self, lvs=None):
         """List all bases and layers for humans
 
@@ -395,6 +400,17 @@ class ImageLayers(object):
 
     def latest_layer(self):
         return self._last_layer()
+
+    def current_layer(self):
+        path = "/"
+        log().info("Fetching image for '%s'" % path)
+        lv = self.run.findmnt(["--noheadings", "-o", "SOURCE", path])
+        log().info("Found '%s'" % lv)
+        try:
+            return self.image_from_path(lv)
+        except:
+            log().error("The root volume does not look like an image")
+            raise
 
     def base_of_layer(self, layer):
         base = None
