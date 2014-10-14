@@ -107,9 +107,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     lvl = logging.DEBUG if args.debug else logging.INFO
-    print logging.getLogger().handlers
     logging.basicConfig(level=lvl)
-    print logging.getLogger().handlers
 
     log().debug("Arguments: %s" % args)
 
