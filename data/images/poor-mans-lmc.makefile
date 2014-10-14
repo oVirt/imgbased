@@ -23,7 +23,7 @@ FEDORA_URL=https://alt.fedoraproject.org/pub/alt/stage/current/Server/x86_64/os/
 RELEASEVER = 21
 ANACONDA_RELEASEVER = $(RELEASEVER)
 
-MIRRORCURL = bash -c "curl --fail -s 'https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$(RELEASEVER)&arch=x86_64' | sed -n 's/Everything/Fedora/ ; /^ht/ p'  | while read BURL; do URL=\$$BURL\$$0 ; echo Using \$$URL ; curl --fail -L -O \$$URL && exit 0 ; done ; echo Failed to download \$$URL ; exit 1"
+MIRRORCURL = bash -c "curl --fail -s 'https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$(RELEASEVER)&arch=x86_64' | sed -n 's/Everything/Fedora/ ; /^ht/ p'  | while read BURL; do URL=\$$BURL\$$0 ; echo Using \$$URL ; curl --fail -L -O \$$URL && break ; done ; test -f \$$(basename \$$0)"
 
 
 .INTERMEDIATE: spawned_pids
