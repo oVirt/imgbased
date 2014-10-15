@@ -16,5 +16,8 @@ liveimg --url=@ROOTFS_URL@
 imgbase layer --add
 %end
 
-# Reboto after installation
-reboot
+# Reboto after installation, if we were on real hardware
+#reboot
+
+# … poweroff because we are likely in a VM
+poweroff
