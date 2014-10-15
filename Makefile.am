@@ -52,7 +52,6 @@ image-build: data/images/$(TESTIMAGE)
 data/images/%.qcow2:
 	cd data/images && make run-install DISK_NAME=$(TESTIMAGE) KICKSTART=kickstarts/$(IMAGE).ks
 
-
 #
 # Now some targets to test the installation part
 #

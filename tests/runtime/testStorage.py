@@ -48,8 +48,9 @@ class TestFS(unittest.TestCase):
 
                 print(a, b, c, ratio)
 
-                assert ratio > (1.0 - max_delta), \
-                    "Delta is larger than %s" % max_delta
+                delta = 1 - ratio
+                assert delta > max_delta, \
+                    "Delta %s is larger than %s" % (delta, max_delta)
 
         trials(1, 100)
         trials(100, 1)
