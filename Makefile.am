@@ -56,10 +56,10 @@ data/images/%.qcow2:
 # Now some targets to test the installation part
 #
 rootfs.qcow2:
-	if [[ -f $@ ]]; then echo "rootfs already exists" ; else make image-build IMAGE=rootfs ; fi
+	if [[ -e $@ ]]; then echo "rootfs already exists" ; else make image-build IMAGE=rootfs ; fi
 
 rootfs.tar.xz: rootfs.qcow2
-	if [[ -f $< ]]; then echo "Tarball already exists" ; else guestfish -i -a $< tar-out / $@ compress:xz ; fi
+	if [[ -e $< ]]; then echo "Tarball already exists" ; else guestfish -i -a $< tar-out / $@ compress:xz ; fi
 
 
 image-install: rootfs.tar.xz
