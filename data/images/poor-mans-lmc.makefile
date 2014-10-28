@@ -61,5 +61,6 @@ run-install: .treeinfo vmlinuz initrd.img squashfs.img $(KICKSTART)
 		-hda $(DISK_NAME) \
 		-kernel vmlinuz \
 		-initrd initrd.img \
-		-append "console=ttyS0 inst.ks=http://10.0.2.2:$(PYPORT)/$(KICKSTART) inst.stage2=http://10.0.2.2:$(PYPORT)/ quiet $(QEMU_APPEND) cmdline" ; \
+		-device virtio-serial -chardev file,id=logfile,path=anaconda.log -device virtserialport,name=org.fedoraproject.anaconda.log.0,chardev=logfile \
+		-append "console=ttyS0 inst.ks=http://10.0.2.2:$(PYPORT)/$(KICKSTART) inst.stage2=http://10.0.2.2:$(PYPORT)/ quiet cmdline inst.virtiolog $(QEMU_APPEND)" ; \
 	kill $$(cat spawned_pids)
