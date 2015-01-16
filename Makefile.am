@@ -86,10 +86,20 @@ check-runtime: $(TESTIMAGE)
 #
 sparse: INTIMAGE = intermediate-$(SRCIMAGE)
 sparse: DSTIMAGE = sparse-$(SRCIMAGE)
-sparse: $(SRCIMAGE)
+sparse:
+	[[ -f "$(SRCIMAGE)" ]]
 	virt-sparsify --compress $(SRCIMAGE) $(INTIMAGE)
 	mv -v $(INTIMAGE) $(DSTIMAGE)
 
+#
+# Remove the bootloader and label from a disk image
+#
+strip-disklabel: INTIMAGE = intermediate-$(SRCIMAGE)
+strip-disklabel: DSTIMAGE = $(SRCIMAGE)-without-disklabel
+strip-disklabel:
+	[[ -f "$(SRCIMAGE)" ]]
+	set -x ; dd conv=sparse if="$(SRCIMAGE)" skip=$$(partx -sbg -n1 -o START "$(SRCIMAGE)" | egrep -o "[0-9]*") of="$(INTIMAGE)"
+	mv -v "$(INTIMAGE)" "$(DSTIMAGE)"
 
 doc: $(man8_MANS)
 
