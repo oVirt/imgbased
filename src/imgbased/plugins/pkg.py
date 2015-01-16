@@ -44,8 +44,10 @@ def diff(imgbase, left, right, mode="tree"):
     with mounted(imgl.path) as mountl, \
             mounted(imgr.path) as mountr:
         if mode == "tree":
-            l = sorted(imgbase.run.rpm(["-qa", "--root", mountl.target]).splitlines(True))
-            r = sorted(imgbase.run.rpm(["-qa", "--root", mountr.target]).splitlines(True))
+            l = imgbase.run.rpm(["-qa", "--root", mountl.target])
+            l = sorted(l.splitlines(True))
+            r = imgbase.run.rpm(["-qa", "--root", mountr.target])
+            r = sorted(r.splitlines(True))
             udiff = difflib.unified_diff(r, l, fromfile=left, tofile=right,
                                          n=0)
             return (l for l in udiff if not l.startswith("@"))
