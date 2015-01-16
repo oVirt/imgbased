@@ -21,9 +21,8 @@ CURL = curl -L -O --fail
 
 FEDORA_URL=https://alt.fedoraproject.org/pub/alt/stage/current/Server/x86_64/os/
 RELEASEVER = 21
-ANACONDA_RELEASEVER = $(RELEASEVER)
 
-MIRRORCURL = bash -c "curl --fail -s 'https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$(RELEASEVER)&arch=x86_64' | sed -n 's/Everything/Fedora/ ; /^ht/ p'  | while read BURL; do URL=\$$BURL\$$0 ; echo Using \$$URL ; curl --fail -L -O \$$URL && break ; done ; test -f \$$(basename \$$0)"
+MIRRORCURL = bash -c "curl --fail -s 'https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-install-$(RELEASEVER)&arch=x86_64' | sed -n 's/Everything/Fedora/ ; /^ht/ p'  | while read BURL; do URL=\$$BURL\$$0 ; echo Using \$$URL ; curl --fail -L -O \$$URL && break ; done ; test -f \$$(basename \$$0)"
 
 
 .INTERMEDIATE: spawned_pids
@@ -40,7 +39,7 @@ squashfs.img:
 
 .PHONY: .treeinfo
 .treeinfo:
-	$(CURL) $(FEDORA_URL)/$@ > $@
+	$(MIRRORCURL) $@ > $@
 	echo Adjusting squashfs image path, so anaconda finds it
 	# Anaconda uses the .treeinfo file to find stuff
 	sed -i \
