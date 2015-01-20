@@ -94,11 +94,11 @@ sparse:
 #
 # Remove the bootloader and label from a disk image
 #
-strip-disklabel: INTIMAGE = intermediate-$(SRCIMAGE)
+strip-disklabel: INTIMAGE = $(SRCIMAGE)-intermediate
 strip-disklabel: DSTIMAGE = $(SRCIMAGE)-without-disklabel
 strip-disklabel:
 	[[ -f "$(SRCIMAGE)" ]]
-	set -x ; dd conv=sparse if="$(SRCIMAGE)" ibs=1c skip=$$(partx -sbg -n1 -o START "$(SRCIMAGE)" | egrep -o "[0-9]*") of="$(INTIMAGE)"
+	set -x ; dd conv=sparse bs=1M skip=1 if="$(SRCIMAGE)" of="$(INTIMAGE)"
 	mv -v "$(INTIMAGE)" "$(DSTIMAGE)"
 
 doc: $(man8_MANS)
