@@ -1,9 +1,8 @@
-clearpart --all --initlabel
-# --disklabel=gpt can be used in F21
+clearpart --all --initlabel --disklabel=gpt
 
 bootloader --append="console=ttyS0 quiet" --timeout=1
 
-part biosboot --size=1
+part biosboot --size=1 --fstype biosboot
 part /boot --size=512 --fstype ext4 --label=Boot --asprimary
 
 part pv.01 --size 5000

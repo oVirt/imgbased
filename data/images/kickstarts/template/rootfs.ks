@@ -2,7 +2,6 @@
 %include ../partial/header.ks
 
 clearpart --all --initlabel
-# --disklabel=gpt can be used in F21
 
 bootloader --append="console=ttyS0" --timeout=1
 poweroff
