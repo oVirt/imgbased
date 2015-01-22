@@ -14,6 +14,6 @@ kickstarts/%.ks: kickstarts/template/%.ks $(PARTIAL_KS)
 	echo partials: $(PARTIAL_KS)
 	mkdir -p $$(dirname "$@")
 	kickstarts/flatten.py "$<" > "$@"
-	[[ -n "$$PROXY" ]] && sed -i "s/^\(url\|repo\) /\1 --proxy=$$PROXY /" "$@"
+	[[ -n "$$PROXY" ]] && sed -i "s/^\(url\|repo\) /\1 --proxy=$$PROXY /" "$@" || :
 
 include poor-mans-lmc.makefile
