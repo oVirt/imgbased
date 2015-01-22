@@ -58,12 +58,25 @@ data/images/%.qcow2:
 rootfs.qcow2:
 	if [[ -e $@ ]]; then echo "rootfs already exists" ; else make image-build IMAGE=rootfs ; fi
 
+rootfs.raw: rootfs.qcow2
+	if [[ -e $@ ]]; then echo "rootfs already exists" ; else qemu-img convert -p -S 1M -O raw $< $@; fi
+
+rootfs.squashfs.img: rootfs.raw
+	mkdir -p squashfs-root/LiveOS
+#	Check if it's a disk image, then we need to remove the label to get the partition, assumption: On partition
+	-[[ $$(file $<) =~ "boot sector" ]] && make strip-disklabel SRCIMAGE=$< DSTIMAGE=squashfs-root/LiveOS/rootfs.img
+#	If the image is already afilesystem, take it directly
+	-[[ $$(file $<) =~ "filesystem" ]] && ln -v $(PWD)/$(SRCIMAGE) squashfs-root/LiveOS/rootfs.img
+	[[ -f squashfs-root/LiveOS/rootfs.img ]]
+	mksquashfs squashfs-root $@ -comp xz
+	rm -rvf squashfs-root
+
 rootfs.tar.xz: rootfs.qcow2
 	if [[ -e $@ ]]; then echo "Tarball already exists" ; else guestfish -i -a $< tar-out / $@ compress:xz ; fi
 
 image-install: ROOTFS=rootfs.squashfs.img
 image-install: ROOTFS_URL=http://10.0.2.2:\$$(PYPORT)/
-image-install:
+image-install: $(ROOTFS)
 	[[ -f "$(ROOTFS)" ]]
 	-rm -f data/images/kickstarts/installation.ks data/images/$(ROOTFS)
 	-ln -s $$PWD/$(ROOTFS) data/images/
@@ -110,17 +123,6 @@ strip-disklabel:
 	[[ -f "$(SRCIMAGE)" ]]
 	set -x ; dd conv=sparse bs=1M skip=1 if="$(SRCIMAGE)" of="$(INTIMAGE)"
 	mv -v "$(INTIMAGE)" "$(DSTIMAGE)"
-
-#
-# Create a squashfs suitable for dracut and anaconda
-#
-rootfs.squashfs.img:
-	mkdir -p squashfs-root/LiveOS
-	-[[ -n "$(SRCDISKIMAGE)" ]] && make strip-disklabel SRCIMAGE=$(SRCDISKIMAGE) DSTIMAGE=squashfs-root/LiveOS/rootfs.img
-	-[[ -n "$(SRCIMAGE)" ]] && ln -v $(PWD)/$(SRCIMAGE) squashfs-root/LiveOS/rootfs.img
-	[[ -f squashfs-root/LiveOS/rootfs.img ]]
-	mksquashfs squashfs-root $@ -comp xz
-	rm -rvf squashfs-root
 
 doc: $(man8_MANS)
 
