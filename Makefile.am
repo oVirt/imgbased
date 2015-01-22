@@ -61,10 +61,11 @@ rootfs.qcow2:
 rootfs.tar.xz: rootfs.qcow2
 	if [[ -e $@ ]]; then echo "Tarball already exists" ; else guestfish -i -a $< tar-out / $@ compress:xz ; fi
 
-image-install: ROOTFS_URL=http://10.0.2.2:\$$(PYPORT)/rootfs.tar.xz
-image-install: rootfs.tar.xz
-	-rm -f data/images/kickstarts/installation.ks data/images/rootfs.tar.xz
-	-ln -s $$PWD/rootfs.tar.xz data/images/
+image-install: ROOTFS=rootfs.squashfs.img
+image-install: ROOTFS_URL=http://10.0.2.2:\$$(PYPORT)/$(ROOTFS)
+image-install: $(ROOTFS)
+	-rm -f data/images/kickstarts/installation.ks data/images/$(ROOTFS)
+	-ln -s $$PWD/$(ROOTFS) data/images/
 	make image-build IMAGE=installation SED_KS="s#@ROOTFS_URL@#$(ROOTFS_URL)#"
 
 
@@ -104,11 +105,13 @@ strip-disklabel:
 #
 # Create a squashfs suitable for dracut and anaconda
 #
-squashfs.img: $(SRCDISKIMAGE)
-	mkdir LiveOS
-	make strip-disklabel SRCIMAGE=$(SRCDISKIMAGE) DSTIMAGE=LiveOS/rootfs.img
-	mksquashfs LiveOS $@ -comp xz
-	rm -rvf LiveOS
+rootfs.squashfs.img:
+	mkdir -p squashfs-root/LiveOS
+	-[[ -n "$(SRCDISKIMAGE)" ]] && make strip-disklabel SRCIMAGE=$(SRCDISKIMAGE) DSTIMAGE=squashfs-root/LiveOS/rootfs.img
+	-[[ -n "$(SRCIMAGE)" ]] && ln -v $(PWD)/$(SRCIMAGE) squashfs-root/LiveOS/rootfs.img
+	[[ -f squashfs-root/LiveOS/rootfs.img ]]
+	mksquashfs squashfs-root $@ -comp xz
+	rm -rvf squashfs-root
 
 doc: $(man8_MANS)
 
