@@ -62,11 +62,11 @@ rootfs.tar.xz: rootfs.qcow2
 	if [[ -e $@ ]]; then echo "Tarball already exists" ; else guestfish -i -a $< tar-out / $@ compress:xz ; fi
 
 image-install: ROOTFS=rootfs.squashfs.img
-image-install: ROOTFS_URL=http://10.0.2.2:\$$(PYPORT)/$(ROOTFS)
+image-install: ROOTFS_URL=http://10.0.2.2:\$$(PYPORT)/
 image-install: $(ROOTFS)
 	-rm -f data/images/kickstarts/installation.ks data/images/$(ROOTFS)
 	-ln -s $$PWD/$(ROOTFS) data/images/
-	make image-build IMAGE=installation SED_KS="s#@ROOTFS_URL@#$(ROOTFS_URL)#"
+	make image-build IMAGE=installation SED_KS="s#@ROOTFS_URL@#$(ROOTFS_URL)/$(ROOTFS)#"
 
 
 #
