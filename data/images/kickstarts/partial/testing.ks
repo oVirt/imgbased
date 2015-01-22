@@ -1,12 +1,23 @@
 
 #
-# Configure teh system to test the latest imgbased
+# Configure the system to test the latest imgbased
 #
+
+# SOme imgbase build dependencies
+%packages
+python-nose
+python-sh
+make
+git
+autoconf
+automake
+asciidoc
+yum-plugin-remove-with-leaves
+%end
 
 # Build most recent imagbased for testing
 %post --erroronfail
 echo "Build imgbased"
-yum install -y python-nose python-sh make git autoconf automake asciidoc yum-plugin-remove-with-leaves
 yum remove -y imgbased || :
 
 cd /root

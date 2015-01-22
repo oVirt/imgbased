@@ -50,7 +50,7 @@ doc: $(doc_DATA) $(dist_doc_DATA) $(man8-MANS)
 #
 image-build: data/images/$(QCOW)
 	mv data/images/$(QCOW) $(srcdir)
-	virt-sparsify --check-tmpdir=warn --compress $(QCOW) $(QCOW).sparse && mv -v $(QCOW).sparse $(QCOW)
+	virt-sparsify --check-tmpdir warn --compress $(QCOW) $(QCOW).sparse && mv -v $(QCOW).sparse $(QCOW)
 
 data/images/%.qcow2:
 	cd data/images && make run-install DISK_NAME=$(QCOW) KICKSTART=kickstarts/$(NAME).ks
