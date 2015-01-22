@@ -4,9 +4,6 @@
 #
 %post --erroronfail
 
-echo "Unlocking root account"
-passwd --unlock --delete root
-
 # setup systemd to boot to the right runlevel
 echo "Setting default runlevel to multiuser text mode"
 rm -f /etc/systemd/system/default.target

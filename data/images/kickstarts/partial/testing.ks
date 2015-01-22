@@ -17,8 +17,11 @@ cd imgbased
 make install
 %end
 
-# Automatically login root for testing
+# Automatically login root and remove the password for testing
 %post
 echo "Enabling auto-login of root on all getty instances"
 sed -i "/ExecStart/ s/$/ --autologin root/" /lib/systemd/system/*getty*.service
+
+echo "Unlocking root account"
+passwd --unlock --delete root
 %end
