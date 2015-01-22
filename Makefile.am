@@ -69,6 +69,14 @@ image-install:
 	-ln -s $$PWD/$(ROOTFS) data/images/
 	make image-build IMAGE=installation SED_KS="s#@ROOTFS_URL@#$(ROOTFS_URL)/$(ROOTFS)#"
 
+verrel: TYPE=rootfs
+verrel: NAME=FedoraNodeNext
+verrel: VENDOR=org.ovirt.node
+verrel: ARCH=x86_64
+verrel: VERSION=$$(date +%Y%m%d)$(EXTRA_RELEASE)
+verrel:
+	@echo $(TYPE):$(NAME):$(VENDOR):$(ARCH):$(VERSION)
+
 
 #
 # Run simple and advanced test
