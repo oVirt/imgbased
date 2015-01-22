@@ -63,7 +63,8 @@ rootfs.tar.xz: rootfs.qcow2
 
 image-install: ROOTFS=rootfs.squashfs.img
 image-install: ROOTFS_URL=http://10.0.2.2:\$$(PYPORT)/
-image-install: $(ROOTFS)
+image-install:
+	[[ -f "$(ROOTFS)" ]]
 	-rm -f data/images/kickstarts/installation.ks data/images/$(ROOTFS)
 	-ln -s $$PWD/$(ROOTFS) data/images/
 	make image-build IMAGE=installation SED_KS="s#@ROOTFS_URL@#$(ROOTFS_URL)/$(ROOTFS)#"
