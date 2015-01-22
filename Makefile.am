@@ -101,6 +101,15 @@ strip-disklabel:
 	set -x ; dd conv=sparse bs=1M skip=1 if="$(SRCIMAGE)" of="$(INTIMAGE)"
 	mv -v "$(INTIMAGE)" "$(DSTIMAGE)"
 
+#
+# Create a squashfs suitable for dracut and anaconda
+#
+squashfs.img: $(SRCDISKIMAGE)
+	mkdir LiveOS
+	make strip-disklabel SRCIMAGE=$(SRCDISKIMAGE) DSTIMAGE=LiveOS/rootfs.img
+	mksquashfs LiveOS $@ -comp xz
+	rm -rvf LiveOS
+
 doc: $(man8_MANS)
 
 docs/imgbase.8: docs/imgbase.8.asc
