@@ -5,8 +5,10 @@ TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
                   $(top_srcdir)/build-aux/tap-driver.sh
 TESTS = tests/package/check_python.test tests/package/check_packaging.test
 
-IMAGE = rootfs
-TESTIMAGE = $(IMAGE).qcow2
+NAME = rootfs
+SQUASHFS=$(NAME).squashfs.img
+QCOW = $(NAME).qcow2
+QCOW_CHECK = installation.qcow2
 
 hooksdir = $(pkgdatadir)/hooks.d/
 pyimagebaseddir = $(pythondir)/$(PACKAGE_NAME)
@@ -46,11 +48,12 @@ doc: $(doc_DATA) $(dist_doc_DATA) $(man8-MANS)
 #
 # Build the test image
 #
-image-build: data/images/$(TESTIMAGE)
-	mv data/images/$(TESTIMAGE) $(srcdir)
+image-build: data/images/$(QCOW)
+	mv data/images/$(QCOW) $(srcdir)
+	virt-sparsify --compress $(QCOW) $(QCOW).sparse && mv -v $(QCOW).sparse $(QCOW)
 
 data/images/%.qcow2:
-	cd data/images && make run-install DISK_NAME=$(TESTIMAGE) KICKSTART=kickstarts/$(IMAGE).ks
+	cd data/images && make run-install DISK_NAME=$(QCOW) KICKSTART=kickstarts/$(NAME).ks
 
 #
 # Now some targets to test the installation part
@@ -64,7 +67,8 @@ rootfs.raw: rootfs.qcow2
 rootfs.squashfs.img: rootfs.raw
 	mkdir -p squashfs-root/LiveOS
 #	Check if it's a disk image, then we need to remove the label to get the partition, assumption: On partition
-	-[[ $$(file $<) =~ "boot sector" ]] && make strip-disklabel SRCIMAGE=$< DSTIMAGE=squashfs-root/LiveOS/rootfs.img
+#	FIXME The size of the mbr/label is hardcoded, works by removing the label from the disk image
+	-[[ $$(file $<) =~ "boot sector" ]] && dd conv=sparse bs=1M skip=1 if=$< of=squashfs-root/LiveOS/rootfs.img
 #	If the image is already afilesystem, take it directly
 	-[[ $$(file $<) =~ "filesystem" ]] && ln -v $(PWD)/$(SRCIMAGE) squashfs-root/LiveOS/rootfs.img
 	[[ -f squashfs-root/LiveOS/rootfs.img ]]
@@ -74,13 +78,12 @@ rootfs.squashfs.img: rootfs.raw
 rootfs.tar.xz: rootfs.qcow2
 	if [[ -e $@ ]]; then echo "Tarball already exists" ; else guestfish -i -a $< tar-out / $@ compress:xz ; fi
 
-image-install: ROOTFS=rootfs.squashfs.img
-image-install: ROOTFS_URL=http://10.0.2.2:\$$(PYPORT)/
-image-install: $(ROOTFS)
-	[[ -f "$(ROOTFS)" ]]
-	-rm -f data/images/kickstarts/installation.ks data/images/$(ROOTFS)
-	-ln -s $$PWD/$(ROOTFS) data/images/
-	make image-build IMAGE=installation SED_KS="s#@ROOTFS_URL@#$(ROOTFS_URL)/$(ROOTFS)#"
+image-install: SQUASHFS_URL=http://10.0.2.2:\$$(PYPORT)/
+image-install: $(SQUASHFS)
+	[[ -f "$(SQUASHFS)" ]]
+	-rm -f data/images/kickstarts/installation.ks data/images/$(SQUASHFS)
+	-ln -s $$PWD/$(SQUASHFS) data/images/
+	make image-build NAME=installation SED_KS="s#@ROOTFS_URL@#$(SQUASHFS_URL)/$(SQUASHFS)#"
 
 verrel: TYPE=rootfs
 verrel: NAME=FedoraNodeNext
@@ -94,35 +97,15 @@ verrel:
 #
 # Run simple and advanced test
 #
-check: 
-	[[ -f "$(TESTIMAGE)" ]] && $(MAKE) check-runtime || :
+check:
+	[[ -f "$(QCOW_CHECK)" ]] && $(MAKE) check-runtime || :
 
 #
 # Run runtime/functional test on the test image
 # Intentioanlly no dependency on build
 #
-check-runtime: $(TESTIMAGE)
-	make -f tests/runtime/Makefile check-local IMAGE=$(abs_srcdir)/$(TESTIMAGE)
-
-#
-# Sparsify an image
-#
-sparse: INTIMAGE = intermediate-$(SRCIMAGE)
-sparse: DSTIMAGE = sparse-$(SRCIMAGE)
-sparse:
-	[[ -f "$(SRCIMAGE)" ]]
-	virt-sparsify --compress $(SRCIMAGE) $(INTIMAGE)
-	mv -v $(INTIMAGE) $(DSTIMAGE)
-
-#
-# Remove the bootloader and label from a disk image
-#
-strip-disklabel: INTIMAGE = $(SRCIMAGE)-intermediate
-strip-disklabel: DSTIMAGE = $(SRCIMAGE)-without-disklabel
-strip-disklabel:
-	[[ -f "$(SRCIMAGE)" ]]
-	set -x ; dd conv=sparse bs=1M skip=1 if="$(SRCIMAGE)" of="$(INTIMAGE)"
-	mv -v "$(INTIMAGE)" "$(DSTIMAGE)"
+check-runtime: $(QCOW_CHECK)
+	make -f tests/runtime/Makefile check-local IMAGE=$(abs_dir)/$(QCOW_CHECK)
 
 doc: $(man8_MANS)
 
