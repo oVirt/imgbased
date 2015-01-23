@@ -12,6 +12,7 @@ QCOW_CHECK = installation.qcow2
 
 hooksdir = $(pkgdatadir)/hooks.d/
 pyimagebaseddir = $(pythondir)/$(PACKAGE_NAME)
+pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
 
 vpath $(srcdir)
 
@@ -20,6 +21,9 @@ dist_sbin_SCRIPTS = \
 
 dist_pyimagebased_PYTHON = \
   src/imgbased/*.py
+
+dist_pyimagebasedplugins_PYTHON = \
+  src/imgbased/plugins/*.py
 
 dist_hooks_SCRIPTS = \
   data/hooks/persistence \
