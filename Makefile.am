@@ -105,7 +105,7 @@ check:
 # Intentioanlly no dependency on build
 #
 check-runtime: $(QCOW_CHECK)
-	make -f tests/runtime/Makefile check-local IMAGE=$(abs_dir)/$(QCOW_CHECK)
+	make -f tests/runtime/Makefile check-local IMAGE=$(QCOW_CHECK)
 
 doc: $(man8_MANS)
 
