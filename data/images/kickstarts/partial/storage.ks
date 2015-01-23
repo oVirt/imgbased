@@ -1,6 +1,6 @@
 clearpart --all --initlabel --disklabel=gpt
 
-bootloader --append="console=ttyS0 quiet" --timeout=1
+bootloader --timeout=1
 
 part biosboot --size=1 --fstype biosboot
 part /boot --size=512 --fstype ext4 --label=Boot --asprimary

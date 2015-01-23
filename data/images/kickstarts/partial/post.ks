@@ -6,25 +6,8 @@
 
 # setup systemd to boot to the right runlevel
 echo "Setting default runlevel to multiuser text mode"
-rm -f /etc/systemd/system/default.target
-ln -s /lib/systemd/system/multi-user.target /etc/systemd/system/default.target
-echo .
-
-#echo "Enable readonly-root"
-#sed -i \
-#    -e "s/^\(READONLY\)=.*/\1=yes/" \
-#    -e "s/^\(TEMPORARY_STATE\)=.*/\1=yes/" \
-#    /etc/sysconfig/readonly-root
-
-#echo "Make rootfs ro"
-# https://bugzilla.redhat.com/show_bug.cgi?id=1082085
-#sed -i "s/subvol=Origin/subvol=Origin,ro/" /etc/fstab
-
-#echo "Enable docker"
-#systemctl enable docker.service || :
-
-#echo "Enable openvswitch"
-#systemctl enable openvswitch.service || :
+rm -vf /etc/systemd/system/default.target
+ln -vs /lib/systemd/system/multi-user.target /etc/systemd/system/default.target
 
 #echo "Enable cockpit"
 #systemctl enable cockpit.service || :
@@ -46,17 +29,7 @@ chmod a+x /etc/grub.d/42_syslinux
 
 # Update grub2 cfg
 grub2-mkconfig -o /boot/grub2/grub.cfg
-#grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
-
-echo "Getty fixes"
-# although we want console output going to the serial console, we don't
-# actually have the opportunity to login there. FIX.
-# we don't really need to auto-spawn _any_ gettys.
-sed -i '/^#NAutoVTs=.*/ a\
-NAutoVTs=0' /etc/systemd/logind.conf
-
-echo "Fix missing console device"
-/bin/mknod /dev/console c 5 1
+grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg || :
 
 echo "Cleaning old yum repodata."
 yum clean all

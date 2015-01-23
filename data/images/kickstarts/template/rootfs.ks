@@ -3,7 +3,7 @@
 
 clearpart --all --initlabel
 
-bootloader --append="console=ttyS0" --timeout=1
+bootloader --timeout=1
 poweroff
 
 part / --size=3072 --fstype=ext4 --label=Image-0.0 --fsoptions=discard
