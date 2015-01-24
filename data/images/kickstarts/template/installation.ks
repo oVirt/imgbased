@@ -12,7 +12,7 @@
 liveimg --url=@ROOTFS_URL@
 
 # Create a layer after installation
-%post
+%post --erroronfail
 imgbase layer --add
 %end
 
