@@ -290,8 +290,12 @@ class ImageLayers(object):
         log().info("Adding a new layer")
         self.run.lvcreate(["--snapshot", "--name", new_layer,
                            previous_layer])
+        # FIXME do a correct check if it's a base
+        is_base = previous_layer.endswith(".0")
         self.run.lvchange(["--activate", "y",
-                           "--setactivationskip", "n", previous_layer])
+                           "--setactivationskip", "y" if is_base else "n",
+                           previous_layer])
+
         self.run.lvchange(["--activate", "y",
                            "--setactivationskip", "n", new_layer])
 
@@ -377,6 +381,7 @@ class ImageLayers(object):
             subprocess.check_call(cmd, **kwargs)
 
         self.run.lvchange(["--permission", "r",
+                           "--setactivationskip", "y",
                            "%s/%s" % (self.vg, new_base_lv.name)])
 
         self.hooks.emit("new-base-added", new_base_lv.path)
