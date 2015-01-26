@@ -290,14 +290,19 @@ class ImageLayers(object):
         log().info("Adding a new layer")
         self.run.lvcreate(["--snapshot", "--name", new_layer,
                            previous_layer])
+        self.run.lvchange(["--activate", "y",
+                           "--setactivationskip", "n", new_layer])
+        # Assign a new filesystem UUID and label
+        self.run.tune2fs(["-u", "random",
+                          "-L", new_layer,
+                          ImageLayers().image_from_name(new_layer.split("/")[1]).path])
+
+        # Handle the previous layer
         # FIXME do a correct check if it's a base
         is_base = previous_layer.endswith(".0")
         self.run.lvchange(["--activate", "y",
                            "--setactivationskip", "y" if is_base else "n",
                            previous_layer])
-
-        self.run.lvchange(["--activate", "y",
-                           "--setactivationskip", "n", new_layer])
 
     def _add_boot_entry(self, name, rootlv):
         """Add a new BLS based boot entry and update the layers /etc/fstab

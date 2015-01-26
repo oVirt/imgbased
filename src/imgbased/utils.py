@@ -114,3 +114,6 @@ class ExternalBinary(object):
 
     def findmnt(self, args, **kwargs):
         return self.call(["findmnt"] + args, **kwargs)
+
+    def tune2fs(self, args, **kwargs):
+        return self.call(["tune2fs"] + args, **kwargs)
