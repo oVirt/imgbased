@@ -15,4 +15,4 @@ log "Preparing the sources"
 log "Performing installation"
 make image-install
 
-ln -v rootfs.squashfs.img $(make verrel EXTRA_RELEASE=".${BUILD_NUMBER}").squashfs.img"
+ln -v rootfs.squashfs.img $(make verrel).squashfs.img"
