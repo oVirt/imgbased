@@ -12,7 +12,7 @@ log "Preparing the sources"
 ./autogen.sh
 ./configure
 
-if $WITH_VDSM;
+if ${WITH_VDSM:-false}
 then
   log "Including vdsm from the oVirt repositories"
   cat <<EOF >> data/images/kickstarts/template/rootfs.ks
