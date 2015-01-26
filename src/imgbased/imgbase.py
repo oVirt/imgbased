@@ -29,6 +29,48 @@ from .utils import memoize, ExternalBinary, format_to_pattern, \
     mounted, log
 
 
+class LVM(object):
+    _lvs = ExternalBinary().lvs
+
+    class LV(object):
+        vg_name = None
+        lv_name = None
+
+        @property
+        def lvm_name(self):
+            """With lvm_name we referre to the combination of VG+LV: VG/LV
+            """
+            return "%s/%s" % (self.vg_name, self.lv_name)
+
+        @property
+        def path(self):
+            return LVM._lvs(["--noheadings", "-olv_path", self.lvm_name])
+
+        def __init__(self, vg_name, lv_name):
+            self.vg_name = vg_name
+            self.lv_name = lv_name
+
+        @staticmethod
+        def from_lvm_name(lvm_name):
+            """Easy way to get an opbject for the lvm name
+
+            >>> lv = LVM.LV.from_lvm_name("HostVG/Foo")
+            >>> lv.vg_name
+            'HostVG'
+            >>> lv.lv_name
+            'Foo'
+            """
+            return LVM.LV(*lvm_name.split("/"))
+
+        @staticmethod
+        def from_path(path):
+            """Get an object for the path
+            """
+            data = LVM._lvs(["--noheadings", "-olv_name,vg_name", path])
+            assert data, "Failed to find LV for path: %s" % path
+            return LVM.LV(*data.split(" "))
+
+
 class ImageLayers(object):
     debug = False
     dry = False
@@ -56,8 +98,11 @@ class ImageLayers(object):
         @property
         @memoize
         def path(self):
-            return self.p.run.lvs(["--noheadings", "-olv_path",
-                                   "%s/%s" % (self.p.vg, self.name)])
+            return self.lvm.path
+
+        @property
+        def lvm(self):
+            return LVM.LV(self.p.vg, self.name)
 
         def __init__(self, p, v=None, r=None):
             self.p = p
@@ -165,6 +210,11 @@ class ImageLayers(object):
         name = self.run.lvs(["-olv_name", "--noheadings", path])
         log().info("Found LV '%s' for path '%s'" % (name, path))
         return self.image_from_name(name)
+
+    def image_from_lvm_name(self, lvm_name):
+        lv = LVM.LV.from_lvm_name(lvm_name)
+        assert lv.vg_name == self.vg
+        return self.image_from_name(lv.lv_name)
 
     def layout(self, lvs=None):
         """List all bases and layers for humans
@@ -288,36 +338,38 @@ class ImageLayers(object):
         """Add a new thin LV
         """
         log().info("Adding a new layer")
-        self.run.lvcreate(["--snapshot", "--name", new_layer,
-                           previous_layer])
+        self.run.lvcreate(["--snapshot", "--name",
+                           new_layer.lvm_name,
+                           previous_layer.lvm_name])
         self.run.lvchange(["--activate", "y",
-                           "--setactivationskip", "n", new_layer])
+                           "--setactivationskip", "n",
+                           new_layer.lvm_name])
         # Assign a new filesystem UUID and label
-        self.run.tune2fs(["-u", "random",
-                          "-L", new_layer,
-                          ImageLayers().image_from_name(new_layer.split("/")[1]).path])
+        self.run.tune2fs(["-U", "random",
+                          "-L", new_layer.lv_name + "-fs",
+                          new_layer.path])
 
         # Handle the previous layer
         # FIXME do a correct check if it's a base
-        is_base = previous_layer.endswith(".0")
+        is_base = previous_layer.lvm_name.endswith(".0")
         self.run.lvchange(["--activate", "y",
                            "--setactivationskip", "y" if is_base else "n",
-                           previous_layer])
+                           previous_layer.lvm_name])
 
-    def _add_boot_entry(self, name, rootlv):
+    def _add_boot_entry(self, lv):
         """Add a new BLS based boot entry and update the layers /etc/fstab
 
         http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec/
         """
         log().info("Adding a boot entry for the new layer")
 
-        self.bootloader.add_boot_entry(name, rootlv)
+        self.bootloader.add_boot_entry(lv.lvm_name, lv.path)
 
-        with mounted(rootlv) as mount:
+        with mounted(lv.path) as mount:
             log().info("Updating fstab of new layer")
             self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
-                           rootlv, "%s/etc/fstab" % mount.target])
-            self.hooks.emit("new-layer-added", "/", rootlv, mount.target)
+                           lv.path, "%s/etc/fstab" % mount.target])
+            self.hooks.emit("new-layer-added", "/", lv.path, mount.target)
 
     def init_layout(self, pvs, poolsize, without_vg=False):
         """Create the LVM layout needed by this tool
@@ -330,13 +382,15 @@ class ImageLayers(object):
 
     def _create_thinpool(self, poolsize):
         assert poolsize > 0
+        lvm_name = LVM.LV(self.vg, self.thinpool).lvm_name
         self.run.lvcreate(["--size", str(poolsize),
-                           "--thin", "%s/%s" % (self.vg, self.thinpool)])
+                           "--thin", lvm_name])
 
     def _create_thinvol(self, name, volsize):
+        lvm_name = LVM.LV(self.vg, self.thinpool).lvm_name
         self.run.lvcreate(["--name", name,
                            "--virtualsize", str(volsize),
-                           "--thin", "%s/%s" % (self.vg, self.thinpool)])
+                           "--thin", lvm_name])
 
     def add_bootable_layer(self):
         """Add a new layer which can be booted from the boot menu
@@ -353,10 +407,8 @@ class ImageLayers(object):
 
         log().debug("New layer: %s" % last_layer)
 
-        self._add_layer("%s/%s" % (self.vg, last_layer.name),
-                        "%s/%s" % (self.vg, new_layer.name))
-        self._add_boot_entry("%s/%s" % (self.vg, new_layer),
-                             new_layer.path)
+        self._add_layer(last_layer.lvm, new_layer.lvm)
+        self._add_boot_entry(new_layer.lvm)
 
     def add_base(self, infile, size, version=None, lvs=None):
         """Add a new base LV
@@ -395,9 +447,10 @@ class ImageLayers(object):
         """Free space in the thinpool for bases and layers
         """
         log().debug("Calculating free space in thinpool %s" % self.thinpool)
+        lvm_name = LVM.LV(self.vg, self.thinpool).lvm_name
         args = ["--noheadings", "--nosuffix", "--units", units,
                 "--options", "data_percent,lv_size",
-                "%s/%s" % (self.vg, self.thinpool)]
+                lvm_name]
         stdout = self.run.lvs(args).replace(",", ".").strip()
         used_percent, size = re.split("\s+", stdout)
         log().debug("Used: %s%% from %s" % (used_percent, size))
