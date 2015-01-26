@@ -8,11 +8,13 @@ export http_proxy=$PROXY
 
 log() { echo -e "\n\n$@\n\n" ; }
 
+log "Preparing the sources"
 ./autogen.sh
 ./configure
 
 if $WITH_VDSM;
 then
+  log "Including vdsm from the oVirt repositories"
   cat <<EOF >> data/images/kickstarts/template/rootfs.ks
 
 %post
@@ -23,5 +25,4 @@ EOF
 fi
 
 log "Launching the build"
-# 10.0.2.2 -- because that is the host ip inside the qemu container
-make image-build PROXY=$PROXY
+make image-build
