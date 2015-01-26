@@ -26,7 +26,7 @@ import re
 from .hooks import Hooks
 from . import bootloader
 from .utils import memoize, ExternalBinary, format_to_pattern, \
-    mounted, log
+    mounted, log, chroot
 
 
 class LVM(object):
@@ -369,7 +369,12 @@ class ImageLayers(object):
             log().info("Updating fstab of new layer")
             self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
                            lv.path, "%s/etc/fstab" % mount.target])
-            self.hooks.emit("new-layer-added", "/", lv.path, mount.target)
+
+    def _regenerate_initramfs(self, lv):
+        with mounted(lv.path) as mount:
+            log().info("Regenerating initramfs")
+            self.run.call(["dracut", "-f"],
+                          preexec_fn=lambda: chroot(mount.target))
 
     def init_layout(self, pvs, poolsize, without_vg=False):
         """Create the LVM layout needed by this tool
@@ -409,6 +414,10 @@ class ImageLayers(object):
 
         self._add_layer(last_layer.lvm, new_layer.lvm)
         self._add_boot_entry(new_layer.lvm)
+        self._regenerate_initramfs(new_layer.lvm)
+        with mounted(new_layer.lvm.path) as mount:
+            self.hooks.emit("new-layer-added", "/",
+                            new_layer.lvm.path, mount.target)
 
     def add_base(self, infile, size, version=None, lvs=None):
         """Add a new base LV

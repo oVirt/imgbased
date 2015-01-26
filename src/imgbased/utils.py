@@ -28,6 +28,12 @@ def call(*args, **kwargs):
     return subprocess.check_output(*args, **kwargs).strip()
 
 
+def chroot(target_root):
+    if target_root and target_root != '/':
+        os.chroot(target_root)
+        os.chdir("/")
+
+
 def format_to_pattern(fmt):
     """Take a format string and make a pattern from it
     https://docs.python.org/2/library/re.html#simulating-scanf
@@ -117,3 +123,5 @@ class ExternalBinary(object):
 
     def tune2fs(self, args, **kwargs):
         return self.call(["tune2fs"] + args, **kwargs)
+
+# vim: sw=4 et sts=4
