@@ -376,7 +376,7 @@ class ImageLayers(object):
         with mounted(lv.path) as mount:
             log().info("Regenerating initramfs")
             self.run.call(["dracut", "-f"])
-            initrd = glob.glob("/boot/initramfs*.x86_64..img")[0]
+            initrd = glob.glob("/boot/initramfs*.x86_64.img")[0]
             log().debug("Using intiramfs: %s" % initrd)
             shutil.copy2(initrd, mount.target + "/" + initrd)
 
