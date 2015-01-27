@@ -15,11 +15,8 @@ liveimg --url=@ROOTFS_URL@
 %post --erroronfail
 set -ex
 imgbase --debug layer --add
-#sed -i "s/Image\(-\+\)0.0/Image\10.1/ig" /etc/fstab
-#dracut -f
-lvs
-lvchange --setactivationskip n HostVG/Image-0.0
-lvs
+# FIXME we can not yet disbale Image-0.0 because teh initrd does not work in imgbase
+#lvs ; lvchange --setactivationskip y HostVG/Image-0.0 ; lvs
 %end
 
 %post --nochroot
