@@ -377,7 +377,7 @@ class ImageLayers(object):
         we want to avoid this to only touch the initrd in the layer
         """
         kver = self.run.call(["rpm", "-q", "kernel",
-                              "--qf", "%{nvr}"])
+                              "--qf", "%{version}-%{release}.%{arch}"])
         log().info("Regenerating initramfs for: %s" % kver)
         self.run.call(["dracut", "-f", kver])
         initrd = glob.glob("/boot/initramfs*.x86_64.img")[0]
