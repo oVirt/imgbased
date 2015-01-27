@@ -373,11 +373,16 @@ class ImageLayers(object):
                            lv.path, "%s/etc/fstab" % mount.target])
 
     def _regenerate_initramfs(self, lv):
+        """FIXME currently this is touching the base initrd
+        we want to avoid this to only touch the initrd in the layer
+        """
+        kver = self.run.call(["rpm", "-q", "kernel",
+                              "--qf", "%{nvr}"])
+        log().info("Regenerating initramfs for: %s" % kver)
+        self.run.call(["dracut", "-f", kver])
+        initrd = glob.glob("/boot/initramfs*.x86_64.img")[0]
+        log().debug("Using intiramfs: %s" % initrd)
         with mounted(lv.path) as mount:
-            log().info("Regenerating initramfs")
-            self.run.call(["dracut", "-f"])
-            initrd = glob.glob("/boot/initramfs*.x86_64.img")[0]
-            log().debug("Using intiramfs: %s" % initrd)
             shutil.copy2(initrd, mount.target + "/" + initrd)
 
     def init_layout(self, pvs, poolsize, without_vg=False):
