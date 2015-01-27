@@ -23,10 +23,12 @@
 import subprocess
 import os
 import re
+import glob
+import shutil
 from .hooks import Hooks
 from . import bootloader
 from .utils import memoize, ExternalBinary, format_to_pattern, \
-    mounted, log, chroot
+    mounted, log
 
 
 class LVM(object):
@@ -373,8 +375,10 @@ class ImageLayers(object):
     def _regenerate_initramfs(self, lv):
         with mounted(lv.path) as mount:
             log().info("Regenerating initramfs")
-            self.run.call(["dracut", "-f"],
-                          preexec_fn=lambda: chroot(mount.target))
+            self.run.call(["dracut", "-f"])
+            initrd = glob.glob("/boot/initramfs*.x86_64..img")[0]
+            log().debug("Using intiramfs: %s" % initrd)
+            shutil.copy2(initrd, mount.target + "/" + initrd)
 
     def init_layout(self, pvs, poolsize, without_vg=False):
         """Create the LVM layout needed by this tool
