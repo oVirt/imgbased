@@ -10,7 +10,3 @@ selinux --permissive
 network --bootproto=dhcp
 rootpw --lock
 
-# Left to the template:
-#reboot
-#poweroff
-
