@@ -9,8 +9,8 @@ echo "Setting default runlevel to multiuser text mode"
 rm -vf /etc/systemd/system/default.target
 ln -vs /lib/systemd/system/multi-user.target /etc/systemd/system/default.target
 
-#echo "Enable cockpit"
-#systemctl enable cockpit.service || :
+echo "Enable cockpit"
+systemctl enable cockpit.service || :
 
 echo "Install image-minimizer"
 curl -O https://git.fedorahosted.org/cgit/lorax.git/plain/src/bin/image-minimizer
