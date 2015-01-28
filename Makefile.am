@@ -57,17 +57,17 @@ image-build: data/images/$(QCOW)
 	mv data/images/$(QCOW) $(srcdir)
 	-virt-sparsify --check-tmpdir continue --compress $(QCOW) $(QCOW).sparse && mv -v $(QCOW).sparse $(QCOW)
 
-data/images/%.qcow2:
+data/images/%.qcow2: $(PARTIAL_KS)
 	cd data/images && make run-install DISK_NAME=$(QCOW) KICKSTART=kickstarts/$(NAME).ks
 
 #
 # Now some targets to test the installation part
 #
 rootfs.qcow2:
-	if [[ -e $@ ]]; then echo "rootfs already exists" ; else make image-build IMAGE=rootfs ; fi
+	make image-build IMAGE=rootfs
 
 rootfs.raw: rootfs.qcow2
-	if [[ -e $@ ]]; then echo "rootfs already exists" ; else qemu-img convert -p -S 1M -O raw $< $@; fi
+	qemu-img convert -p -S 1M -O raw $< $@
 
 rootfs.squashfs.img: rootfs.raw
 	mkdir -p squashfs-root/LiveOS
