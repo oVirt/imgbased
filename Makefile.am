@@ -63,7 +63,7 @@ data/images/%.qcow2: $(PARTIAL_KS)
 #
 # Now some targets to test the installation part
 #
-rootfs.qcow2:
+rootfs.qcow2: data/images/rootfs.qcow2
 	make image-build IMAGE=rootfs
 
 rootfs.raw: rootfs.qcow2
