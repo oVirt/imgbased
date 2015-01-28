@@ -67,11 +67,9 @@ data/images/%.qcow2: $(PARTIAL_KS)
 # Now some targets to test the installation part
 #
 rootfs.qcow2: data/images/rootfs.qcow2
-ifdef FORCE_REUSE_EXISTING_ROOTFS
-	@echo "Reusing existing rootfs -- no action taken"
-else
+        ifndef FORCE_REUSE_EXISTING_ROOTFS
 	make image-build IMAGE=rootfs
-endif
+        endif
 
 rootfs.raw: rootfs.qcow2
 	qemu-img convert -p -S 1M -O raw $< $@
