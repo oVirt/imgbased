@@ -1,7 +1,6 @@
 
 #
 # How to use
-# $ export ALL_PROXY=10.0.2.2:3128
 # $ make run-install
 #
 # https://git.fedorahosted.org/cgit/anaconda.git/tree/docs/boot-options.txt

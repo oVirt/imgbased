@@ -4,7 +4,6 @@ set -ex
 
 export PATH=$PATH:/sbin:/usr/sbin
 export TMPDIR=/var/tmp/
-export http_proxy=$PROXY
 
 log() { echo -e "\n\n$@\n\n" ; }
 
