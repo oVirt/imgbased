@@ -27,10 +27,6 @@ echo "echo syslinux_configfile syslinux.cfg" >> /etc/grub.d/42_syslinux
 chmod a+x /etc/grub.d/42_syslinux
 
 
-# Update grub2 cfg
-grub2-mkconfig -o /boot/grub2/grub.cfg
-grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg || :
-
 echo "Cleaning old yum repodata."
 yum clean all
 
@@ -38,8 +34,5 @@ echo "Fixing SELinux contexts."
 touch /var/log/cron
 touch /var/log/boot.log
 mkdir -p /var/cache/yum
-
-# have to install policycoreutils to run this... commenting for now
-/usr/sbin/fixfiles -R -a restore
 
 %end
