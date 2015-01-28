@@ -372,19 +372,6 @@ class ImageLayers(object):
             self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
                            lv.path, "%s/etc/fstab" % mount.target])
 
-    def _regenerate_initramfs(self, lv):
-        """FIXME currently this is touching the base initrd
-        we want to avoid this to only touch the initrd in the layer
-        """
-        kver = self.run.call(["rpm", "-q", "kernel",
-                              "--qf", "%{version}-%{release}.%{arch}"])
-        log().info("Regenerating initramfs for: %s" % kver)
-        self.run.call(["dracut", "-f", kver])
-        initrd = glob.glob("/boot/initramfs*.x86_64.img")[0]
-        log().debug("Using intiramfs: %s" % initrd)
-        with mounted(lv.path) as mount:
-            shutil.copy2(initrd, mount.target + "/" + initrd)
-
     def init_layout(self, pvs, poolsize, without_vg=False):
         """Create the LVM layout needed by this tool
         """
@@ -423,7 +410,6 @@ class ImageLayers(object):
 
         self._add_layer(last_layer.lvm, new_layer.lvm)
         self._add_boot_entry(new_layer.lvm)
-        self._regenerate_initramfs(new_layer.lvm)
         with mounted(new_layer.lvm.path) as mount:
             self.hooks.emit("new-layer-added", "/",
                             new_layer.lvm.path, mount.target)
