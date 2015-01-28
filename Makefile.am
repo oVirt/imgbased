@@ -77,7 +77,7 @@ rootfs.squashfs.img: rootfs.raw
 #	If the image is already afilesystem, take it directly
 	-[[ $$(file $<) =~ "filesystem" ]] && ln -v $(PWD)/$(SRCIMAGE) squashfs-root/LiveOS/rootfs.img
 	[[ -f squashfs-root/LiveOS/rootfs.img ]]
-	mksquashfs squashfs-root $@ -comp xz
+	mksquashfs squashfs-root $@ -comp xz -noappend
 	rm -rvf squashfs-root
 
 rootfs.tar.xz: rootfs.qcow2
