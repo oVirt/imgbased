@@ -16,8 +16,16 @@
 # Only available in Fedora 20+
 #anaconda-core
 #anaconda-tui
-#cockpit
+
+# lvm - for sure
 lvm2
+
+# for monitoring/administration
+cockpit
+
+# config generic == hostonly, this is needed
+# to support make a generic image (do not keep lvm informations in the image)
+dracut-config-generic
 
 vim-minimal
 grub2-efi
