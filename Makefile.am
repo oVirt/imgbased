@@ -10,6 +10,8 @@ SQUASHFS=$(NAME).squashfs.img
 QCOW = $(NAME).qcow2
 QCOW_CHECK = installation.qcow2
 
+.INTERMEDIATE : rootfs.qcow2
+
 hooksdir = $(pkgdatadir)/hooks.d/
 pyimagebaseddir = $(pythondir)/$(PACKAGE_NAME)
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
