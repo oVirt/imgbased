@@ -30,7 +30,9 @@ class TestImgbased(unittest.TestCase):
         assert "HostVG" in lvm.vgs()
 
         assert "Image-0.0" in imgbase.layout()
-        assert "Image-0.0" in imgbase.layer("--current")
+
+        # Check that a current layer exists
+        imgbase.layer("--current")
 
 
 class TestEnvironment(unittest.TestCase):
