@@ -13,21 +13,10 @@ liveimg --url=@ROOTFS_URL@
 
 # Create a layer after installation
 %post --erroronfail
-set -ex
 imgbase --debug layer --add
-# FIXME we can not yet disbale Image-0.0 because teh initrd does not work in imgbase
-#lvs ; lvchange --setactivationskip y HostVG/Image-0.0 ; lvs
 %end
 
-%post --nochroot
-#echo "Create the new layer"
-#lvcreate --snapshot --name HostVG/Image-0.1 HostVG/Image-0.0
-#tune2fs -u random -L Image-0.1 /dev/HostVG/Image-0.1
-
-#echo "Disable the base"
-%end
-
-# Reboto after installation, if we were on real hardware
+# Reboot after installation, if we were on real hardware
 #reboot
 
 # … poweroff because we are likely in a VM
