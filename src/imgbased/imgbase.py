@@ -23,8 +23,6 @@
 import subprocess
 import os
 import re
-import glob
-import shutil
 from .hooks import Hooks
 from . import bootloader
 from .utils import memoize, ExternalBinary, format_to_pattern, \
