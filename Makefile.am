@@ -10,7 +10,6 @@ SQUASHFS=$(NAME).squashfs.img
 QCOW = $(NAME).qcow2
 QCOW_CHECK = installation.qcow2
 
-.INTERMEDIATE : rootfs.qcow2
 .SECONDARY : rootfs.qcow2
 
 hooksdir = $(pkgdatadir)/hooks.d/
@@ -56,21 +55,17 @@ doc: $(doc_DATA) $(dist_doc_DATA) $(man8-MANS)
 # Build the test image
 # and sparsify if possible
 #
-image-build: data/images/$(QCOW)
-	mv data/images/$(QCOW) $(srcdir)
-	-virt-sparsify --check-tmpdir continue --compress $(QCOW) $(QCOW).sparse && mv -v $(QCOW).sparse $(QCOW)
+image-build: $(QCOW)
+	echo 1 $@
 
-data/images/%.qcow2: $(PARTIAL_KS)
+$(QCOW): $(PARTIAL_KS)
 	cd data/images && make run-install DISK_NAME=$(QCOW) KICKSTART=kickstarts/$(NAME).ks
+	mv -v data/images/$(QCOW) $(srcdir)
+	-virt-sparsify --check-tmpdir continue --compress $(QCOW) $(QCOW).sparse && mv -v $(QCOW).sparse $(QCOW)
 
 #
 # Now some targets to test the installation part
 #
-rootfs.qcow2: data/images/rootfs.qcow2
-        ifndef FORCE_REUSE_EXISTING_ROOTFS
-	make image-build IMAGE=rootfs
-        endif
-
 rootfs.raw: rootfs.qcow2
 	qemu-img convert -p -S 1M -O raw $< $@
 
@@ -93,7 +88,7 @@ image-install: $(SQUASHFS)
 	[[ -f "$(SQUASHFS)" ]]
 	-rm -f data/images/kickstarts/installation.ks data/images/$(SQUASHFS)
 	-ln -s $$PWD/$(SQUASHFS) data/images/
-	make image-build NAME=installation SED_KS="s#@ROOTFS_URL@#$(SQUASHFS_URL)/$(SQUASHFS)#"
+	$(MAKE) image-build NAME=installation SED_KS="s#@ROOTFS_URL@#$(SQUASHFS_URL)/$(SQUASHFS)#"
 
 verrel: TYPE=rootfs
 verrel: NAME=FedoraNodeNext
