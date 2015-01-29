@@ -17,15 +17,14 @@ curl -O https://git.fedorahosted.org/cgit/lorax.git/plain/src/bin/image-minimize
 install -m775 image-minimizer /usr/bin
 
 echo "Enable FDO Bootloader Spec"
-echo "echo '# Import BLS entries'" > /etc/grub.d/42_bls
-echo "echo bls_import" >> /etc/grub.d/42_bls
-chmod a+x /etc/grub.d/42_bls
+echo "echo '# Import BLS entries'" > /etc/grub.d/05_bls
+echo "echo bls_import" >> /etc/grub.d/05_bls
+chmod a+x /etc/grub.d/*_bls
 
 echo "Enable Syslinux configuration"
-echo "echo '# Import syslinux entries'" > /etc/grub.d/42_syslinux
-echo "echo syslinux_configfile syslinux.cfg" >> /etc/grub.d/42_syslinux
-chmod a+x /etc/grub.d/42_syslinux
-
+echo "echo '# Import syslinux entries'" > /etc/grub.d/06_syslinux
+echo "echo syslinux_configfile syslinux.cfg" >> /etc/grub.d/06_syslinux
+chmod a+x /etc/grub.d/*_syslinux
 
 echo "Cleaning old yum repodata."
 yum clean all
