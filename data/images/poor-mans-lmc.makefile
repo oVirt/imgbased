@@ -41,10 +41,10 @@ squashfs.img:
 	$(MIRRORCURL) $@ > $@
 	echo Adjusting squashfs image path, so anaconda finds it
 	# Anaconda uses the .treeinfo file to find stuff
+	# Let the squashfs point to the PWD, not in some subdir
 	sed -i \
 		"s/=.*squashfs\.img/= squashfs.img/" \
 		$@
-	cat $@
 
 run-install: PYPORT:=$(shell echo $$(( 50000 + $$RANDOM % 15000 )) )
 run-install: VNCPORT:=$(shell echo $$(( $$RANDOM % 1000 )) )
