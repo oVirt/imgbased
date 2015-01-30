@@ -16,7 +16,6 @@ QCOW_CHECK = installation.qcow2
 # and sparsify if possible
 #
 image-build: $(QCOW)
-	echo 1 $@
 
 $(QCOW): $(PARTIAL_KS)
 	cd data/images && make run-install DISK_NAME=$(QCOW) KICKSTART=kickstarts/$(NAME).ks

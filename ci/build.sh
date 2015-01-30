@@ -16,9 +16,12 @@ then
   log "Including vdsm from the oVirt repositories"
   cat <<EOF >> data/images/kickstarts/template/rootfs.ks
 
-%post
+%pre
 yum install -y http://resources.ovirt.org/pub/yum-repo/ovirt-release35.rpm
-yum install -y vdsm
+%end
+
+%packages
+vdsm
 %end
 EOF
 fi
