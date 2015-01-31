@@ -10,6 +10,6 @@ export PATH=$PATH:/sbin/:/usr/sbin/
 # Touch the rootfs.qcow2, to pretend that it is fresh
 [ -f rootfs.qcow2 ] && touch rootfs.qcow2
 
-make image-install
+make image-install SQUASHFS_URL=$SQUASHFS_URL
 
 ln -v rootfs.squashfs.img "$(make verrel).squashfs.img"
