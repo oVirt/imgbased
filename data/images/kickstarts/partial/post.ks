@@ -10,7 +10,7 @@ rm -vf /etc/systemd/system/default.target
 ln -vs /lib/systemd/system/multi-user.target /etc/systemd/system/default.target
 
 echo "Install image-minimizer"
-curl -O https://github.com/rhinstaller/lorax/raw/master/src/sbin/livemedia-creator
+curl -O https://github.com/rhinstaller/lorax/raw/master/src/bin/image-minimizer
 install -m775 image-minimizer /usr/bin
 
 echo "Enable FDO Bootloader Spec"
