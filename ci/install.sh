@@ -12,4 +12,7 @@ export PATH=$PATH:/sbin/:/usr/sbin/
 
 make image-install SQUASHFS_URL=$SQUASHFS_URL
 
-ln -v rootfs.squashfs.img "$(make verrel).squashfs.img"
+IMG="$(make verrel).squashfs.img"
+ln -v rootfs.squashfs.img $IMG
+
+echo $IMG > .index
