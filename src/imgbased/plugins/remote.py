@@ -3,12 +3,9 @@ from ..utils import log
 from ConfigParser import ConfigParser
 from StringIO import StringIO
 import shlex
-import glob
-import requests
-from os import path
-from pprint import pprint
 import argparse
 import sys
+import requests
 
 
 def init(app):
@@ -28,9 +25,13 @@ def add_argparse(app, parser, subparsers):
     su_add = su.add_parser("add", help="Add a remote")
     su_add.add_argument("NAME", type=str)
     su_add.add_argument("URL", type=str)
+
     su_remove = su.add_parser("remove", help="Remove a remote")
     su_remove.add_argument("NAME", type=str)
+
     su_list = su.add_parser("list", help="List availabel remote images")
+    su_list.add_argument("NAME", type=str)
+
     su_fetch = su.add_parser("fetch", help="Retireve a remote image into "
                              "a dst")
     su_fetch.add_argument("NAME", type=str)
@@ -41,8 +42,8 @@ def add_argparse(app, parser, subparsers):
 
     su_pull = su.add_parser("pull", help="Pull a remote image and add it "
                             "to the layout")
-    su_fetch.add_argument("NAME", type=str)
-    su_fetch.add_argument("IMAGE", type=str)
+    su_pull.add_argument("NAME", type=str)
+    su_pull.add_argument("IMAGE", type=str)
 
 
 def check_argparse(app, args):
@@ -65,6 +66,7 @@ def check_argparse(app, args):
     elif args.subcmd == "list":
         for name, url in sorted(remotes.list().items()):
             print "%s: %s" % (name, url)
+
 
 class LocalRemotesConfiguration():
     """Datastructure to access localy configured remotes
@@ -229,8 +231,8 @@ class RemoteImage():
         with open(dstpath, "wb") as dst:
             for chunk in req.iter_content(1024):
                 dst.write(chunk)
-        #curl("--location", "--fail",
-        #     "--output", imgbase
+        # curl("--location", "--fail",
+        #      "--output", imgbase
 
 
 class SimpleIndexImageDiscoverer():
@@ -262,7 +264,8 @@ path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix> \>]
         info.name = parts.pop(0)
         info.vendorid = parts.pop(0)
         info.arch = parts.pop(0)
-        info.version = parts.pop(0).split(".", 1)[0] # Strip an eventual suffix
+        # Strip an eventual suffix
+        info.version = parts.pop(0).split(".", 1)[0]
 
         return info
 
