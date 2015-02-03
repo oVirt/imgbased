@@ -4,22 +4,10 @@
 #
 
 # Build most recent imagbased for testing
-%packages
-python-nose
-python-sh
-make
-git
-autoconf
-automake
-asciidoc
-yum-plugin-remove-with-leaves
-python-requests
-%end
-
 %post --erroronfail
 echo "Build imgbased"
 
-yum install -y python-nose python-sh make git autoconf automake asciidoc yum-plugin-remove-with-leaves python-request || :
+yum install -y python-nose python-sh make git autoconf automake asciidoc yum-plugin-remove-with-leaves python-requests || :
 yum remove -y imgbased || :
 
 cd /root
