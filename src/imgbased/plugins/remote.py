@@ -30,7 +30,7 @@ def add_argparse(app, parser, subparsers):
     su_remove.add_argument("NAME", type=str)
 
     su_list = su.add_parser("list", help="List availabel remote images")
-    su_list.add_argument("NAME", type=str)
+    su_list.add_argument("NAME", type=str, nargs="?")
 
     su_fetch = su.add_parser("fetch", help="Retireve a remote image into "
                              "a dst")
@@ -64,8 +64,15 @@ def check_argparse(app, args):
         remotes.remove(args.NAME)
 
     elif args.subcmd == "list":
-        for name, url in sorted(remotes.list().items()):
-            print "%s: %s" % (name, url)
+        all_remotes = remotes.list()
+        if args.NAME:
+            print(all_remotes[args.NAME].list_images())
+        else:
+            for name, url in sorted(all_remotes.items()):
+                print "%s: %s" % (name, url)
+
+    elif args.subcmd == "fetch":
+        raise NotImplementedError()
 
 
 class LocalRemotesConfiguration():
@@ -271,13 +278,13 @@ path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix> \>]
 
     def _list_images(self, lines):
         filenames = []
-        images = []
+        images = {}
         for line in lines:
             if line and not line.startswith("#"):
                 filenames.append(line)
         for filename in filenames:
             try:
-                images.append(self._imageinfo_from_name(filename))
+                images[filename] = self._imageinfo_from_name(filename)
             except Exception as e:
                 log().info("Failed to parse imagename '%s': %s" %
                            (filename, e))
