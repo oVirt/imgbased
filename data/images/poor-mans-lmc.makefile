@@ -37,6 +37,7 @@ squashfs.img:
 
 
 .PHONY: .treeinfo
+.SECONDARY: .treeinfo
 .treeinfo:
 	$(MIRRORCURL) $@ > $@
 	echo Adjusting squashfs image path, so anaconda finds it
