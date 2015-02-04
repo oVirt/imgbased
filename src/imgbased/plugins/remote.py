@@ -101,11 +101,11 @@ class LocalRemotesConfiguration():
 
     def _parser(self):
         p = ConfigParser()
-        if self.cfgstr:
+        if self.cfgstr is None:
+            p.read(self.CFG_PATH)
+        else:
             # Used for doctests
             p.readfp(StringIO(self.cfgstr))
-        else:
-            p.read(self.CFG_PATH)
         return p
 
     def _iter_sections(self):
@@ -252,7 +252,7 @@ class SimpleIndexImageDiscoverer():
 
     >>> r = SimpleIndexImageDiscoverer(None)
 
-    >>> r._list_images(example.split("\\n"))
+    >>> r._list_images(example.split("\\n")).values()
     [<Image name=<name> vendorid=<vendor> version=<version> \
 path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix> \>]
     """
