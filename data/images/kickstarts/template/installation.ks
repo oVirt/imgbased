@@ -16,6 +16,9 @@ liveimg --url=@ROOTFS_URL@
 imgbase --debug layer --add
 %end
 
+# Do not reconfigure, because we did this during the installation
+firstboot --disable
+
 # Reboot after installation, if we were on real hardware
 #reboot
 
