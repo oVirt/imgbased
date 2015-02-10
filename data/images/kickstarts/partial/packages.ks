@@ -25,13 +25,11 @@ efibootmgr
 cockpit
 
 # Configuration management
-puppet
-salt
+#puppet
+#salt
 
 # Some tools
 vim-minimal
 augeas
 tmux
-
 %end
-
