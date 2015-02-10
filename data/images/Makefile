@@ -1,5 +1,6 @@
 
-PARTIAL_KS=$(wildcard kickstarts/partial/*.ks)
+DISTRO=fedora
+PARTIAL_KS=$(wildcard kickstarts/partial/*.ks kickstarts/baseos/*.ks)
 
 all: run-install
 	echo Done
@@ -12,7 +13,9 @@ grow:
 
 kickstarts/%.ks: kickstarts/template/%.ks $(PARTIAL_KS)
 	echo partials: $(PARTIAL_KS)
+	echo distro: $(DISTRO)
 	mkdir -p $$(dirname "$@")
+	ln -vfs kickstarts/baseos/$(DISTRO).ks kickstarts/partial/os.ks
 	kickstarts/flatten.py "$<" > "$@"
 	[[ -n "$$http_proxy" ]] && sed -i "s/^\(url\|repo\) /\1 --proxy=$$http_proxy /" "$@" || :
 
