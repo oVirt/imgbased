@@ -10,7 +10,7 @@ export PATH=$PATH:/sbin/:/usr/sbin/
 # Touch the rootfs.qcow2, to pretend that it is fresh
 [ -f rootfs.qcow2 ] && touch rootfs.qcow2
 
-make image-install SQUASHFS_URL=$SQUASHFS_URL
+make image-install SQUASHFS_URL=$SQUASHFS_URL DISTRO=${DISTRO:-fedora}
 
 IMG="$(make verrel).squashfs.img"
 ln -v rootfs.squashfs.img $IMG

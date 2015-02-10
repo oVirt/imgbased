@@ -10,4 +10,4 @@ export PATH=$PATH:/sbin/:/usr/sbin/
 # Touch the installation.qcow2, to pretend that it is fresh
 [ -f installation.qcow2 ] && touch installation.qcow2
 
-make check
+make check DISTRO=${DISTRO:-fedora}
