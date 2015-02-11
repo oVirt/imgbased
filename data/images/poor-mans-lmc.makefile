@@ -14,7 +14,7 @@ DISK_SIZE = 10G
 VM_RAM = 2048
 VM_SMP = 4
 
-QEMU = qemu-kvm
+QEMU = qemu-system-x86_64 -enable-kvm
 QEMU_APPEND =
 CURL = curl -L -O --fail
 

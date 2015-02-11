@@ -19,7 +19,8 @@ class Instance(object):
         assert os.path.exists(image)
         assert os.path.exists(shared_path)
 
-        cmd = ["qemu-kvm",
+        cmd = ["qemu-system-x86_64",
+               "-enable-kvm",
                "-snapshot",
                "-display", "none",
                "-m", "1024",
