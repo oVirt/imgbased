@@ -26,4 +26,4 @@ then
 fi
 
 log "Launching the build"
-make image-build DISTRO=${WITH_DISTRO:-fedora}
+make image-build
