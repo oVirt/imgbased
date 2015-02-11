@@ -36,6 +36,10 @@ EXTRA_DIST = \
   tests/runtime/*.py
 
 PARTIAL_KS = $(wildcard data/images/kickstarts/*/*.ks)
+DERIVED_KS = $(wildcard data/images/kickstarts/*.ks)
+
+CLEANFILES = $(DERIVED_KS)
+.PHONY: $(DERIVED_KS)
 
 dist_doc_DATA = \
   data/images/kickstarts/flatten.py \
@@ -55,8 +59,6 @@ docs/imgbase.8: docs/imgbase.8.asc
 rpm:DEF_RELEASE=--define "_release 0.$$(date +%Y%m%d%H%M)git$$(git log -n1 --format=%h)"
 rpm: dist
 	rpmbuild $(DEF_RELEASE) -ta $(DIST_ARCHIVES)
-
-CLEANFILES = $(DERIVED_KS)
 
 %: %.xml
 	xsltproc -o $@ -nonet \

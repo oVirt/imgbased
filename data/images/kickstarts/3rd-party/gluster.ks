@@ -2,7 +2,9 @@
 # Adding gluster from upstream
 #
 %pre
-yum-config-manager --add-repo="http://download.gluster.org/pub/gluster/glusterfs/LATEST/Fedora/glusterfs-fedora.repo"
+set -x
+mkdir -p /tmp/yum.repos.d/
+curl -o /tmp/yum.repos.d/glusterfs-fedora.repo "http://download.gluster.org/pub/gluster/glusterfs/LATEST/Fedora/glusterfs-fedora.repo"
 %end
 
 # Taken from http://www.gluster.org/documentation/quickstart/index.html
