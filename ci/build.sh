@@ -27,3 +27,6 @@ fi
 
 log "Launching the build"
 make image-build
+
+log "Generate manifest"
+guestfish -ia rootfs.qcow2 sh 'rpm -qa --qf "%{sourcerpm}\n" | sort -u' > manifest-srpm
