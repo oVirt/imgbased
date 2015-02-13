@@ -1,4 +1,4 @@
-clearpart --all --initlabel --disklabel=gpt
+clearpart --all --initlabel # --disklabel=gpt
 
 bootloader --timeout=1
 
