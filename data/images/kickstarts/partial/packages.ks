@@ -2,7 +2,7 @@
 #
 # Packages
 #
-%packages --excludedocs
+%packages --excludedocs --ignoremissing
 @core
 
 # Only available in Fedora 20+
