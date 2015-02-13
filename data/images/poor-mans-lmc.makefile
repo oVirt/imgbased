@@ -25,8 +25,10 @@ MIRRORS=http://mirrorlist.centos.org/mirrorlist?repo=os&release=$(RELEASEVER)&ar
 else
 RELEASEVER = 21
 MIRRORS=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$(RELEASEVER)&arch=x86_64
+ifeq '$(RELEASEVER)' '21'
 # Some alternative for F21:
-#MIRRORS=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-install-$(RELEASEVER)&arch=x86_64
+MIRRORS=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-install-$(RELEASEVER)&arch=x86_64
+endif
 endif
 
 
