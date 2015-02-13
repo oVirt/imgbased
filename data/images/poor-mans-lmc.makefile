@@ -23,9 +23,10 @@ CENTOS_URL=http://mirror.centos.org/centos/7/os/x86_64/
 RELEASEVER=7
 MIRRORS=http://mirrorlist.centos.org/mirrorlist?repo=os&release=$(RELEASEVER)&arch=x86_64
 else
-FEDORA_URL=https://alt.fedoraproject.org/pub/alt/stage/current/Server/x86_64/os/
-RELEASEVER = 21
-MIRRORS=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-install-$(RELEASEVER)&arch=x86_64
+RELEASEVER = 20
+MIRRORS=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$(RELEASEVER)&arch=x86_64
+# Some alternative for F21:
+#MIRRORS=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-install-$(RELEASEVER)&arch=x86_64
 endif
 
 
@@ -35,14 +36,19 @@ MIRRORCURL = bash -c "curl --fail -s '$(MIRRORS)' | sed -n 's/Everything/Fedora/
 .INTERMEDIATE: spawned_pids
 
 vmlinuz:
-	$(MIRRORCURL) isolinux/vmlinuz
+	$(MIRRORCURL) images/pxeboot/vmlinuz
 
 initrd.img:
-	$(MIRRORCURL) isolinux/initrd.img
+	$(MIRRORCURL) images/pxeboot/initrd.img
+
+upgrade.img:
+	$(MIRRORCURL) images/pxeboot/upgrade.img
 
 squashfs.img:
 	$(MIRRORCURL) LiveOS/squashfs.img
 
+
+CLEANFILES+=$(wildcard *.img vmlinuz)
 
 .PHONY: .treeinfo
 .SECONDARY: .treeinfo
@@ -52,12 +58,13 @@ squashfs.img:
 	# Anaconda uses the .treeinfo file to find stuff
 	# Let the squashfs point to the PWD, not in some subdir
 	sed -i \
-		"s/=.*squashfs\.img/= squashfs.img/" \
+		-e "s#=.*images/pxeboot/#= #" \
+		-e "s#=.*LiveOS/#= #" \
 		$@
 
 run-install: PYPORT:=$(shell echo $$(( 50000 + $$RANDOM % 15000 )) )
 run-install: VNCPORT:=$(shell echo $$(( $$RANDOM % 1000 )) )
-run-install: .treeinfo vmlinuz initrd.img squashfs.img $(KICKSTART)
+run-install: .treeinfo vmlinuz initrd.img upgrade.img squashfs.img $(KICKSTART)
 	python -m SimpleHTTPServer $(PYPORT) & echo $$! > spawned_pids
 	sed -i -e "$(SED_KS)" $(KICKSTART)
 	qemu-img create -f qcow2 $(DISK_NAME) $(DISK_SIZE)

@@ -19,4 +19,9 @@ kickstarts/%.ks: kickstarts/template/%.ks $(PARTIAL_KS)
 	kickstarts/flatten.py "$<" > "$@"
 	[[ -n "$$http_proxy" ]] && sed -i "s/^\(url\|repo\) /\1 --proxy=$$http_proxy /" "$@" || :
 
+CLEANFILES+=$(wildcard kickstarts/*.ks)
+
 include poor-mans-lmc.makefile
+
+clean:
+	-rm -vf $(CLEANFILES)

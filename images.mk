@@ -17,6 +17,9 @@ QCOW_CHECK = installation.qcow2
 #
 image-build: $(QCOW)
 
+clean-build:
+	cd data/images && make clean
+
 $(QCOW): $(PARTIAL_KS)
 	cd data/images && make run-install DISK_NAME=$(QCOW) KICKSTART=kickstarts/$(NAME).ks
 	mv -v data/images/$(QCOW) $(srcdir)

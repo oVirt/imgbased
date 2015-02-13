@@ -12,7 +12,7 @@ log "Preparing the sources"
 ./autogen.sh
 ./configure
 
-make clean
+make clean clean-build
 
 make -C data/images/ kickstarts/rootfs.ks
 if ${WITH_VDSM:-false}
