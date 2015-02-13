@@ -19,8 +19,8 @@ imgbase --debug layer --add
 # Do not reconfigure, because we did this during the installation
 firstboot --disable
 
-# Reboot after installation, if we were on real hardware
-#reboot
+# Configure simple networking on installation
+network --bootproto=dhcp
 
 # … poweroff because we are likely in a VM
 poweroff
