@@ -15,15 +15,10 @@ log "Preparing the sources"
 make clean clean-build
 
 make -C data/images/ kickstarts/rootfs.ks
-if ${WITH_VDSM:-false}
-then
-  include_ks data/images/kickstarts/3rd-party/ovirt.ks
-fi
 
-if ${WITH_GLUSTER:-false}
-then
-  include_ks data/images/kickstarts/3rd-party/gluster.ks
-fi
+${WITH_VDSM:-false} && include_ks data/images/kickstarts/3rd-party/ovirt.ks
+${WITH_GLUSTER:-false} && include_ks data/images/kickstarts/3rd-party/gluster.ks
+${WITH_COCKPIT:-true} && include_ks data/images/kickstarts/3rd-party/cockpit.ks
 
 log "Launching the build"
 make image-build

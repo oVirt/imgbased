@@ -21,9 +21,6 @@ grub2-efi
 shim
 efibootmgr
 
-# for monitoring/administration
-cockpit
-
 # Configuration management
 #puppet
 #salt
