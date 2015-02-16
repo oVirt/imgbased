@@ -23,7 +23,7 @@ CENTOS_URL=http://mirror.centos.org/centos/7/os/x86_64/
 RELEASEVER=7
 MIRRORS=http://mirrorlist.centos.org/mirrorlist?repo=os&release=$(RELEASEVER)&arch=x86_64
 else
-RELEASEVER = 21
+RELEASEVER = 20
 MIRRORS=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$(RELEASEVER)&arch=x86_64
 ifeq '$(RELEASEVER)' '21'
 # Some alternative for F21:
@@ -78,5 +78,5 @@ run-install: .treeinfo vmlinuz initrd.img upgrade.img squashfs.img $(KICKSTART)
 		-kernel vmlinuz \
 		-initrd initrd.img \
 		-device virtio-serial -chardev file,id=logfile,path=anaconda.log -device virtserialport,name=org.fedoraproject.anaconda.log.0,chardev=logfile \
-		-append "console=ttyS0 inst.ks=http://10.0.2.2:$(PYPORT)/$(KICKSTART) inst.stage2=http://10.0.2.2:$(PYPORT)/ quiet cmdline inst.virtiolog $(QEMU_APPEND)" ; \
+		-append "console=ttyS0 inst.ks=http://10.0.2.2:$(PYPORT)/$(KICKSTART) inst.stage2=http://10.0.2.2:$(PYPORT)/ quiet cmdline $(QEMU_APPEND)" ; \
 	kill $$(cat spawned_pids)
