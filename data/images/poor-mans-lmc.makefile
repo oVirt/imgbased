@@ -23,7 +23,7 @@ CENTOS_URL=http://mirror.centos.org/centos/7/os/x86_64/
 RELEASEVER=7
 MIRRORS=http://mirrorlist.centos.org/mirrorlist?repo=os&release=$(RELEASEVER)&arch=x86_64
 else
-RELEASEVER = 20
+RELEASEVER = 21
 MIRRORS=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$(RELEASEVER)&arch=x86_64
 ifeq '$(RELEASEVER)' '21'
 # Some alternative for F21:
