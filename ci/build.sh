@@ -5,7 +5,7 @@ set -ex
 export PATH=$PATH:/sbin:/usr/sbin
 export TMPDIR=/var/tmp/
 
-include_ks() { cat $@ >> data/kickstarts/rootfs.ks ; }
+include_ks() { cat $@ >> rootfs.ks ; }
 
 ./autogen.sh
 ./configure
