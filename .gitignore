@@ -22,7 +22,7 @@ py-compile
 *.log
 *.8
 *.trs
-data/images/kickstarts/*.ks
+data/kickstarts/*.ks
 *.qcow2
 *.xml
 */config.py

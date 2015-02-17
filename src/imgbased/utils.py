@@ -2,7 +2,6 @@
 import functools
 import subprocess
 import os
-import re
 import logging
 
 
@@ -43,6 +42,7 @@ def format_to_pattern(fmt):
     >>> pat
     'Bar-([-+]?\\\\d+)'
 
+    >>> import re
     >>> re.search(pat, "Bar-01").groups()
     ('01',)
     """

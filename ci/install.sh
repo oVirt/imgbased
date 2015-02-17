@@ -19,7 +19,7 @@ ln -v rootfs.squashfs.img $IMG
 echo $IMG > .index
 
 # Create a kickstart for a specific location
-cp -v data/images/kickstarts/installation.ks auto-installation.ks
+cp -v data/kickstarts/installation.ks auto-installation.ks
 
 # Create an inteactive kickstart for a specific location
-sed -e "/^clearpart / d" data/images/kickstarts/installation.ks > interactive-installation.ks
+sed -e "/^clearpart / d" data/kickstarts/installation.ks > interactive-installation.ks
