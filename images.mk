@@ -5,24 +5,15 @@
 #
 
 KICKSTARTS=$(wildcard data/kickstarts/*/*.ks)
+CLEANFILES+=$(wildcard *.qcow2) $(wildcard *.ks)
 .SECONDARY: rootfs.qcow2
+
 
 image-build: rootfs.qcow2
 
-%.qcow2: $(KICKSTARTS)
-	make -C data/kickstarts $*.ks
-	mv -vf data/kickstarts/$*.ks
-	make -f tools/build.mk $@
-	-virt-sparsify --check-tmpdir continue --compress $@ $@.sparse && mv -v $@.sparse $@
-
-%.squashfs.img: %.qcow2
-	 make -f tools/build.mk $@
-	unsquashfs -ll $@
-
 image-install: SQUASHFS_URL="@HOST_HTTP@/rootfs.squashfs.img"
-image-install:
+image-install: installation.ks
 	[[ -f rootfs.squashfs.img ]]
-	-rm -f data/kickstarts/installation.ks
 	$(MAKE) -C data/kickstarts installation.ks
 	mv -vf data/kickstarts/installation.ks .
 	sed -i "s#@ROOTFS_URL@#$(SQUASHFS_URL)#" installation.ks
@@ -34,4 +25,18 @@ verrel:
 check: QCOW_CHECK=installation.qcow2
 check:
 	[[ -f "$(QCOW_CHECK)" ]] && make -f tests/runtime/Makefile check-local IMAGE=$(QCOW_CHECK) || :
+
+
+%.ks:
+	-rm -f data/kickstarts/installation.ks
+	make -C data/kickstarts $@
+	mv -vf data/kickstarts/$@ $@
+
+%.qcow2: %.ks
+	make -f tools/build.mk $@
+	-virt-sparsify --check-tmpdir continue --compress $@ $@.sparse && mv -v $@.sparse $@
+
+%.squashfs.img: %.qcow2
+	 make -f tools/build.mk $@
+	unsquashfs -ll $@
 

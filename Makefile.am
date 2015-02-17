@@ -1,4 +1,6 @@
 
+CLEANFILES=
+
 include images.mk
 
 SHELL := /bin/bash
@@ -38,7 +40,7 @@ EXTRA_DIST = \
 PARTIAL_KS = $(wildcard data/kickstarts/*/*.ks)
 DERIVED_KS = $(wildcard data/kickstarts/*.ks)
 
-CLEANFILES = $(DERIVED_KS)
+CLEANFILES+= $(DERIVED_KS)
 .PHONY: $(DERIVED_KS)
 
 dist_doc_DATA = \
@@ -67,4 +69,3 @@ rpm: dist
 %.xml: %.asc
 	mkdir -p $$(dirname $@)
 	asciidoc -d manpage -b docbook -o $@ $<
-

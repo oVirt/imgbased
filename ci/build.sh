@@ -12,9 +12,7 @@ log "Preparing the sources"
 ./autogen.sh
 ./configure
 
-make clean clean-build
-
-make -C data/kickstarts rootfs.ks
+make clean rootfs.ks
 
 ${WITH_VDSM:-false} && include_ks data/kickstarts/3rd-party/ovirt.ks
 ${WITH_GLUSTER:-false} && include_ks data/kickstarts/3rd-party/gluster.ks
