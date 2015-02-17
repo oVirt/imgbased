@@ -7,6 +7,7 @@ export PATH=$PATH:/sbin/:/usr/sbin/
 ./autogen.sh
 ./configure
 
+make rootfs.squashfs.img
 [[ -n $SQUASHFS_URL ]] && make image-install SQUASHFS_URL=$SQUASHFS_URL || make image-install
 
 IMG="$(make verrel).squashfs.img"
