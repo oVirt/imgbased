@@ -4,65 +4,39 @@
 # files
 #
 
-NAME = rootfs
-SQUASHFS=$(NAME).squashfs.img
-QCOW = $(NAME).qcow2
-QCOW_CHECK = installation.qcow2
+KICKSTARTS=$(wildcard data/kickstarts/*/*.ks)
+CLEANFILES+=$(wildcard *.qcow2) $(wildcard *.ks)
+.SECONDARY: rootfs.qcow2
 
-.SECONDARY : rootfs.qcow2
 
-#
-# Build the test image
-# and sparsify if possible
-#
-image-build: $(QCOW)
+image-build: rootfs.qcow2
 
-clean-build:
-	cd data/images && make clean
+image-install: SQUASHFS_URL="@HOST_HTTP@/rootfs.squashfs.img"
+image-install: installation.ks
+	[[ -f rootfs.squashfs.img ]]
+	$(MAKE) -C data/kickstarts installation.ks
+	mv -vf data/kickstarts/installation.ks .
+	sed -i "s#@ROOTFS_URL@#$(SQUASHFS_URL)#" installation.ks
+	$(MAKE) -f image-tools/build.mk installation.qcow2
 
-$(QCOW): $(PARTIAL_KS)
-	cd data/images && make run-install DISK_NAME=$(QCOW) KICKSTART=kickstarts/$(NAME).ks
-	mv -v data/images/$(QCOW) $(srcdir)
-	-virt-sparsify --check-tmpdir continue --compress $(QCOW) $(QCOW).sparse && mv -v $(QCOW).sparse $(QCOW)
-
-#
-# Now some targets to test the installation part
-#
-rootfs.raw: rootfs.qcow2
-	qemu-img convert -p -S 1M -O raw $< $@
-
-rootfs.squashfs.img: rootfs.raw
-	bash tools/image_to_squashfs $< $@
-
-rootfs.tar.xz: rootfs.qcow2
-	if [[ -e $@ ]]; then echo "Tarball already exists" ; else guestfish -i -a $< tar-out / $@ compress:xz ; fi
-
-image-install: SQUASHFS_URL=http://10.0.2.2:\$$(PYPORT)/
-image-install: $(SQUASHFS)
-	[[ -f "$(SQUASHFS)" ]]
-	-rm -f data/images/kickstarts/installation.ks data/images/$(SQUASHFS)
-	-ln -s $$PWD/$(SQUASHFS) data/images/
-	$(MAKE) image-build NAME=installation SED_KS="s#@ROOTFS_URL@#$(SQUASHFS_URL)/$(SQUASHFS)#"
-
-verrel: TYPE=rootfs
-verrel: NAME=FedoraNodeNext
-verrel: VENDOR=org.ovirt.node
-verrel: ARCH=x86_64
-verrel: VERSION=$$(date +%Y%m%d)$(EXTRA_RELEASE)
 verrel:
-	@bash tools/image-verrel $(TYPE) $(NAME) $(VENDOR) $(ARCH) $(VERSION)
+	@bash image-tools/image-verrel rootfs NodeNext org.ovirt.node
 
-#
-# Run simple and advanced test
-#
+check: QCOW_CHECK=installation.qcow2
 check:
-	[[ -f "$(QCOW_CHECK)" ]] && $(MAKE) check-runtime || :
+	[[ -f "$(QCOW_CHECK)" ]] && make -f tests/runtime/Makefile check-local IMAGE=$(QCOW_CHECK) || :
 
-#
-# Run runtime/functional test on the test image
-# Intentioanlly no dependency on build
-#
-check-runtime: $(QCOW_CHECK)
-	make -f tests/runtime/Makefile check-local IMAGE=$(QCOW_CHECK)
 
+%.ks:
+	-rm -f data/kickstarts/installation.ks
+	make -C data/kickstarts $@
+	mv -vf data/kickstarts/$@ $@
+
+%.qcow2: %.ks
+	make -f image-tools/build.mk $@
+	-virt-sparsify --check-tmpdir continue --compress $@ $@.sparse && mv -v $@.sparse $@
+
+%.squashfs.img: %.qcow2
+	 make -f image-tools/build.mk $@
+	unsquashfs -ll $@
 
