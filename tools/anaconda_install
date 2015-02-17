@@ -1,0 +1,86 @@
+#!/usr/bin/bash
+
+set -ex
+# Kill child processes on exit
+trap 'kill $(jobs -pr)' SIGINT SIGTERM EXIT
+
+usage() {
+echo "Usage: $0 <distro> <releasever> <kickstart> <dstimage> [<disksize>G]"
+}
+
+DISTRO=$1
+RELEASEVER=$2
+KICKSTART=$3
+DISK_NAME=$4
+DISK_SIZE=${5:-10G}
+
+VM_RAM=${6:-2048}
+VM_SMP=${7:-4}
+
+[[ -f $KICKSTART ]]
+[[ ! -f $DISK_NAME ]]
+
+MIRRORS=
+
+if [[ "$DISTRO" = "fedora" ]];
+then
+  MIRRORS="https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$RELEASEVER&arch=x86_64"
+  [[ "$RELEASEVER" = "21" ]] && MIRRORS="https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-install-$RELEASEVER&arch=x86_64" || :
+fi
+
+if [[ "$DISTRO" = "centos" ]];
+then
+  CENTOS_URL="http://mirror.centos.org/centos/7/os/x86_64/"
+  MIRRORS="http://mirrorlist.centos.org/mirrorlist?repo=os&release=$RELEASEVER&arch=x86_64"
+fi
+
+[[ -z $MIRRORS ]] && exit 3
+
+mirrorcurl() {
+  [[ -f $(basename $1) ]] && return
+  curl --location --fail -s "$MIRRORS" \
+  | sed -n 's/Everything/Fedora/ ; /^ht/ p' \
+  | while read BURL; do URL=$BURL$1 ; echo Using $URL ; curl --fail -L -O $URL && break ; done ; test -f $(basename $1)
+}
+
+
+mirrorcurl images/pxeboot/vmlinuz
+mirrorcurl images/pxeboot/initrd.img
+mirrorcurl images/pxeboot/upgrade.img
+mirrorcurl LiveOS/squashfs.img
+
+rm -f .treeinfo
+mirrorcurl .treeinfo
+echo "Adjusting squashfs image path, so anaconda finds it"
+# Anaconda uses the .treeinfo file to find stuff
+# Let the squashfs point to the PWD, not in some subdir
+sed -i -e "s#=.*images/pxeboot/#= #" \
+       -e "s#=.*LiveOS/#= #" \
+       .treeinfo
+
+[[ $KICKSTART != $(basename $KICKSTART) ]] && ln -fvs $KICKSTART $(basename $KICKSTART)
+
+PYPORT=$(( 50000 + $RANDOM % 15000 ))
+VNCPORT=$(( $RANDOM % 1000 ))
+APPEND="console=ttyS0 quiet"
+APPEND+=" cmdline inst.ks=http://10.0.2.2:$PYPORT/$(basename $KICKSTART) inst.stage2=http://10.0.2.2:$PYPORT/"
+APPEND+=" $QEMU_APPEND"
+
+sed -i "s#@HOST_HTTP@#http://10.0.2.2:$PYPORT#" $KICKSTART
+
+python -m SimpleHTTPServer $PYPORT &
+
+qemu-img create -f qcow2 $DISK_NAME $DISK_SIZE
+
+qemu-system-x86_64 \
+	-enable-kvm \
+	-vnc 0.0.0.0:$VNCPORT \
+	-serial stdio \
+	-smp $VM_SMP \
+	-m $VM_RAM \
+	-hda $DISK_NAME \
+	-kernel vmlinuz \
+	-initrd initrd.img \
+	-device virtio-serial \
+	-chardev file,id=logfile,path=anaconda.log -device virtserialport,name=org.fedoraproject.anaconda.log.0,chardev=logfile \
+	-append "$APPEND"
