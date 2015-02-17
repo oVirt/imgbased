@@ -13,7 +13,7 @@ IMG="$(make verrel).squashfs.img"
 ln -v rootfs.squashfs.img $IMG
 
 # Create an index file for imgbase remote
-echo $IMG > .index
+ls -1 > .index
 
 # Create a kickstart for a specific location
 mv -v data/kickstarts/installation.ks auto-installation.ks
