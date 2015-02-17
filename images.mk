@@ -32,15 +32,7 @@ rootfs.raw: rootfs.qcow2
 	qemu-img convert -p -S 1M -O raw $< $@
 
 rootfs.squashfs.img: rootfs.raw
-	mkdir -p squashfs-root/LiveOS
-#	Check if it's a disk image, then we need to remove the label to get the partition, assumption: On partition
-#	FIXME The size of the mbr/label is hardcoded, works by removing the label from the disk image
-	-[[ $$(file $<) =~ "boot sector" ]] && dd conv=sparse bs=1M skip=1 if=$< of=squashfs-root/LiveOS/rootfs.img
-#	If the image is already afilesystem, take it directly
-	-[[ $$(file $<) =~ "filesystem" ]] && ln -v $(PWD)/$(SRCIMAGE) squashfs-root/LiveOS/rootfs.img
-	[[ -f squashfs-root/LiveOS/rootfs.img ]]
-	mksquashfs squashfs-root $@ -comp xz -noappend
-	rm -rvf squashfs-root
+	bash tools/image_to_squashfs $< $@
 
 rootfs.tar.xz: rootfs.qcow2
 	if [[ -e $@ ]]; then echo "Tarball already exists" ; else guestfish -i -a $< tar-out / $@ compress:xz ; fi
@@ -58,7 +50,7 @@ verrel: VENDOR=org.ovirt.node
 verrel: ARCH=x86_64
 verrel: VERSION=$$(date +%Y%m%d)$(EXTRA_RELEASE)
 verrel:
-	@echo $(TYPE):$(NAME):$(VENDOR):$(ARCH):$(VERSION)
+	@bash tools/image-verrel $(TYPE) $(NAME) $(VENDOR) $(ARCH) $(VERSION)
 
 #
 # Run simple and advanced test

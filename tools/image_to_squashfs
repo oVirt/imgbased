@@ -1,0 +1,61 @@
+#!/usr/bin/bash
+
+usage() {
+cat <<EOF
+Usage: $0 <diskimage> [<squashfsfile>]"
+
+This tool converts a raw disk or filesystem image
+into a by dracut bootable squashfs.
+
+It has some logic to strip the label and bootloader from a
+disk image to retrieve the filesystem.
+EOF
+}
+
+info() { echo $(date +%X) $@ ; }
+die() { echo $@ >&2 ; exit 1 ; }
+
+image_to_squashfs()
+{
+  SRCIMAGE=$1
+  DSTIMAGE=$2
+
+  [[ -f $SRCIMAGE ]] || die "Source image '$SRCIMAGE' does not exist."
+  [[ -f $DSTIMAGE ]] && die "Destination image '$DSTIMAGE' already exists, please remove manually."
+  [[ -e squashfs-root ]] && die "squashfs-root already exists, please remove manually."
+
+  mkdir -p squashfs-root/LiveOS
+
+  # Check if it's a disk image, then we need to remove the label
+  # to get the partition, assumption: On partition
+
+  # FIXME The size of the mbr/label is hardcoded, works by removing the label from the disk image
+  [[ $(file $SRCIMAGE) =~ "boot sector" ]] && {
+    info "Found a disk image, extracting the filesystem ..."
+    nice dd conv=sparse bs=1M skip=1 if=$SRCIMAGE of=squashfs-root/LiveOS/rootfs.img
+  }
+
+  # If the image is already afilesystem, take it directly
+  [[ $(file $SRCIMAGE) =~ "filesystem" ]] && {
+    info "Found a filesystem image, using this directly."
+    ln -v $SRCIMAGE squashfs-root/LiveOS/rootfs.img
+  }
+
+  [[ -f squashfs-root/LiveOS/rootfs.img ]] || die "Failed to create squashfs image."
+
+  info "Creating squashfs ..."
+  mksquashfs squashfs-root $DSTIMAGE -comp xz -noappend
+
+  info "Cleaning up"
+  rm -rvf squashfs-root
+}
+
+main() {
+  SRC=$1
+  DST=${2:-squashfs.img}
+  [[ -n $SRC ]] || die "No source given"
+
+  image_to_squashfs $SRC $DST
+}
+
+[[ -n $@ ]] && main $@ || usage
