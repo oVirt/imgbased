@@ -12,6 +12,8 @@ log "Preparing the sources"
 ./autogen.sh
 ./configure
 
+git submodule update --init --recursive
+
 make clean rootfs.ks
 
 ${WITH_VDSM:-false} && include_ks data/kickstarts/3rd-party/ovirt.ks
