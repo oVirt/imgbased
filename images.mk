@@ -17,10 +17,10 @@ image-install: installation.ks
 	$(MAKE) -C data/kickstarts installation.ks
 	mv -vf data/kickstarts/installation.ks .
 	sed -i "s#@ROOTFS_URL@#$(SQUASHFS_URL)#" installation.ks
-	$(MAKE) -f tools/build.mk installation.qcow2
+	$(MAKE) -f image-tools/build.mk installation.qcow2
 
 verrel:
-	@bash tools/image-verrel rootfs NodeNext org.ovirt.node
+	@bash image-tools/image-verrel rootfs NodeNext org.ovirt.node
 
 check: QCOW_CHECK=installation.qcow2
 check:
@@ -33,10 +33,10 @@ check:
 	mv -vf data/kickstarts/$@ $@
 
 %.qcow2: %.ks
-	make -f tools/build.mk $@
+	make -f image-tools/build.mk $@
 	-virt-sparsify --check-tmpdir continue --compress $@ $@.sparse && mv -v $@.sparse $@
 
 %.squashfs.img: %.qcow2
-	 make -f tools/build.mk $@
+	 make -f image-tools/build.mk $@
 	unsquashfs -ll $@
 
