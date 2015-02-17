@@ -10,7 +10,7 @@ sparsify:
 
 kickstarts/%.ks: kickstarts/template/%.ks $(PARTIAL_KS)
 	@mkdir -p $$(dirname "$@")
-	cat "kickstarts/baseos/$(DISTRO).ks" >> "$@"
+	cat "kickstarts/platform/$(DISTRO).ks" >> "$@"
 	kickstarts/flatten.py "$<" >> "$@"
 	[[ -n "$$http_proxy" ]] && sed -i "s/^\(url\|repo\) /\1 --proxy=$$http_proxy /" "$@" || :
 
