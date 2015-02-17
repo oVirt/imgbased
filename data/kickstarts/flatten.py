@@ -35,7 +35,7 @@ def replace_in_template(template):
         for line in src:
             if line.startswith("%include "):
                 incl = line.replace("%include ", "").strip()
-                content += "\n##\n## Including %s\n##\n" % incl
+                content += "\n\n##\n## Including %s\n##\n" % incl
                 incl = os.path.join(basedir, incl)
                 content += replace_in_template(incl)
             else:
