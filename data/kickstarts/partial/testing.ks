@@ -26,3 +26,6 @@ sed -i "/ExecStart/ s/$/ --autologin root/" /lib/systemd/system/*getty*.service
 echo "Unlocking root account"
 passwd --unlock --delete root
 %end
+
+# Disable firstboot, because we just unlocked root (see above)
+firstboot --disable
