@@ -1,4 +1,3 @@
 [submodule "image-tools"]
 	path = image-tools
-	url = git@github.com:fabiand/image-tools.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
+	url = https://github.com/fabiand/image-tools.git
