@@ -6,7 +6,7 @@
 
 KICKSTARTS=$(wildcard data/kickstarts/*/*.ks)
 CLEANFILES+=$(wildcard *.qcow2) $(wildcard *.ks)
-.SECONDARY: rootfs.qcow2
+.SECONDARY: rootfs.qcow2 rootfs.ks
 
 
 image-build: rootfs.qcow2
