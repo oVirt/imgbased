@@ -54,6 +54,7 @@ class TestEnvironment(unittest.TestCase):
         """Checking relevant mount points
         """
         from sh import findmnt
+
         def mnt_source(p):
             n = findmnt("-no", "SOURCE", p, _ok_code=[1])
             return n.strip()
