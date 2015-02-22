@@ -49,3 +49,15 @@ class TestEnvironment(unittest.TestCase):
         from sh import which
         for app in ["df", "du", "diff", "lvm"]:
             assert which(app)
+
+    def test_mounts(self):
+        """Checking relevant mount points
+        """
+        from sh import findmnt
+        def mnt_source(p):
+            n = findmnt("-no", "SOURCE", p, _ok_code=[1])
+            return n.strip()
+
+        assert mnt_source("/tmp") == "tmpfs"
+        assert mnt_source("/etc") == ""
+        assert mnt_source("/var") != ""
