@@ -3,5 +3,6 @@
 #
 %post
 set -x
-yum install -y docker
+grep -qi fedora /etc/system-release && yum install -y docker-io
+grep -qi centos /etc/system-release && yum install -y docker
 %end
