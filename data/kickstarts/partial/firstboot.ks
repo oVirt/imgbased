@@ -2,6 +2,6 @@
 
 firstboot --reconfig
 
-%packages
+%packages --ignoremissing
 initial-setup
 %end

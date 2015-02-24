@@ -8,6 +8,8 @@ KICKSTARTS=$(wildcard data/kickstarts/*/*.ks)
 CLEANFILES+=$(wildcard *.qcow2) $(wildcard *.ks)
 .SECONDARY: rootfs.qcow2 rootfs.ks
 
+DISTRO=centos
+RELEASEVER=7
 
 image-build: rootfs.qcow2
 
@@ -29,11 +31,11 @@ check:
 
 %.ks:
 	-rm -f data/kickstarts/installation.ks
-	make -C data/kickstarts $@
+	$(MAKE) -C data/kickstarts DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) $@
 	mv -vf data/kickstarts/$@ $@
 
 %.qcow2: %.ks
-	make -f image-tools/build.mk $@
+	make -f image-tools/build.mk DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) $@
 	-virt-sparsify --check-tmpdir continue --compress $@ $@.sparse && mv -v $@.sparse $@
 
 %.squashfs.img: %.qcow2
