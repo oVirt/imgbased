@@ -19,7 +19,8 @@ image-install: installation.ks
 	$(MAKE) -C data/kickstarts installation.ks
 	mv -vf data/kickstarts/installation.ks .
 	sed -i "s#@ROOTFS_URL@#$(SQUASHFS_URL)#" installation.ks
-	$(MAKE) -f image-tools/build.mk DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) DISK_SIZE=$$(( 10 * 1024 )) installation.qcow2
+# FIXME Workaround broken anaconda in CentOS: http://bugs.centos.org/view.php?id=8239
+	$(MAKE) -f image-tools/build.mk DISTRO=fedora RELEASEVER=21 DISK_SIZE=$$(( 10 * 1024 )) installation.qcow2
 
 verrel:
 	@bash image-tools/image-verrel rootfs NodeNext org.ovirt.node
