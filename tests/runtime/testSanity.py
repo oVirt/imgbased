@@ -51,14 +51,20 @@ class TestEnvironment(unittest.TestCase):
             assert which(app)
 
     def test_mounts(self):
-        """Checking relevant mount points
+        """Check presence of relevant mount points
         """
         from sh import findmnt
 
-        def mnt_source(p):
-            n = findmnt("-no", "SOURCE", p, _ok_code=[1])
-            return n.strip()
+        mnt_opt = lambda o, p: findmnt("-no", o, p, _ok_code=[1]).strip()
 
-        assert mnt_source("/tmp") == "tmpfs"
-        assert mnt_source("/etc") == ""
-        assert mnt_source("/var") != ""
+        assert mnt_opt("SOURCE", "/tmp") == "tmpfs", \
+            "/tmp is not a tmpfs"
+
+        assert mnt_opt("SOURCE", "/etc") == "", \
+            "/etc is not on /"
+
+        assert mnt_opt("SOURCE", "/var") != "", \
+            "/var is not a separate device"
+
+        assert "discard" in mnt_opt("OPTIONS", "/"), \
+            "/ is not mounted with the discard option"
