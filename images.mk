@@ -37,7 +37,6 @@ check:
 
 %.qcow2: %.ks
 	make -f image-tools/build.mk DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) $@
-	-virt-sparsify --check-tmpdir continue --compress $@ $@.sparse && mv -v $@.sparse $@
 
 %.squashfs.img: %.qcow2
 	 make -f image-tools/build.mk $@
