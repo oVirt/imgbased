@@ -17,6 +17,4 @@ ${WITH_GLUSTER:-false} && include_ks gluster.ks
 ${WITH_COCKPIT:-true} && include_ks cockpit.ks
 ${WITH_DOCKER:-docker} && include_ks docker.ks
 
-make image-build
-
-guestfish -ia rootfs.qcow2 sh 'rpm -qa | sort -u' > manifest-rpm
+make image-build rootfs-manifest-rpm

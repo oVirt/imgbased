@@ -42,3 +42,5 @@ check:
 	 make -f image-tools/build.mk $@
 	unsquashfs -ll $@
 
+%-manifest-rpm: %.qcow2
+	 make -f image-tools/build.mk $@
