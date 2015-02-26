@@ -5,11 +5,12 @@
 #
 
 KICKSTARTS=$(wildcard data/kickstarts/*/*.ks)
-CLEANFILES+=$(wildcard *.qcow2) $(wildcard *.ks)
+CLEANFILES+=$(wildcard *.qcow2) $(wildcard *.ks) vmlinuz initrd.img squashfs.img
 .SECONDARY: rootfs.qcow2 rootfs.ks
 
-DISTRO=centos
-RELEASEVER=7
+# FIXME Stick to Fedora until this is solved: http://bugs.centos.org/view.php?id=8239
+DISTRO=fedora
+RELEASEVER=22
 
 image-build: rootfs.qcow2
 
@@ -19,8 +20,7 @@ image-install: installation.ks
 	$(MAKE) -C data/kickstarts installation.ks
 	mv -vf data/kickstarts/installation.ks .
 	sed -i "s#@ROOTFS_URL@#$(SQUASHFS_URL)#" installation.ks
-# FIXME Workaround broken anaconda in CentOS: http://bugs.centos.org/view.php?id=8239
-	$(MAKE) -f image-tools/build.mk DISTRO=fedora RELEASEVER=21 DISK_SIZE=$$(( 10 * 1024 )) installation.qcow2
+	$(MAKE) -f image-tools/build.mk DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) DISK_SIZE=$$(( 10 * 1024 )) SPARSE= installation.qcow2
 
 verrel:
 	@bash image-tools/image-verrel rootfs NodeNext org.ovirt.node
