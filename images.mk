@@ -10,7 +10,7 @@ CLEANFILES+=$(wildcard *.qcow2) $(wildcard *.ks) vmlinuz initrd.img squashfs.img
 
 # FIXME Stick to Fedora until this is solved: http://bugs.centos.org/view.php?id=8239
 DISTRO=fedora
-RELEASEVER=22
+RELEASEVER=21
 
 image-build: rootfs.qcow2
 
