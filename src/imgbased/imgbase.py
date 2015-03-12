@@ -382,12 +382,11 @@ class ImageLayers(object):
         self._add_layer(existing, initial_base)
         self.add_bootable_layer()
 
-    def init_layout(self, pvs, poolsize, without_vg=False):
+    def init_layout(self, pvs, poolsize):
         """Create the LVM layout needed by this tool
         """
-        assert (not without_vg and pvs) or (without_vg)
         assert poolsize > 0
-        if not without_vg:
+        if pvs:
             self.run.vgcreate([self.vg] + pvs)
         self._create_thinpool(poolsize)
 

@@ -130,9 +130,9 @@ if __name__ == '__main__':
 
     if args.command == "layout":
         if args.init:
-            if not args.size or not args.pv:
-                raise RuntimeError("--size and PVs required")
-            app.imgbase.init_layout(args.pv, args.size, args.without_vg)
+            if not args.size:
+                raise RuntimeError("--size required")
+            app.imgbase.init_layout(args.pv, args.size)
         elif args.init_from:
             app.imgbase.init_layout_from(args.init_from)
         elif args.free_space:
