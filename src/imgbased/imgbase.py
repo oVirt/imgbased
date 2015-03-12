@@ -370,6 +370,18 @@ class ImageLayers(object):
             self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
                            lv.path, "%s/etc/fstab" % mount.target])
 
+    def init_layout_from(self, existing_lvm_name):
+        """Create a snapshot from an existing thin LV to make it suitable
+        """
+        log().info("Trying to create a manageable base from '%s'" %
+                   existing_lvm_name)
+        existing = LVM.LV.from_lvm_name(existing_lvm_name)
+        initial_base = self._next_base().lvm
+        log().info("Creating an initial base '%s' for '%s'" %
+                   (initial_base, existing))
+        self._add_layer(existing, initial_base)
+        self.add_bootable_layer()
+
     def init_layout(self, pvs, poolsize, without_vg=False):
         """Create the LVM layout needed by this tool
         """

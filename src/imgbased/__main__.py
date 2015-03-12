@@ -70,6 +70,10 @@ if __name__ == '__main__':
                               help="How much space there is in the thinpool")
     layout_group.add_argument("--init", action="store_true", default=False,
                               help="Create the initial Volume Group")
+    layout_group.add_argument("--init-from", type=str, default="",
+                              metavar="VG/LV",
+                              help="Make an existing thin LV consumable")
+
     space_group = layout_parser.add_argument_group("Free space arguments")
     space_group.add_argument("--units", default="m",
                              help="Units to be used for free space")
@@ -129,6 +133,8 @@ if __name__ == '__main__':
             if not args.size or not args.pv:
                 raise RuntimeError("--size and PVs required")
             app.imgbase.init_layout(args.pv, args.size, args.without_vg)
+        elif args.init_from:
+            app.imgbase.init_layout_from(args.init_from)
         elif args.free_space:
             print(app.imgbase.free_space(args.units))
         else:
@@ -156,3 +162,5 @@ if __name__ == '__main__':
     # Now let the plugins check if they need to run something
     #
     app.hooks.emit("post-arg-parse", args)
+
+# vim: et sts=4 sw=4:
