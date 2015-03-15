@@ -19,3 +19,4 @@ ls -1 > .index
 # Create a kickstarts for auto and interactive installations
 mv -v installation.ks auto-installation.ks
 sed -e "/^clearpart / d" auto-installation.ks > interactive-installation.ks
+sed -i "/http_proxy=/ d" *-installation.ks
