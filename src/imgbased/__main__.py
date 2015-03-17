@@ -54,10 +54,6 @@ if __name__ == '__main__':
 
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--dry", action="store_true")
-    parser.add_argument("--vg", help="Volume Group to use",
-                        default=ImageLayers.vg)
-    parser.add_argument("--thinpool", help="Thinpool to use",
-                        default=ImageLayers.thinpool)
     parser.add_argument("--layerformat", help="Format to discover layers",
                         default=ImageLayers.layerformat)
 
@@ -73,8 +69,6 @@ if __name__ == '__main__':
     #
     # Get started
     #
-    app.imgbase.vg = args.vg
-    app.imgbase.thinpool = args.thinpool
     app.imgbase.layerformat = args.layerformat
     app.imgbase.debug = args.debug
     app.imgbase.dry = args.dry

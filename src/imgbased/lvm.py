@@ -25,15 +25,27 @@ from .utils import ExternalBinary
 
 class LVM(object):
     _lvs = ExternalBinary().lvs
+    _vgs = ExternalBinary().vgs
     _lvcreate = ExternalBinary().lvcreate
     _lvchange = ExternalBinary().lvchange
     _vgcreate = ExternalBinary().vgcreate
+    _vgchange = ExternalBinary().vgchange
 
     class VG(object):
         vg_name = None
 
         def __init__(self, vg_name):
             self.vg_name = vg_name
+
+        def __repr__(self):
+            return "<VG '%s' />" % self.name
+
+        @staticmethod
+        def find_by_tag(tag):
+            vgs = LVM._vgs(["--noheadings", "--select",
+                            "vg_tags = %s" % tag, "-o", "vg_name"]).decode()
+            assert len(vgs.split()) == 1
+            return vgs.split()[0]
 
         @staticmethod
         def create(vg_name, pv_paths):
@@ -46,6 +58,9 @@ class LVM(object):
                            "--size", str(size),
                            pool.lvm_name])
             return pool
+
+        def addtag(self, tag):
+            LVM._vgchange(["--addtag", tag, self.vg_name])
 
     class LV(object):
         vg_name = None
@@ -64,6 +79,9 @@ class LVM(object):
         def __init__(self, vg_name, lv_name):
             self.vg_name = vg_name
             self.lv_name = lv_name
+
+        def __repr__(self):
+            return "<LV '%s' />" % self.lvm_name
 
         @staticmethod
         def from_lvm_name(lvm_name):
@@ -90,10 +108,11 @@ class LVM(object):
                            "--name", new_name,
                            self.lvm_name])
 
-        def activate(self, val):
+        def activate(self, val, ignoreactivationskip=False):
             assert val in [True, False]
             val = "y" if True else "n"
             LVM._lvchange(["--activate", val,
+                           "-K" if ignoreactivationskip else "",
                            self.lvm_name])
 
         def setactivationskip(self, val):

@@ -24,6 +24,7 @@ import subprocess
 import os
 import re
 import io
+import datetime
 from .hooks import Hooks
 from . import bootloader
 from .utils import memoize, ExternalBinary, format_to_pattern, \
@@ -37,8 +38,9 @@ class ImageLayers(object):
 
     hooks = None
 
-    vg = "HostVG"
-    thinpool = "ImagePool"
+    vg_tag = "imgbased:vg"
+    thinpool_tag = "imgbased:pool"
+
     layerformat = "Image-%d.%d"
 
     run = None
@@ -62,7 +64,7 @@ class ImageLayers(object):
 
         @property
         def lvm(self):
-            return LVM.LV(self.p.vg, self.name)
+            return LVM.LV(self.p._vg(), self.name)
 
         def __init__(self, p, v=None, r=None):
             self.p = p
@@ -108,6 +110,19 @@ class ImageLayers(object):
 
         self.run = ExternalBinary()
         self.bootloader = bootloader.BlsBootloader(self)
+
+
+    def _vg(self):
+        vgs = LVM.VG.find_by_tag(self.vg_tag)
+        log().debug("VG candidates: %s" % vgs)
+        assert len(vgs)
+        return vgs
+
+    def _thinpool(self):
+        lvs = LVM.LV.find_by_tag(self.thinpool_tag)
+        log().debug("Thinpool candidates: %s" % lvs)
+        assert len(lvs) == 1
+        return lvs[0]
 
     def _lvs(self):
         log().debug("Querying for LVs")
@@ -168,13 +183,13 @@ class ImageLayers(object):
         return ImageLayers.Image(self, int(version), int(release))
 
     def image_from_path(self, path):
-        name = LVM.from_path(path).lv_name
+        name = LVM.LV.from_path(path).lv_name
         log().info("Found LV '%s' for path '%s'" % (name, path))
         return self.image_from_name(name)
 
     def image_from_lvm_name(self, lvm_name):
         lv = LVM.LV.from_lvm_name(lvm_name)
-        assert lv.vg_name == self.vg
+        assert lv.vg_name == self._vg()
         return self.image_from_name(lv.lv_name)
 
     def layout(self, lvs=None):
@@ -245,13 +260,16 @@ class ImageLayers(object):
         >>> layers._next_base(version=20140401, lvs=lvs)
         <Image-20140401.0 />
         """
+        log().debug("Finding next base")
         try:
             base = self._last_base(lvs)
             base.version = version or int(base.version) + 1
             base.release = 0
             base.layers = []
         except RuntimeError:
+            log().debug("No previous base found, creating an initial one")
             base = ImageLayers.Image(self, version or 0, 0)
+            log().debug("Initial base is now: %s" % base)
         return base
 
     def _last_layer(self, base=None, lvs=None):
@@ -300,8 +318,7 @@ class ImageLayers(object):
         """
         log().info("Adding a new layer")
         previous_layer.create_snapshot(new_layer.lvm_name)
-        new_layer.activate(True)
-        new_layer.setactivationskip(False)
+        new_layer.activate(True, True)
 
         # Assign a new filesystem UUID and label
         self.run.tune2fs(["-U", "random",
@@ -311,7 +328,6 @@ class ImageLayers(object):
         # Handle the previous layer
         # FIXME do a correct check if it's a base
         skip_if_is_base = previous_layer.lvm_name.endswith(".0")
-        previous_layer.activate(True)
         previous_layer.setactivationskip(skip_if_is_base)
 
     def _add_boot_entry(self, lv):
@@ -321,12 +337,16 @@ class ImageLayers(object):
         """
         log().info("Adding a boot entry for the new layer")
 
-        self.bootloader.add_boot_entry(lv.lvm_name, lv.path)
-
         with mounted(lv.path) as mount:
-            log().info("Updating fstab of new layer")
-            self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
-                           lv.path, "%s/etc/fstab" % mount.target])
+            fstab = "%s/etc/fstab" % mount.target
+            if os.path.exists(fstab):
+                log().info("Updating fstab of new layer")
+                self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
+                               lv.path, fstab])
+                self.bootloader.add_boot_entry(lv.lvm_name, lv.path)
+            else:
+                log().info("No fstab found, not updating and not creating a" +
+                           "boot entry.")
 
     def init_layout_from(self, existing_lvm_name):
         """Create a snapshot from an existing thin LV to make it suitable
@@ -334,7 +354,11 @@ class ImageLayers(object):
         log().info("Trying to create a manageable base from '%s'" %
                    existing_lvm_name)
         existing = LVM.LV.from_lvm_name(existing_lvm_name)
-        initial_base = self._next_base().lvm
+        log().debug("Found existing LV '%s'" % existing)
+        log().debug("Tagging existing pool")
+        LVM.VG(existing.vg_name).addtag(self.vg_tag)
+        today = int(datetime.date.today().strftime("%Y%m%d"))
+        initial_base = self._next_base(version=today).lvm
         log().info("Creating an initial base '%s' for '%s'" %
                    (initial_base, existing))
         self._add_layer(existing, initial_base)
@@ -346,7 +370,7 @@ class ImageLayers(object):
         assert poolsize > 0
         if pvs:
             LVM.VG.create(self.vg, pvs)
-        LVM.VG(self.vg).create_thinpool(self.thinpool, poolsize)
+        LVM.VG(self._vg()).create_thinpool(self._thinpool(), poolsize)
 
     def add_bootable_layer(self):
         """Add a new layer which can be booted from the boot menu
@@ -389,7 +413,7 @@ class ImageLayers(object):
 
         new_base_lv = self._next_base(version=version, lvs=lvs)
         log().debug("New base will be: %s" % new_base_lv)
-        pool = LVM.Thinpool(self.vg, self.thinpool)
+        pool = LVM.Thinpool(self._vg(), self._thinpool())
         pool.create_thinvol(new_base_lv.name, size)
 
         cmd.append("of=%s" % new_base_lv.path)
@@ -405,8 +429,8 @@ class ImageLayers(object):
     def free_space(self, units="m"):
         """Free space in the thinpool for bases and layers
         """
-        log().debug("Calculating free space in thinpool %s" % self.thinpool)
-        lvm_name = LVM.LV(self.vg, self.thinpool).lvm_name
+        log().debug("Calculating free space in thinpool %s" % self._thinpool())
+        lvm_name = LVM.LV(self._vg(), self._thinpool()).lvm_name
         args = ["--noheadings", "--nosuffix", "--units", units,
                 "--options", "data_percent,lv_size",
                 lvm_name]
@@ -438,7 +462,7 @@ class ImageLayers(object):
         base = None
         args = ["--noheadings", "--options", "origin"]
         get_origin = lambda l: LVM._lvs(args +
-                                        ["%s/%s" % (self.vg, l)])
+                                        ["%s/%s" % (self._vg(), l)])
 
         while base is None and layer is not None:
             layer = get_origin(layer)

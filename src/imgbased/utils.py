@@ -109,14 +109,24 @@ class ExternalBinary(object):
     def lvs(self, args, **kwargs):
         return self.call(["lvs"] + args, **kwargs)
 
+    def vgs(self, args, **kwargs):
+        return self.call(["vgs"] + args, **kwargs)
+
     def lvcreate(self, args, **kwargs):
         return self.call(["lvcreate"] + args, **kwargs)
 
     def vgcreate(self, args, **kwargs):
         return self.call(["vgcreate"] + args, **kwargs)
 
+    def vgchange(self, args, **kwargs):
+        return self.call(["vgchange"] + args, **kwargs)
+
+
     def lvchange(self, args, **kwargs):
         return self.call(["lvchange"] + args, **kwargs)
+
+    def vgchange(self, args, **kwargs):
+        return self.call(["vgchange"] + args, **kwargs)
 
     def find(self, args, **kwargs):
         return self.call(["find"] + args, **kwargs)
