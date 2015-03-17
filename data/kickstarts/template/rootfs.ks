@@ -11,7 +11,8 @@ part / --size=3072 --fstype=ext4 --label=Image-0.0 --fsoptions=discard
 %post
 # Empty fstab, it wil be rewritten
 # https://github.com/rhinstaller/lorax/blob/master/README.livemedia-creator#L121
-:> /etc/fstab
+# But not needed in Fedora 21+
+#:> /etc/fstab
 %end
 
 %include ../partial/packages.ks
