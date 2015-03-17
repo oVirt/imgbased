@@ -22,7 +22,7 @@ image-install: data/ks/auto-installation-testing.ks.in
 verrel:
 	@bash image-tools/image-verrel rootfs ImgbaseAppliance com.github.imgbased
 
-check: QCOW_CHECK=installation.qcow2
+check: QCOW_CHECK=auto-installation-testing.qcow2
 check:
 	[[ -f "$(QCOW_CHECK)" ]] && make -f tests/runtime/Makefile check-local IMAGE=$(QCOW_CHECK) || :
 

@@ -52,6 +52,7 @@ efibootmgr
 vim-minimal
 augeas
 tmux
+git
 
 # Install, just in case ...
 initial-setup

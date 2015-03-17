@@ -26,7 +26,7 @@ class Instance(object):
                "-m", "1024",
                "-serial", "stdio",
                "-net", "user", "-net", "nic",
-               "-hda", image,
+               "-drive", "if=virtio,cache=unsafe,file=%s" % image,
                "-watchdog-action", "poweroff",
                "-virtfs",
                "local,id=hostos,path=%s,mount_tag=%s,security_model=none" %
