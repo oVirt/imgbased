@@ -76,7 +76,7 @@ class Hooks(object):
           name: Name of the hook to create
         """
         assert name not in self.hooks, "Hook already exists: %s" % name
-        self.hooks[name] = []
+        self.hooks[name] = set()
         self._argspecs[name] = argspec
 
     def connect(self, name, cb):
@@ -91,7 +91,10 @@ class Hooks(object):
         assert name in self.hooks, "Unknown hook: %s" % name
         assert (cb.func_code.co_argcount - 1) == len(argspec), \
             "Args for '%s' do not match signature: %s" % (name, argspec)
-        self.hooks[name].append(cb)
+        self.hooks[name].add(cb)
+
+    def unconnect(self, name, cb):
+        self.hooks[name].remove(cb)
 
     def emit(self, name, *args):
         """Trigger a specific hook
@@ -104,6 +107,10 @@ class Hooks(object):
         assert name in self.hooks, "Unknown hook: %s" % name
         assert len(args) == len(argspec), "Number of arguments does not match"
 
-        for cb in self.hooks.get(None, list()) + self.hooks.get(name, set()):
+        wildcard = self.hooks.get(None, set())
+        specific = self.hooks.get(name, set())
+	all_cbs = wildcard.union(specific)
+
+        for cb in all_cbs:
             log().debug("Triggering: %s (%s, %s)" % (cb, self.context, args))
             cb(self.context, *args)
