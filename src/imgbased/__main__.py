@@ -84,15 +84,6 @@ if __name__ == '__main__':
     init_group.add_argument("--without-vg", action="store_true", default=False,
                             help="Do not create a Volume Group")
 
-    layer_parser = subparsers.add_parser("layer",
-                                         help="Runtime layer handling")
-    layer_parser.add_argument("--add", action="store_true",
-                              default=False, help="Add a new layer")
-    layer_parser.add_argument("--latest", action="store_true",
-                              help="Get the latest layer")
-    layer_parser.add_argument("--current", action="store_true",
-                              help="Get the current layer used to boot this")
-
     app.hooks.emit("pre-arg-parse", parser, subparsers)
 
     args = parser.parse_args()
@@ -124,14 +115,6 @@ if __name__ == '__main__':
             print(app.imgbase.free_space(args.units))
         else:
             print(app.imgbase.layout())
-
-    elif args.command == "layer":
-        if args.add:
-            app.imgbase.add_bootable_layer()
-        elif args.current:
-            print (app.imgbase.current_layer())
-        elif args.latest:
-            print (app.imgbase.latest_layer())
 
     #
     # Now let the plugins check if they need to run something
