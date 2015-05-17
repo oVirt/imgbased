@@ -27,48 +27,7 @@ from .hooks import Hooks
 from . import bootloader
 from .utils import memoize, ExternalBinary, format_to_pattern, \
     mounted, log
-
-
-class LVM(object):
-    _lvs = ExternalBinary().lvs
-
-    class LV(object):
-        vg_name = None
-        lv_name = None
-
-        @property
-        def lvm_name(self):
-            """With lvm_name we referre to the combination of VG+LV: VG/LV
-            """
-            return "%s/%s" % (self.vg_name, self.lv_name)
-
-        @property
-        def path(self):
-            return LVM._lvs(["--noheadings", "-olv_path", self.lvm_name])
-
-        def __init__(self, vg_name, lv_name):
-            self.vg_name = vg_name
-            self.lv_name = lv_name
-
-        @staticmethod
-        def from_lvm_name(lvm_name):
-            """Easy way to get an opbject for the lvm name
-
-            >>> lv = LVM.LV.from_lvm_name("HostVG/Foo")
-            >>> lv.vg_name
-            'HostVG'
-            >>> lv.lv_name
-            'Foo'
-            """
-            return LVM.LV(*lvm_name.split("/"))
-
-        @staticmethod
-        def from_path(path):
-            """Get an object for the path
-            """
-            data = LVM._lvs(["--noheadings", "-olv_name,vg_name", path])
-            assert data, "Failed to find LV for path: %s" % path
-            return LVM.LV(*data.split(" "))
+from .lvm import LVM
 
 
 class ImageLayers(object):
