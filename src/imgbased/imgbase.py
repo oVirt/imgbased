@@ -166,7 +166,7 @@ class ImageLayers(object):
         return ImageLayers.Image(self, int(version), int(release))
 
     def image_from_path(self, path):
-        name = self.run.lvs(["-olv_name", "--noheadings", path])
+        name = LVM.from_path(path).lv_name
         log().info("Found LV '%s' for path '%s'" % (name, path))
         return self.image_from_name(name)
 
@@ -297,12 +297,10 @@ class ImageLayers(object):
         """Add a new thin LV
         """
         log().info("Adding a new layer")
-        self.run.lvcreate(["--snapshot", "--name",
-                           new_layer.lvm_name,
-                           previous_layer.lvm_name])
-        self.run.lvchange(["--activate", "y",
-                           "--setactivationskip", "n",
-                           new_layer.lvm_name])
+        previous_layer.create_snapshot(new_layer.lvm_name)
+        new_layer.activate(True)
+        new_layer.setactivationskip(False)
+
         # Assign a new filesystem UUID and label
         self.run.tune2fs(["-U", "random",
                           "-L", new_layer.lv_name + "-fs",
@@ -310,10 +308,9 @@ class ImageLayers(object):
 
         # Handle the previous layer
         # FIXME do a correct check if it's a base
-        is_base = previous_layer.lvm_name.endswith(".0")
-        self.run.lvchange(["--activate", "y",
-                           "--setactivationskip", "y" if is_base else "n",
-                           previous_layer.lvm_name])
+        skip_if_is_base = previous_layer.lvm_name.endswith(".0")
+        previous_layer.activate(True)
+        previous_layer.setactivationskip(skip_if_is_base)
 
     def _add_boot_entry(self, lv):
         """Add a new BLS based boot entry and update the layers /etc/fstab
@@ -346,20 +343,8 @@ class ImageLayers(object):
         """
         assert poolsize > 0
         if pvs:
-            self.run.vgcreate([self.vg] + pvs)
-        self._create_thinpool(poolsize)
-
-    def _create_thinpool(self, poolsize):
-        assert poolsize > 0
-        lvm_name = LVM.LV(self.vg, self.thinpool).lvm_name
-        self.run.lvcreate(["--size", str(poolsize),
-                           "--thin", lvm_name])
-
-    def _create_thinvol(self, name, volsize):
-        lvm_name = LVM.LV(self.vg, self.thinpool).lvm_name
-        self.run.lvcreate(["--name", name,
-                           "--virtualsize", str(volsize),
-                           "--thin", lvm_name])
+            LVM.VG.create(self.vg, pvs)
+        LVM.VG(self.vg).create_thinpool(self.thinpool, poolsize)
 
     def add_bootable_layer(self):
         """Add a new layer which can be booted from the boot menu
@@ -402,16 +387,16 @@ class ImageLayers(object):
 
         new_base_lv = self._next_base(version=version, lvs=lvs)
         log().debug("New base will be: %s" % new_base_lv)
-        self._create_thinvol(new_base_lv.name, size)
+        pool = LVM.Thinpool(self.vg, self.thinpool)
+        pool.create_thinvol(new_base_lv.name, size)
 
         cmd.append("of=%s" % new_base_lv.path)
         log().debug("Running: %s %s" % (cmd, kwargs))
         if not self.dry:
             subprocess.check_call(cmd, **kwargs)
 
-        self.run.lvchange(["--permission", "r",
-                           "--setactivationskip", "y",
-                           "%s/%s" % (self.vg, new_base_lv.name)])
+        new_base_lv.lvm.permission("r")
+        new_base_lv.lvm.setactivationskip("y")
 
         self.hooks.emit("new-base-added", new_base_lv.path)
 
@@ -423,7 +408,7 @@ class ImageLayers(object):
         args = ["--noheadings", "--nosuffix", "--units", units,
                 "--options", "data_percent,lv_size",
                 lvm_name]
-        stdout = self.run.lvs(args).replace(",", ".").strip()
+        stdout = LVM._lvs(args).replace(",", ".").strip()
         used_percent, size = re.split("\s+", stdout)
         log().debug("Used: %s%% from %s" % (used_percent, size))
         free = float(size)
@@ -450,8 +435,8 @@ class ImageLayers(object):
     def base_of_layer(self, layer):
         base = None
         args = ["--noheadings", "--options", "origin"]
-        get_origin = lambda l: self.run.lvs(args +
-                                            ["%s/%s" % (self.vg, l)])
+        get_origin = lambda l: LVM._lvs(args +
+                                        ["%s/%s" % (self.vg, l)])
 
         while base is None and layer is not None:
             layer = get_origin(layer)

@@ -25,6 +25,27 @@ from .utils import ExternalBinary
 
 class LVM(object):
     _lvs = ExternalBinary().lvs
+    _lvcreate = ExternalBinary().lvcreate
+    _lvchange = ExternalBinary().lvchange
+    _vgcreate = ExternalBinary().vgcreate
+
+    class VG(object):
+        vg_name = None
+
+        def __init__(self, vg_name):
+            self.vg_name = vg_name
+
+        @staticmethod
+        def create(vg_name, pv_paths):
+            LVM._vgcreate([vg_name] + pv_paths)
+            return LVM.VG(vg_name)
+
+        def create_thinpool(self, name, size):
+            pool = LVM.ThinPool(self.vg_name, name).lvm_name
+            LVM._lvcreate(["--thin",
+                           "--size", str(size),
+                           pool.lvm_name])
+            return pool
 
     class LV(object):
         vg_name = None
@@ -63,5 +84,36 @@ class LVM(object):
             data = LVM._lvs(["--noheadings", "-olv_name,vg_name", path])
             assert data, "Failed to find LV for path: %s" % path
             return LVM.LV(*data.split(" "))
+
+        def create_snapshot(self, new_name):
+            self._lvcreate(["--snapshot",
+                            "--name", new_name,
+                            self.lvm_name])
+
+        def activate(self, val):
+            assert val in [True, False]
+            val = "y" if True else "n"
+            self._lvchange(["--activate", val,
+                            self.lvm_name])
+
+        def setactivationskip(self, val):
+            assert val in [True, False]
+            val = "y" if True else "n"
+            self._lvchange(["--setactivationskip", val,
+                            self.lvm_name])
+
+        def permission(self, val):
+            assert val in ["r", "rw"]
+            self._lvchange(["--permission", val,
+                            self.lvm_name])
+
+    class ThinPool(LV):
+        def create_thinvol(self, vol_name, volsize):
+            vol = LVM.LV(self.vg, vol_name)
+            LVM._lvcreate(["--thin",
+                           "--size", str(volsize),
+                           "--name", vol.lv_name,
+                           self.lvm_name])
+            return vol
 
 # vim: sw=4 et sts=4
