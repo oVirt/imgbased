@@ -13,13 +13,16 @@ def add_argparse(app, parser, subparsers):
     s = subparsers.add_parser("nspawn",
                               help="Boot into an image")
     s.add_argument("IMAGE", help="Image to use")
+    s.add_argument("COMMAND", help="Command to run inside the container",
+                   nargs="?",
+                   default="")
 
 
 def check_argparse(app, args):
     log().debug("Operating on: %s" % app.imgbase)
     if args.command == "nspawn":
         if args.image:
-            nspawn(app.imgbase, args.image)
+            nspawn(app.imgbase, args.image, args.command)
 
 
 def nspawn(imgbase, layer, cmd=""):
