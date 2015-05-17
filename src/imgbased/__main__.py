@@ -22,7 +22,6 @@
 #
 import logging
 import argparse
-import sys
 from . import config
 from .imgbase import ImageLayers, ExternalBinary
 from .hooks import Hooks
@@ -85,20 +84,6 @@ if __name__ == '__main__':
     init_group.add_argument("--without-vg", action="store_true", default=False,
                             help="Do not create a Volume Group")
 
-    base_parser = subparsers.add_parser("base",
-                                        help="Runtime base handling")
-    base_parser.add_argument("--add", action="store_true",
-                             help="Add a base layer from a file or stdin")
-    base_parser.add_argument("--size",
-                             help="(Virtual) Size of the thin volume")
-    base_parser.add_argument("--latest", action="store_true",
-                             help="Get the most recently added base")
-    base_parser.add_argument("--of-layer", metavar="LAYER",
-                             help="Get the base of layer LAYER")
-    base_parser.add_argument("image", nargs="?", type=argparse.FileType('r'),
-                             default=sys.stdin,
-                             help="File or stdin to use")
-
     layer_parser = subparsers.add_parser("layer",
                                          help="Runtime layer handling")
     layer_parser.add_argument("--add", action="store_true",
@@ -147,16 +132,6 @@ if __name__ == '__main__':
             print (app.imgbase.current_layer())
         elif args.latest:
             print (app.imgbase.latest_layer())
-
-    elif args.command == "base":
-        if args.add:
-            if not args.size or not args.image:
-                raise RuntimeError("--size and image required")
-            app.imgbase.add_base(args.image, args.size)
-        elif args.latest:
-            print (app.imgbase.latest_base())
-        elif args.of_layer:
-            print (str(app.imgbase.base_of_layer(args.of_layer)))
 
     #
     # Now let the plugins check if they need to run something
