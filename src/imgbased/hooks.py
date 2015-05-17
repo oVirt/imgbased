@@ -109,7 +109,7 @@ class Hooks(object):
 
         wildcard = self.hooks.get(None, set())
         specific = self.hooks.get(name, set())
-	all_cbs = wildcard.union(specific)
+        all_cbs = wildcard.union(specific)
 
         for cb in all_cbs:
             log().debug("Triggering: %s (%s, %s)" % (cb, self.context, args))
