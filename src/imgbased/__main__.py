@@ -61,28 +61,6 @@ if __name__ == '__main__':
     parser.add_argument("--layerformat", help="Format to discover layers",
                         default=ImageLayers.layerformat)
 
-    layout_parser = subparsers.add_parser("layout",
-                                          help="List all bases and layers")
-    layout_group = layout_parser.add_mutually_exclusive_group()
-    layout_group.add_argument("--free-space", action="store_true",
-                              default=False,
-                              help="How much space there is in the thinpool")
-    layout_group.add_argument("--init", action="store_true", default=False,
-                              help="Create the initial Volume Group")
-    layout_group.add_argument("--init-from", type=str, default="",
-                              metavar="VG/LV",
-                              help="Make an existing thin LV consumable")
-
-    space_group = layout_parser.add_argument_group("Free space arguments")
-    space_group.add_argument("--units", default="m",
-                             help="Units to be used for free space")
-    init_group = layout_parser.add_argument_group("Initialization arguments")
-    init_group.add_argument("--size",
-                            help="Size of the thinpool (in MB)")
-    init_group.add_argument("pv", nargs="*", metavar="PV", type=file,
-                            help="LVM PVs to use")
-    init_group.add_argument("--without-vg", action="store_true", default=False,
-                            help="Do not create a Volume Group")
 
     app.hooks.emit("pre-arg-parse", parser, subparsers)
 
@@ -103,18 +81,6 @@ if __name__ == '__main__':
     app.imgbase.dry = args.dry
 
     ExternalBinary.dry = args.dry
-
-    if args.command == "layout":
-        if args.init:
-            if not args.size:
-                raise RuntimeError("--size required")
-            app.imgbase.init_layout(args.pv, args.size)
-        elif args.init_from:
-            app.imgbase.init_layout_from(args.init_from)
-        elif args.free_space:
-            print(app.imgbase.free_space(args.units))
-        else:
-            print(app.imgbase.layout())
 
     #
     # Now let the plugins check if they need to run something
