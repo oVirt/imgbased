@@ -6,6 +6,7 @@ import shlex
 import argparse
 import sys
 import requests
+import re
 
 
 def init(app):
@@ -63,16 +64,16 @@ def check_argparse(app, args):
     elif args.subcmd == "remove":
         remotes.remove(args.NAME)
 
-    elif args.subcmd == "list":
+    elif args.subcmd == "fetch":
+        raise NotImplementedError()
+
+    else: #if args.subcmd == "list":
         all_remotes = remotes.list()
         if args.NAME:
             print(all_remotes[args.NAME].list_images())
         else:
             for name, url in sorted(all_remotes.items()):
                 print "%s: %s" % (name, url)
-
-    elif args.subcmd == "fetch":
-        raise NotImplementedError()
 
 
 class LocalRemotesConfiguration():
@@ -194,8 +195,10 @@ class Remote(object):
 
     _discoverer = None
 
-    def __init__(self):
+    def __init__(self, name=None, url=None):
         self._discoverer = SimpleIndexImageDiscoverer(self)
+        self.name = name
+        self.url = url
 
     def list_images(self):
         return self._discoverer.list_images()
@@ -210,7 +213,7 @@ class RemoteImage():
 
     path: Is relative, a filename
     """
-    reomte = None
+    remote = None
 
     vendorid = None
     architecture = None
@@ -225,7 +228,27 @@ class RemoteImage():
             (self.name, self.vendorid, self.version, self.path)
 
     def url(self):
-        return self.remote.url + "/" + self.path
+        """Retrieve the url to retrieve an image
+        >>> remote = Remote("faraway", "http://far.away/")
+        >>> img = RemoteImage(remote)
+        >>> img.path = "relfile"
+        >>> img.url()
+        'http://far.away//relfile'
+
+        >>> img.path = "http://foo.bar/"
+        >>> img.url()
+        'http://foo.bar/'
+
+        >>> img.path = "file://foo/bar/"
+        >>> img.url()
+        'file://foo/bar/'
+
+        """
+        url = self.remote.url + "/" + self.path
+        if re.search("(https?|file)://", self.path):
+            url = self.path
+        return url
+
 
     def pull(self, dstpath):
         """Fetch and store a remote image
