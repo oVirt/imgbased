@@ -58,7 +58,7 @@ class Instance(object):
         return self.wait(None)
 
     def sendline(self, line):
-        print "sending: " + line
+        print("sending: ", line)
         self.child.stdin.write(line + "\n")
 
     def mount_hostos(self):

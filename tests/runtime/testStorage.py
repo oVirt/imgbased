@@ -27,12 +27,12 @@ def trial(num_bins=1, size_bin=500, after_rm=None, max_delta=0.05):
 
     a = img_free()
 
-    [dd(B, size_bin) for B in xrange(0, num_bins)]
-    print ("Files which were created")
-    print (ls("-shal", *glob.glob("/var/tmp/*.bin")))
+    [dd(B, size_bin) for B in iter(range(0, num_bins))]
+    print("Files which were created")
+    print(ls("-shal", *glob.glob("/var/tmp/*.bin")))
     b = img_free()
 
-    print ("Files are getting removed")
+    print("Files are getting removed")
     rm("-f", *glob.glob("/var/tmp/*.bin"))
     after_rm()
     c = img_free()

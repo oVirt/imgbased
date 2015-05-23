@@ -49,7 +49,7 @@ class Hooks(object):
      Once created, you can attach a callback to a hook:
 
      >>> def concat_and_print(ctx, a, b):
-     ...     print(ctx, a, b)
+     ...     print((ctx, a, b))
 
      >>> hooks.connect("on-foo", concat_and_print)
 

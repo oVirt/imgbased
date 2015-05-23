@@ -66,8 +66,8 @@ def check_argparse(app, args):
                 raise RuntimeError("--size and image required")
             app.imgbase.add_base_with_tree(args.image, args.size)
         elif args.latest:
-            print (app.imgbase.latest_base())
+            print(app.imgbase.latest_base())
         elif args.of_layer:
-            print (str(app.imgbase.base_of_layer(args.of_layer)))
+            print(str(app.imgbase.base_of_layer(args.of_layer)))
 
 # vim: sw=4 et sts=4

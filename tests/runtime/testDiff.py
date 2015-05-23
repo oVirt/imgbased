@@ -28,6 +28,6 @@ class TestDiff(unittest.TestCase):
         touch("/root/marker")
         touch("/var/tmp/marker")
         diff = imgbase("--debug", "diff", "Image-0.1", "Image-0.2")
-        print diff
+        print(diff)
         assert "/root/marker" in diff
         assert "/var/tmp/marker" not in diff

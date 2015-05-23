@@ -45,8 +45,8 @@ def check_argparse(app, args):
         if args.add:
             app.imgbase.add_bootable_layer()
         elif args.current:
-            print (app.imgbase.current_layer())
+            print(app.imgbase.current_layer())
         elif args.latest:
-            print (app.imgbase.latest_layer())
+            print(app.imgbase.latest_layer())
 
 # vim: sw=4 et sts=4

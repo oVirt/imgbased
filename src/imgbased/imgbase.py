@@ -23,6 +23,7 @@
 import subprocess
 import os
 import re
+import io
 from .hooks import Hooks
 from . import bootloader
 from .utils import memoize, ExternalBinary, format_to_pattern, \
@@ -376,10 +377,10 @@ class ImageLayers(object):
         cmd = ["dd", "conv=sparse"]
         kwargs = {}
 
-        if type(infile) is file:
+        if type(infile) is io.IOBase:
             log().debug("Reading base from stdin")
             kwargs["stdin"] = infile
-        elif type(infile) in [str, unicode]:
+        elif type(infile) in [str, bytes]:
             log().debug("Reading base from file: %s" % infile)
             cmd.append("if=%s" % infile)
         else:

@@ -61,7 +61,6 @@ if __name__ == '__main__':
     parser.add_argument("--layerformat", help="Format to discover layers",
                         default=ImageLayers.layerformat)
 
-
     app.hooks.emit("pre-arg-parse", parser, subparsers)
 
     args = parser.parse_args()
