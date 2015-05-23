@@ -7,6 +7,7 @@ import argparse
 import sys
 from urllib import request
 import re
+import os
 
 
 def init(app):
@@ -222,16 +223,18 @@ class Remote(object):
         """List all streams in this remote
 
         >>> def fake_images():
+        ...     images = {}
         ...     for t in [("org.example", "Client", "1"),
         ...               ("org.example", "Client", "2"),
         ...               ("org.example", "Server", "1"),
-        ...               ("org.example", "Server", "1.1"),
-        ...               ("org.example", "Server", "1.2"),
-        ...               ("org.example", "Server", "1.12"),
-        ...               ("org.example", "Server", "2.0")]:
+        ...               ("org.example", "Server", "1-1"),
+        ...               ("org.example", "Server", "1-2"),
+        ...               ("org.example", "Server", "1-12"),
+        ...               ("org.example", "Server", "2-0")]:
         ...         i = RemoteImage(None)
         ...         i.vendorid, i.name, i.version = t
-        ...         yield i
+        ...         images[str(t)] = i
+        ...     return images
 
         >>> r = Remote('foo', 'http://www.foo.com')
         >>> r.list_images = fake_images
@@ -240,11 +243,13 @@ class Remote(object):
         ['org.example.Client', 'org.example.Server']
 
         >>> r.list_versions("org.example.Server")
-        ['1', '1.1', '1.2', '1.12', '2.0']
+        ['1', '1-1', '1-2', '1-12', '2-0']
         """
         return sorted(set(i.stream() for i in self.list_images().values()))
 
     def list_versions(self, stream):
+        """Get all versions of a stream in this remote
+        """
         versions = (i.version for i in self.list_images().values()
                     if i.stream() == stream)
         return sorted_versions(versions, "-")
@@ -301,57 +306,55 @@ class RemoteImage():
         'file://foo/bar/'
 
         """
-        url = self.remote.url + "/" + self.path
         if re.search("(https?|file)://", self.path):
             url = self.path
+        else:
+            url = self.remote.url + "/" + self.path
         return url
 
     def pull(self, dstpath):
         """Fetch and store a remote image
 
         dstpath: device or filename
+
+        >>> src = "/tmp/src"
+        >>> dst = "/tmp/dst"
+
+        >>> with open(src, "w") as f:
+        ...     f.write("Hey!")
+        4
+
+        >>> img = RemoteImage(None)
+        >>> img.path = "file://%s" % src
+        >>> img.url()
+        'file:///tmp/src'
+
+        >>> img.pull(dst)
+
+        >>> with open(dst) as f:
+        ...     f.read()
+        'Hey!'
         """
         url = self.url()
-        req = request.urlopen(url)
-        req.raise_for_status()
-        with open(dstpath, "wb") as dst:
-            for chunk in req.iter_content(1024):
-                dst.write(chunk)
+        request.urlretrieve(url, dstpath)
         # curl("--location", "--fail",
         #      "--output", imgbase
 
 
-class SimpleIndexImageDiscoverer():
-    """Remotely find images based on a simple index file
-
-    >>> example = '''
-    ... # A comment
-    ... rootfs:<name>:<vendor>:<arch>:<version>.<suffix>
-    ... rootfs:NodeAppliance:org.ovirt.node:x86_64:2.20420102.0.squashfs
-    ... '''
-
-    >>> r = SimpleIndexImageDiscoverer(None)
-
-    >>> images = r._list_images(example.split("\\n"))
-    >>> sorted([i.name for i in images.values()])
-    ['<name>', 'NodeAppliance']
-    """
-    indexfile = ".index"
-
-    @property
-    def _remote_indexfile(self):
-        return self.remote.url + "/" + self.indexfile
+class ImageDiscoverer():
+    remote = None
 
     def __init__(self, remote):
         self.remote = remote
 
-    def _imageinfo_from_name(self, filename):
+    def _imageinfo_from_name(self, path):
+        filename = os.path.basename(path)
         parts = filename.split(":")
 
         assert parts.pop(0) == "rootfs", "Only supporting rootfs images"
 
         info = RemoteImage(self.remote)
-        info.path = filename
+        info.path = path
         info.name = parts.pop(0)
         info.vendorid = parts.pop(0)
         info.arch = parts.pop(0)
@@ -359,6 +362,32 @@ class SimpleIndexImageDiscoverer():
         info.version = parts.pop(0).split(".", 1)[0]
 
         return info
+
+    def list_images(self):
+        raise NotImplemented()
+
+
+class SimpleIndexImageDiscoverer(ImageDiscoverer):
+    """Remotely find images based on a simple index file
+
+    >>> example = '''
+    ... # A comment
+    ... rootfs:<name>:<vendor>:<arch>:<version>.<suffix>
+    ... rootfs:NodeAppliance:org.ovirt.node:x86_64:2.20420102.0.squashfs
+    ... http://example.com/rootfs:Some:org.example:x86_64:2.0.squashfs
+    ... '''
+
+    >>> r = SimpleIndexImageDiscoverer(None)
+
+    >>> images = r._list_images(example.split("\\n"))
+    >>> sorted([i.name for i in images.values()])
+    ['<name>', 'NodeAppliance', 'Some']
+    """
+    indexfile = ".index"
+
+    @property
+    def _remote_indexfile(self):
+        return self.remote.url + "/" + self.indexfile
 
     def _list_images(self, lines):
         filenames = []
@@ -369,7 +398,7 @@ class SimpleIndexImageDiscoverer():
         for filename in filenames:
             try:
                 images[filename] = self._imageinfo_from_name(filename)
-            except Exception as e:
+            except AssertionError as e:
                 log().info("Failed to parse imagename '%s': %s" %
                            (filename, e))
         return images
