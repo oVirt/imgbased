@@ -37,15 +37,10 @@ EXTRA_DIST = \
   tests/package/common.sh \
   tests/runtime/*.py
 
-PARTIAL_KS = $(wildcard data/kickstarts/*/*.ks)
-DERIVED_KS = $(wildcard data/kickstarts/*.ks)
-
-CLEANFILES+= $(DERIVED_KS)
-.PHONY: $(DERIVED_KS)
+KS = $(wildcard data/ks/*.ks)
 
 dist_doc_DATA = \
-  data/kickstarts/flatten.py \
-  $(PARTIAL_KS) \
+  $(KS) \
   docs/imgbase.asc \
   docs/imgbase.8.asc
 

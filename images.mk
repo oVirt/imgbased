@@ -4,7 +4,6 @@
 # files
 #
 
-KICKSTARTS=$(wildcard data/kickstarts/*/*.ks)
 CLEANFILES+=$(wildcard *.qcow2) $(wildcard *.ks) vmlinuz initrd.img squashfs.img
 .SECONDARY: rootfs.qcow2 rootfs.ks
 
@@ -15,27 +14,20 @@ RELEASEVER=22
 image-build: rootfs.qcow2
 
 image-install: SQUASHFS_URL="@HOST_HTTP@/rootfs.squashfs.img"
-image-install: installation.ks
+image-install: data/ks/auto-installation-testing.ks.in
 	[[ -f rootfs.squashfs.img ]]
-	$(MAKE) -C data/kickstarts installation.ks
-	mv -vf data/kickstarts/installation.ks .
-	sed -i "s#@ROOTFS_URL@#$(SQUASHFS_URL)#" installation.ks
-	$(MAKE) -f image-tools/build.mk DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) DISK_SIZE=$$(( 10 * 1024 )) SPARSE= installation.qcow2
+	sed "s#@ROOTFS_URL@#$(SQUASHFS_URL)#" data/ks/auto-installation-testing.ks.in > auto-installation-testing.ks
+	$(MAKE) -f image-tools/build.mk DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) DISK_SIZE=$$(( 10 * 1024 )) SPARSE= auto-installation-testing.qcow2
 
 verrel:
-	@bash image-tools/image-verrel rootfs NodeNext org.ovirt.node
+	@bash image-tools/image-verrel rootfs ImgbaseAppliance com.github.imgbased
 
-check: QCOW_CHECK=installation.qcow2
+check: QCOW_CHECK=auto-installation-testing.qcow2
 check:
 	[[ -f "$(QCOW_CHECK)" ]] && make -f tests/runtime/Makefile check-local IMAGE=$(QCOW_CHECK) || :
 
-
-%.ks:
-	-rm -f data/kickstarts/installation.ks
-	$(MAKE) -C data/kickstarts DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) $@
-	mv -vf data/kickstarts/$@ $@
-
-%.qcow2: %.ks
+%.qcow2: data/ks/%.ks
+	cp $< .
 	make -f image-tools/build.mk DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) $@
 
 %.squashfs.img: %.qcow2

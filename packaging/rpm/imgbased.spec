@@ -12,10 +12,14 @@ BuildArch:      noarch
 
 BuildRequires:       make
 BuildRequires:       automake autoconf
+BuildRequires:       git
 BuildRequires:       asciidoc
 BuildRequires:       python
-BuildRequires:       pylint python-pep8 pyflakes
+BuildRequires:       pylint python-pep8 pyflakes python-nose
 
+Requires:       python-sh
+Requires:       python-requests
+Requires:       lvm2
 
 %description
 This tool enforces a special usage pattern for LVM.
