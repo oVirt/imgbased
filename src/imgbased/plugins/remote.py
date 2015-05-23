@@ -1,10 +1,11 @@
 
 from ..utils import log
-from ConfigParser import ConfigParser
-from StringIO import StringIO
+from configparser import ConfigParser
+from io import StringIO
 import shlex
 import argparse
 import sys
+from urllib import request
 import requests
 import re
 
@@ -67,13 +68,13 @@ def check_argparse(app, args):
     elif args.subcmd == "fetch":
         raise NotImplementedError()
 
-    else: #if args.subcmd == "list":
+    elif args.subcmd == "list":
         all_remotes = remotes.list()
         if args.NAME:
             print(all_remotes[args.NAME].list_images())
         else:
             for name, url in sorted(all_remotes.items()):
-                print "%s: %s" % (name, url)
+                print("%s: %s" % (name, url))
 
 
 class LocalRemotesConfiguration():
@@ -256,7 +257,7 @@ class RemoteImage():
         dstpath: device or filename
         """
         url = self.url()
-        req = requests.get(url)
+        req = request.urlopen(url)
         req.raise_for_status()
         with open(dstpath, "wb") as dst:
             for chunk in req.iter_content(1024):
@@ -280,6 +281,10 @@ class SimpleIndexImageDiscoverer():
 path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix> \>]
     """
     indexfile = ".index"
+
+    @property
+    def _remote_indexfile(self):
+        return self.remote.url + "/" + self.indexfile
 
     def __init__(self, remote):
         self.remote = remote
@@ -314,7 +319,8 @@ path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix> \>]
         return images
 
     def list_images(self):
-        src = requests.get(self.remote.url + "/" + self.indexfile).text
+        req = request.urlopen(self._remote_indexfile)
+        src = req.read().decode("utf-8")
         lines = src.split("\n")
         return self._list_images(lines)
 

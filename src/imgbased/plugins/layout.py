@@ -22,6 +22,7 @@
 #
 
 from ..utils import log
+import argparse
 
 
 def init(app):
@@ -48,7 +49,7 @@ def add_argparse(app, parser, subparsers):
     init_group = layout_parser.add_argument_group("Initialization arguments")
     init_group.add_argument("--size",
                             help="Size of the thinpool (in MB)")
-    init_group.add_argument("pv", nargs="*", metavar="PV", type=file,
+    init_group.add_argument("pv", nargs="*", metavar="PV", type=argparse.FileType(),
                             help="LVM PVs to use")
     init_group.add_argument("--without-vg", action="store_true", default=False,
                             help="Do not create a Volume Group")

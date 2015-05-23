@@ -14,12 +14,14 @@ BuildRequires:       make
 BuildRequires:       automake autoconf
 BuildRequires:       git
 BuildRequires:       asciidoc
-BuildRequires:       python
-BuildRequires:       pylint python-pep8 pyflakes python-nose
+BuildRequires:       python3
+BuildRequires:       python3-pylint python3-pep8 python3-pyflakes python3-nose
 
-Requires:       python-sh
-Requires:       python-requests
 Requires:       lvm2
+Requires:       python3-sh
+Requires:       python3-requests
+Requires:       python3-urllib
+
 
 %description
 This tool enforces a special usage pattern for LVM.

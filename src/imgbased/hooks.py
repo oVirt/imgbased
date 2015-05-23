@@ -89,7 +89,7 @@ class Hooks(object):
         argspec = self._argspecs.get(name, None)
 
         assert name in self.hooks, "Unknown hook: %s" % name
-        assert (cb.func_code.co_argcount - 1) == len(argspec), \
+        assert (cb.__code__.co_argcount - 1) == len(argspec), \
             "Args for '%s' do not match signature: %s" % (name, argspec)
         self.hooks[name].add(cb)
 
