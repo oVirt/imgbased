@@ -1,12 +1,11 @@
 
-from ..utils import log
+from ..utils import log, sorted_versions
 from configparser import ConfigParser
 from io import StringIO
 import shlex
 import argparse
 import sys
 from urllib import request
-import requests
 import re
 
 
@@ -31,8 +30,17 @@ def add_argparse(app, parser, subparsers):
     su_remove = su.add_parser("remove", help="Remove a remote")
     su_remove.add_argument("NAME", type=str)
 
-    su_list = su.add_parser("list", help="List availabel remote images")
-    su_list.add_argument("NAME", type=str, nargs="?")
+    su_list = su.add_parser("list", help="List availabel remotes")
+
+    su_streams = su.add_parser("streams", help="List availabel streams in a remote")
+    su_streams.add_argument("NAME", type=str)
+
+    su_images = su.add_parser("images", help="List availabel images in a remote")
+    su_images.add_argument("NAME", type=str)
+
+    su_images = su.add_parser("versions", help="List availabel versions of a stream")
+    su_images.add_argument("NAME", type=str)
+    su_images.add_argument("STREAM", type=str)
 
     su_fetch = su.add_parser("fetch", help="Retireve a remote image into "
                              "a dst")
@@ -57,24 +65,30 @@ def check_argparse(app, args):
         # Not us
         return
 
-    remotes = LocalRemotesConfiguration()
+    remotecfg = LocalRemotesConfiguration()
+    remotes = remotecfg.list()
 
     if args.subcmd == "add":
-        remotes.add(args.NAME, args.URL)
+        remotecfg.add(args.NAME, args.URL)
 
     elif args.subcmd == "remove":
-        remotes.remove(args.NAME)
+        remotecfg.remove(args.NAME)
 
     elif args.subcmd == "fetch":
         raise NotImplementedError()
 
+    elif args.subcmd == "streams":
+        print(remotes[args.NAME].list_streams())
+
+    elif args.subcmd == "images":
+        print(remotes[args.NAME].list_images())
+
+    elif args.subcmd == "versions":
+        print(remotes[args.NAME].list_versions(args.STREAM))
+
     elif args.subcmd == "list":
-        all_remotes = remotes.list()
-        if args.NAME:
-            print(all_remotes[args.NAME].list_images())
-        else:
-            for name, url in sorted(all_remotes.items()):
-                print("%s: %s" % (name, url))
+        for name, url in sorted(remotes.items()):
+            print("%s: %s" % (name, url))
 
 
 class LocalRemotesConfiguration():
@@ -86,7 +100,7 @@ class LocalRemotesConfiguration():
     Just like git.
 
     >>> example = '''
-    ... [general]
+    ... [core]
     ...
     ... [remote jenkins]
     ... url = http://jenkins.ovirt.org/
@@ -204,6 +218,37 @@ class Remote(object):
     def list_images(self):
         return self._discoverer.list_images()
 
+    def list_streams(self):
+        """List all streams in this remote
+
+        >>> def fake_images():
+        ...     for t in [("org.example", "Client", "1"),
+        ...               ("org.example", "Client", "2"),
+        ...               ("org.example", "Server", "1"),
+        ...               ("org.example", "Server", "1.1"),
+        ...               ("org.example", "Server", "1.2"),
+        ...               ("org.example", "Server", "1.12"),
+        ...               ("org.example", "Server", "2.0")]:
+        ...         i = RemoteImage(None)
+        ...         i.vendorid, i.name, i.version = t
+        ...         yield i
+
+        >>> r = Remote('foo', 'http://www.foo.com')
+        >>> r.list_images = fake_images
+
+        >>> r.list_streams()
+        ['org.example.Client', 'org.example.Server']
+
+        >>> r.list_versions("org.example.Server")
+        ['1', '1.1', '1.2', '1.12', '2.0']
+        """
+        return sorted(set(i.stream() for i in self.list_images().values()))
+
+    def list_versions(self, stream):
+        versions = (i.version for i in self.list_images().values()
+                    if i.stream() == stream)
+        return sorted_versions(versions, "-")
+
     def __repr__(self):
         return "<Remote name=%s url=%s \>" % \
             (self.name, self.url)
@@ -228,6 +273,17 @@ class RemoteImage():
         return "<Image name=%s vendorid=%s version=%s path=%s \>" % \
             (self.name, self.vendorid, self.version, self.path)
 
+    def stream(self):
+        """Retrieve the stream of an image
+        >>> img = RemoteImage(None)
+        >>> img.vendorid = "org.example"
+        >>> img.name = "Host"
+        >>> img.stream()
+        'org.example.Host'
+        """
+
+        return "%s.%s" % (self.vendorid, self.name)
+
     def url(self):
         """Retrieve the url to retrieve an image
         >>> remote = Remote("faraway", "http://far.away/")
@@ -250,7 +306,6 @@ class RemoteImage():
             url = self.path
         return url
 
-
     def pull(self, dstpath):
         """Fetch and store a remote image
 
@@ -272,13 +327,14 @@ class SimpleIndexImageDiscoverer():
     >>> example = '''
     ... # A comment
     ... rootfs:<name>:<vendor>:<arch>:<version>.<suffix>
+    ... rootfs:NodeAppliance:org.ovirt.node:x86_64:2.20420102.0.squashfs
     ... '''
 
     >>> r = SimpleIndexImageDiscoverer(None)
 
-    >>> r._list_images(example.split("\\n")).values()
-    [<Image name=<name> vendorid=<vendor> version=<version> \
-path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix> \>]
+    >>> images = r._list_images(example.split("\\n"))
+    >>> sorted([i.name for i in images.values()])
+    ['<name>', 'NodeAppliance']
     """
     indexfile = ".index"
 

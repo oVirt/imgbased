@@ -91,6 +91,9 @@ class mounted(object):
         if not self._target:
             self.run.call(["rmdir", self.tmpdir])
 
+def sorted_versions(versions, delim="."):
+    return sorted(list(versions),
+                  key=lambda s: list(map(int, s.split(delim))))
 
 class ExternalBinary(object):
     dry = False
