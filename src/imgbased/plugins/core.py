@@ -35,9 +35,9 @@ def add_argparse(app, parser, subparsers):
                                         help="Runtime base handling")
     base_parser.add_argument("--add", action="store_true",
                              help="Add a base layer")
-    base_parser.add_argument("--add-with-image", action="store_true",
+    base_parser.add_argument("--add-from-image", action="store_true",
                              help="Add a base layer from an fs image")
-    base_parser.add_argument("--add-with-tree", action="store_true",
+    base_parser.add_argument("--add-from-tree", action="store_true",
                              help="Add a base layer from an fs tree")
     base_parser.add_argument("--size",
                              help="(Virtual) Size of the thin volume")

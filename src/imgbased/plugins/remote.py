@@ -8,6 +8,9 @@ import sys
 from urllib import request
 import re
 import os
+import glob
+import urllib
+import hashlib
 
 
 def init(app):
@@ -75,14 +78,27 @@ def check_argparse(app, args):
     elif args.subcmd == "remove":
         remotecfg.remove(args.NAME)
 
-    elif args.subcmd == "fetch":
-        raise NotImplementedError()
+    elif args.subcmd == "pull":
+        log().info("Pulling image '%s' from remote '%s':" %
+                   (args.IMAGE, args.NAME))
+        image = remotes[args.NAME].list_images()[args.IMAGE]
+        print("Pulling image '%s'" % image)
+        image.pull(None)
 
     elif args.subcmd == "streams":
-        print(remotes[args.NAME].list_streams())
+        log().info("Available streams in '%s':" % args.NAME)
+        streams = remotes[args.NAME].list_streams()
+        for stream in streams:
+            print(stream)
 
     elif args.subcmd == "images":
-        print(remotes[args.NAME].list_images())
+        log().info("Available images in remote '%s':" % args.NAME)
+        images = remotes[args.NAME].list_images()
+        for image in images.values():
+            print(image.shorthash(),
+                  image.vendorid,
+                  image.name,
+                  image.version)
 
     elif args.subcmd == "versions":
         print(remotes[args.NAME].list_versions(args.STREAM))
@@ -113,13 +129,14 @@ class LocalRemotesConfiguration():
     >>> rs.list()
     {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \>}
     """
-    CFG_PATH = "/tmp/remotes_config"
+    USER_CFG_DIR = os.path.expandvars("$HOME/.config/imgbase/")
+    USER_CFG_FILE = USER_CFG_DIR + "/config"
     cfgstr = None
 
     def _parser(self):
         p = ConfigParser()
         if self.cfgstr is None:
-            p.read(self.CFG_PATH)
+            p.read(self.USER_CFG_FILE)
         else:
             # Used for doctests
             p.readfp(StringIO(self.cfgstr))
@@ -184,19 +201,24 @@ class LocalRemotesConfiguration():
 
     def add(self, name, url):
         p = self._parser()
-        section = "remote %s" % name
+        section = "remote %s" % shlex.quote(name)
         p.add_section(section)
         p.set(section, "url", url)
         self._save(p)
 
     def remove(self, name):
         p = self._parser()
-        section = "remote %s" % name
+        section = "remote %s" % shlex.quote(name)
         p.remove_section(section)
         self._save(p)
 
     def _save(self, p):
-        with open(self.CFG_PATH, 'wt') as configfile:
+        try:
+            os.makedirs(self.USER_CFG_DIR)
+        except FileExistsError:
+            log().debug("Config file dir already exists: %s" %
+                        self.USER_CFG_DIR)
+        with open(self.USER_CFG_FILE, 'wt') as configfile:
             p.write(configfile)
 
 
@@ -270,6 +292,7 @@ class RemoteImage():
     architecture = None
     version = None
     path = None
+    suffix = None
 
     def __init__(self, remote):
         self.remote = remote
@@ -277,6 +300,16 @@ class RemoteImage():
     def __repr__(self):
         return "<Image name=%s vendorid=%s version=%s path=%s \>" % \
             (self.name, self.vendorid, self.version, self.path)
+
+    def __str__(self):
+        return "%s.%s = %s" % \
+            (self.vendorid, self.name, self.version)
+
+    def __hash__(self):
+        return int(hashlib.sha1(self.path.encode("utf-8")).hexdigest(), 16)
+
+    def shorthash(self):
+        return ("{0:x}".format(hash(self)))[0:7]
 
     def stream(self):
         """Retrieve the stream of an image
@@ -336,7 +369,8 @@ class RemoteImage():
         'Hey!'
         """
         url = self.url()
-        request.urlretrieve(url, dstpath)
+        print("FETCHING %s" % url)
+        #request.urlretrieve(url, dstpath)
         # curl("--location", "--fail",
         #      "--output", imgbase
 
@@ -348,8 +382,18 @@ class ImageDiscoverer():
         self.remote = remote
 
     def _imageinfo_from_name(self, path):
+        """Parse some format:
+
+        >>> fmt = "rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es>"
+        >>> ImageDiscoverer(None)._imageinfo_from_name(fmt)
+        <Image name=<name> vendorid=<vendor> version=<version> \
+path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es> \>
+        """
         filename = os.path.basename(path)
-        parts = filename.split(":")
+
+        # We need to unquote the filename, because it can be an ULR with
+        # escaped chars (like the :)
+        parts = urllib.parse.unquote(filename).split(":")
 
         assert parts.pop(0) == "rootfs", "Only supporting rootfs images"
 
@@ -359,7 +403,7 @@ class ImageDiscoverer():
         info.vendorid = parts.pop(0)
         info.arch = parts.pop(0)
         # Strip an eventual suffix
-        info.version = parts.pop(0).split(".", 1)[0]
+        info.version, info.suffix = parts.pop(0).split(".", 1)
 
         return info
 
@@ -397,7 +441,8 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
                 filenames.append(line)
         for filename in filenames:
             try:
-                images[filename] = self._imageinfo_from_name(filename)
+                img = self._imageinfo_from_name(filename)
+                images[img.shorthash()] = img
             except AssertionError as e:
                 log().info("Failed to parse imagename '%s': %s" %
                            (filename, e))
