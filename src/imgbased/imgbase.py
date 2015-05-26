@@ -112,7 +112,8 @@ class ImageLayers(object):
     def _lvs(self):
         log().debug("Querying for LVs")
         cmd = ["--noheadings", "-o", "lv_name"]
-        lvs = [n.strip() for n in self.run.lvs(cmd).split("\n")]
+        raw = self.run.lvs(cmd)
+        lvs = [n.decode().strip() for n in raw.split()]
         log().debug("Found lvs: %s" % lvs)
         return sorted(lvs)
 
