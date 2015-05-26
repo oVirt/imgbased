@@ -86,26 +86,26 @@ class LVM(object):
             return LVM.LV(*data.split(" "))
 
         def create_snapshot(self, new_name):
-            self._lvcreate(["--snapshot",
-                            "--name", new_name,
-                            self.lvm_name])
+            LVM._lvcreate(["--snapshot",
+                           "--name", new_name,
+                           self.lvm_name])
 
         def activate(self, val):
             assert val in [True, False]
             val = "y" if True else "n"
-            self._lvchange(["--activate", val,
-                            self.lvm_name])
+            LVM._lvchange(["--activate", val,
+                           self.lvm_name])
 
         def setactivationskip(self, val):
             assert val in [True, False]
             val = "y" if True else "n"
-            self._lvchange(["--setactivationskip", val,
-                            self.lvm_name])
+            LVM._lvchange(["--setactivationskip", val,
+                           self.lvm_name])
 
         def permission(self, val):
             assert val in ["r", "rw"]
-            self._lvchange(["--permission", val,
-                            self.lvm_name])
+            LVM._lvchange(["--permission", val,
+                           self.lvm_name])
 
     class ThinPool(LV):
         def create_thinvol(self, vol_name, volsize):
