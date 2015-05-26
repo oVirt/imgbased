@@ -58,6 +58,15 @@ def add_argparse(app, parser, subparsers):
                             "to the layout")
     su_pull.add_argument("NAME", type=str)
     su_pull.add_argument("IMAGE", type=str)
+    su_pull.add_argument("-o", "--output",
+                         help="Specify an external destination for the " +
+                         "pulled image",
+                         type=argparse.FileType('wb'))
+    su_pull.add_argument("-O",
+                         help="Pull the remote image into a local file " +
+                         "named like the remote file.",
+                         action="store_true")
+
 
 
 def check_argparse(app, args):
@@ -82,8 +91,17 @@ def check_argparse(app, args):
         log().info("Pulling image '%s' from remote '%s':" %
                    (args.IMAGE, args.NAME))
         image = remotes[args.NAME].list_images()[args.IMAGE]
-        print("Pulling image '%s'" % image)
-        image.pull(None)
+        if args.output:
+            dst = args.output.name
+        elif args.O:
+            dst = os.path.basename(image.path)
+        else:
+            # Here we should write to the new base
+            raise NotImplemented
+            #dst = app.imgbased.
+        log().info("Pulling image '%s' into '%s'" % (image.path, dst))
+        #raise
+        image.pull(dst)
 
     elif args.subcmd == "streams":
         log().info("Available streams in '%s':" % args.NAME)
@@ -368,11 +386,13 @@ class RemoteImage():
         ...     f.read()
         'Hey!'
         """
+        from sh import curl
         url = self.url()
         print("FETCHING %s" % url)
         #request.urlretrieve(url, dstpath)
-        # curl("--location", "--fail",
-        #      "--output", imgbase
+        import subprocess
+        subprocess.check_call(["curl", "--location", "--fail",
+             "--output", dstpath, url])
 
 
 class ImageDiscoverer():
