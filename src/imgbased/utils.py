@@ -3,6 +3,7 @@ import functools
 import subprocess
 import os
 import logging
+import sh
 from six.moves.urllib import request
 
 
@@ -12,6 +13,13 @@ def log():
 
 def request_url(url):
     return request.urlopen(url).read().decode()
+
+
+def find_mount_source(path):
+    try:
+        return str(sh.findmnt("-n", "-oSOURCE", path)).strip()
+    except:
+        return None
 
 
 def memoize(obj):
@@ -107,7 +115,7 @@ class ExternalBinary(object):
 
     def call(self, *args, **kwargs):
         log().debug("Calling: %s %s" % (args, kwargs))
-        stdout = ""
+        stdout = bytes()
         if not self.dry:
             stdout = call(*args, **kwargs)
             log().debug("Returned: %s" % stdout[0:1024])

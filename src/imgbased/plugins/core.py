@@ -35,19 +35,18 @@ def add_argparse(app, parser, subparsers):
                                         help="Runtime base handling")
     base_parser.add_argument("--add", action="store_true",
                              help="Add a base layer")
-    base_parser.add_argument("--add-from-image", action="store_true",
-                             help="Add a base layer from an fs image")
-    base_parser.add_argument("--add-from-tree", action="store_true",
+    base_parser.add_argument("--add-with-tree",
                              help="Add a base layer from an fs tree")
+    base_parser.add_argument("--add-with-image",
+                             help="Add a base layer from an fs image",
+                             nargs="?", type=argparse.FileType('r'),
+                             default=None)
     base_parser.add_argument("--size",
                              help="(Virtual) Size of the thin volume")
     base_parser.add_argument("--latest", action="store_true",
                              help="Get the most recently added base")
     base_parser.add_argument("--of-layer", metavar="LAYER",
                              help="Get the base of layer LAYER")
-    base_parser.add_argument("image", nargs="?", type=argparse.FileType('r'),
-                             default=sys.stdin,
-                             help="File or stdin to use")
 
 
 def check_argparse(app, args):
@@ -58,13 +57,13 @@ def check_argparse(app, args):
                 raise RuntimeError("--size is required")
             app.imgbase.add_base(args.size)
         elif args.add_with_image:
-            if not args.size or not args.image:
-                raise RuntimeError("--size and image required")
-            app.imgbase.add_base_from_image(args.image)
+            if not args.size:
+                raise RuntimeError("--size is required")
+            app.imgbase.add_base_from_image(args.add_with_image or sys.stdin)
         elif args.add_with_tree:
-            if not args.size or not args.image:
-                raise RuntimeError("--size and image required")
-            app.imgbase.add_base_with_tree(args.image, args.size)
+            if not args.size:
+                raise RuntimeError("--size")
+            app.imgbase.add_base_with_tree(args.add_with_tree, args.size)
         elif args.latest:
             print(app.imgbase.latest_base())
         elif args.of_layer:

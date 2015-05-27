@@ -28,7 +28,7 @@ import datetime
 from .hooks import Hooks
 from . import bootloader
 from .utils import memoize, ExternalBinary, format_to_pattern, \
-    mounted, log
+    mounted, log, find_mount_source
 from .lvm import LVM
 
 
@@ -84,6 +84,30 @@ class ImageLayers(object):
         def is_layer(self):
             return not self.is_base()
 
+    class Base(Image):
+        def protect(self):
+            self.lvm.permission("r")
+            self.lvm.setactivationskip(True)
+            self.lvm.activate(False, True)
+
+        def unprotect(self):
+            self.lvm.permission("rw")
+            self.lvm.setactivationskip(False)
+            self.lvm.activate(True, True)
+
+        def unprotected(self):
+            this = self
+
+            class UnprotectedBase(object):
+                base = this
+
+                def __enter__(self):
+                    self.base.unprotect()
+
+                def __exit__(self, exc_type, exc_value, tb):
+                    self.base.protect()
+            return UnprotectedBase()
+
     def __init__(self):
         self.hooks = Hooks(self)
 
@@ -107,6 +131,8 @@ class ImageLayers(object):
                           ("old-target", "new-lv", "new-target"))
         self.hooks.create("new-base-added",
                           ("new-lv",))
+        self.hooks.create("new-base-with-tree-added",
+                          ("new-fs"))
 
         self.run = ExternalBinary()
         self.bootloader = bootloader.BlsBootloader(self)
@@ -152,13 +178,19 @@ class ImageLayers(object):
         for lv in lvs:
             if not re.match(laypat, lv):
                 continue
-            baseidx, layidx = [int(x) for x in re.search(laypat, lv).groups()]
+            baseidx, layidx = map(int, re.search(laypat, lv).groups())
             sorted_lvs.append((baseidx, layidx))
 
         sorted_lvs = sorted(sorted_lvs)
 
         lst = []
-        imgs = (ImageLayers.Image(self, *v) for v in sorted_lvs)
+        imgs = []
+        for v in sorted_lvs:
+            if v[1] == 0:
+                img = ImageLayers.Base(self, *v)
+            else:
+                img = ImageLayers.Image(self, *v)
+            imgs.append(img)
         for img in imgs:
             if img.release == 0:
                 lst.append(img)
@@ -265,7 +297,7 @@ class ImageLayers(object):
             base.layers = []
         except RuntimeError:
             log().debug("No previous base found, creating an initial one")
-            base = ImageLayers.Image(self, version or 0, 0)
+            base = ImageLayers.Base(self, version or 0, 0)
             log().debug("Initial base is now: %s" % base)
         return base
 
@@ -345,12 +377,17 @@ class ImageLayers(object):
                 log().info("No fstab found, not updating and not creating a" +
                            "boot entry.")
 
-    def init_layout_from(self, existing_lvm_name):
+    def init_layout_from(self, lvm_name_or_mount_target):
         """Create a snapshot from an existing thin LV to make it suitable
         """
         log().info("Trying to create a manageable base from '%s'" %
-                   existing_lvm_name)
-        existing = LVM.LV.from_lvm_name(existing_lvm_name)
+                   lvm_name_or_mount_target)
+        if os.path.ismount(lvm_name_or_mount_target):
+            lvm_path = find_mount_source(lvm_name_or_mount_target)
+            existing = LVM.LV.from_path(lvm_path)
+        else:
+            # If it's not a mount point, then we assume it's a LVM name
+            existing = LVM.LV.from_lvm_name(lvm_name_or_mount_target)
         log().debug("Found existing LV '%s'" % existing)
         log().debug("Tagging existing pool")
         LVM.VG(existing.vg_name).addtag(self.vg_tag)
@@ -391,38 +428,64 @@ class ImageLayers(object):
             self.hooks.emit("new-layer-added", "/",
                             new_layer.lvm.path, mount.target)
 
-    def add_base(self, infile, size, version=None, lvs=None):
+    def add_base(self, size, version=None, lvs=None):
         """Add a new base LV
         """
-        assert infile
-        assert size > 0
-
-        cmd = ["dd", "conv=sparse"]
-        kwargs = {}
-
-        if type(infile) is io.IOBase:
-            log().debug("Reading base from stdin")
-            kwargs["stdin"] = infile
-        elif type(infile) in [str, bytes]:
-            log().debug("Reading base from file: %s" % infile)
-            cmd.append("if=%s" % infile)
-        else:
-            raise RuntimeError("Unknown infile: %s" % infile)
+        assert size
 
         new_base_lv = self._next_base(version=version, lvs=lvs)
         log().debug("New base will be: %s" % new_base_lv)
         pool = LVM.Thinpool(self._vg(), self._thinpool())
         pool.create_thinvol(new_base_lv.name, size)
 
+        self.hooks.emit("new-base-added", new_base_lv.path)
+
+        new_base_lv.protect()
+
+        return new_base_lv
+
+    def add_base_from_image(self, imagefile, size, version=None, lvs=None):
+        new_base_lv = self.add_base(size, version, lvs)
+
+        cmd = ["dd", "conv=sparse"]
+        kwargs = {}
+
+        if type(imagefile) is io.IOBase:
+            log().debug("Reading base from stdin")
+            kwargs["stdin"] = imagefile
+        elif type(imagefile) in [str, bytes]:
+            log().debug("Reading base from file: %s" % imagefile)
+            cmd.append("if=%s" % imagefile)
+        else:
+            raise RuntimeError("Unknown infile: %s" % imagefile)
+
         cmd.append("of=%s" % new_base_lv.path)
         log().debug("Running: %s %s" % (cmd, kwargs))
         if not self.dry:
             subprocess.check_call(cmd, **kwargs)
 
-        new_base_lv.lvm.permission("r")
-        new_base_lv.lvm.setactivationskip("y")
+    def add_base_with_tree(self, sourcetree, size, version=None, lvs=None):
+        new_base_lv = self.add_base(size, version, lvs)
 
-        self.hooks.emit("new-base-added", new_base_lv.path)
+        if not os.path.exists(sourcetree):
+            raise RuntimeError("Sourcetree does not exist: %s" % sourcetree)
+
+        with new_base_lv.unprotected():
+            mkfscmd = ["mkfs.ext4", "-c", "-E", "discard", new_base_lv.path]
+            log().debug("Running: %s" % mkfscmd)
+            if not self.dry:
+                pass
+                subprocess.check_call(mkfscmd)
+                subprocess.check_call("lvs")
+
+            with mounted(new_base_lv.path) as mount:
+                dst = mount.target + "/"
+                cmd = ["rsync", "-pogAXtlHrDx", sourcetree, dst]
+                log().debug("Running: %s" % cmd)
+                if not self.dry:
+                    subprocess.check_call(cmd)
+
+                self.hooks.emit("new-base-with-tree-added", dst)
 
     def free_space(self, units="m"):
         """Free space in the thinpool for bases and layers

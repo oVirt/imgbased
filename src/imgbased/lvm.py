@@ -116,7 +116,7 @@ class LVM(object):
         def from_path(path):
             """Get an object for the path
             """
-            data = LVM._lvs(["--noheadings", "-olv_name,vg_name", path])
+            data = LVM._lvs(["--noheadings", "-ovg_name,lv_name", path])
             assert data, "Failed to find LV for path: %s" % path
             return LVM.LV(*data.split(" "))
 
@@ -127,14 +127,15 @@ class LVM(object):
 
         def activate(self, val, ignoreactivationskip=False):
             assert val in [True, False]
-            val = "y" if True else "n"
-            LVM._lvchange(["--activate", val,
-                           "-K" if ignoreactivationskip else "",
-                           self.lvm_name])
+            val = "y" if val else "n"
+            cmd = ["--activate", val, self.lvm_name]
+            if ignoreactivationskip:
+                cmd.append("--ignoreactivationskip")
+            LVM._lvchange(cmd)
 
         def setactivationskip(self, val):
             assert val in [True, False]
-            val = "y" if True else "n"
+            val = "y" if val else "n"
             LVM._lvchange(["--setactivationskip", val,
                            self.lvm_name])
 
@@ -151,11 +152,11 @@ class LVM(object):
         def addtag(self, tag):
             LVM._lvchange(["--addtag", tag, self.lvm_name])
 
-    class ThinPool(LV):
+    class Thinpool(LV):
         def create_thinvol(self, vol_name, volsize):
-            vol = LVM.LV(self.vg, vol_name)
+            vol = LVM.LV(self.vg_name, vol_name)
             LVM._lvcreate(["--thin",
-                           "--size", str(volsize),
+                           "--virtualsize", volsize,
                            "--name", vol.lv_name,
                            self.lvm_name])
             return vol
