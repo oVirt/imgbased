@@ -383,7 +383,7 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
     >>> sorted([i.name for i in images.values()])
     ['<name>', 'NodeAppliance', 'Some']
     """
-    indexfile = ".index"
+    indexfile = "index"
 
     @property
     def _remote_indexfile(self):
