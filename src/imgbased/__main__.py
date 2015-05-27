@@ -62,7 +62,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     lvl = logging.DEBUG if args.debug else logging.INFO
-    logging.basicConfig(level=lvl)
+    logging.basicConfig(level=lvl,
+                        format="%(asctime)s - %(levelname)s - %(message)s")
 
     log().debug("Arguments: %s" % args)
 
