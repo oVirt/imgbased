@@ -50,7 +50,7 @@ class LVM(object):
         def from_tag(tag):
             vgs = LVM.VG.find_by_tag(tag)
             assert len(vgs) == 1
-            return vgs()[0]
+            return vgs[0]
 
         @staticmethod
         def create(vg_name, pv_paths):
