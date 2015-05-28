@@ -355,6 +355,7 @@ class ImageLayers(object):
         log().debug("Found existing LV '%s'" % existing)
         log().debug("Tagging existing pool")
         LVM.VG(existing.vg_name).addtag(self.vg_tag)
+        existing.thinpool().addtag(self.thinpool_tag)
         today = int(datetime.date.today().strftime("%Y%m%d"))
         initial_base = self._next_base(version=today).lvm
         log().info("Creating an initial base '%s' for '%s'" %

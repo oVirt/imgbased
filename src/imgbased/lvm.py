@@ -143,6 +143,11 @@ class LVM(object):
             LVM._lvchange(["--permission", val,
                            self.lvm_name])
 
+        def thinpool(self):
+            pool_lv = LVM._lvs(["--noheadings", "-opool_lv",
+                               self.lvm_name]).decode().strip()
+            return LVM.LV(self.vg_name, pool_lv) if pool_lv else None
+
     class ThinPool(LV):
         def create_thinvol(self, vol_name, volsize):
             vol = LVM.LV(self.vg, vol_name)
