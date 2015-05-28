@@ -148,6 +148,9 @@ class LVM(object):
                                self.lvm_name]).decode().strip()
             return LVM.LV(self.vg_name, pool_lv) if pool_lv else None
 
+        def addtag(self, tag):
+            LVM._lvchange(["--addtag", tag, self.lvm_name])
+
     class ThinPool(LV):
         def create_thinvol(self, vol_name, volsize):
             vol = LVM.LV(self.vg, vol_name)
