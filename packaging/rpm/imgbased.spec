@@ -14,13 +14,16 @@ BuildRequires:       make
 BuildRequires:       automake autoconf
 BuildRequires:       git
 BuildRequires:       asciidoc
-BuildRequires:       python3
+
+BuildRequires:       python-devel python-six
+BuildRequires:       pylint python-pep8 pyflakes python-nose
+
+BuildRequires:       python3-devel python3-six
 BuildRequires:       python3-pylint python3-pep8 python3-pyflakes python3-nose
 
+Requires:       python-sh python-requests python-urllib3
+Requires:       python3-sh python3-requests python3-urllib3
 Requires:       lvm2
-Requires:       python3-sh
-Requires:       python3-requests
-Requires:       python3-urllib3
 Requires:       util-linux
 Requires:       curl
 

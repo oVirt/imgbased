@@ -1,13 +1,12 @@
 
 from ..utils import log, sorted_versions, request_url
-from configparser import ConfigParser
+from six.moves.configparser import ConfigParser
 from io import StringIO
 import shlex
 import argparse
 import sys
 import re
 import os
-import glob
 import urllib
 import hashlib
 
@@ -34,14 +33,19 @@ def add_argparse(app, parser, subparsers):
     su_remove.add_argument("NAME", type=str)
 
     su_list = su.add_parser("list", help="List availabel remotes")
+    su_list.add_argument("-a", "--all", help="List all images",
+                         action="store_true")
 
-    su_streams = su.add_parser("streams", help="List availabel streams in a remote")
+    su_streams = su.add_parser("streams",
+                               help="List availabel streams in a remote")
     su_streams.add_argument("NAME", type=str)
 
-    su_images = su.add_parser("images", help="List availabel images in a remote")
+    su_images = su.add_parser("images",
+                              help="List availabel images in a remote")
     su_images.add_argument("NAME", type=str)
 
-    su_images = su.add_parser("versions", help="List availabel versions of a stream")
+    su_images = su.add_parser("versions",
+                              help="List availabel versions of a stream")
     su_images.add_argument("NAME", type=str)
     su_images.add_argument("STREAM", type=str)
 
@@ -65,7 +69,6 @@ def add_argparse(app, parser, subparsers):
                          help="Pull the remote image into a local file " +
                          "named like the remote file.",
                          action="store_true")
-
 
 
 def check_argparse(app, args):
@@ -97,9 +100,8 @@ def check_argparse(app, args):
         else:
             # Here we should write to the new base
             raise NotImplemented
-            #dst = app.imgbased.
+            # dst = app.imgbased.
         log().info("Pulling image '%s' into '%s'" % (image.path, dst))
-        #raise
         image.pull(dst)
 
     elif args.subcmd == "streams":
@@ -387,7 +389,7 @@ class RemoteImage():
         """
         from sh import curl
         url = self.url()
-        print("FETCHING %s" % url)
+        log().info("Fetching image from url '%s'" % url)
         curl("--location", "--fail",
              "--output", dstpath, url)
 

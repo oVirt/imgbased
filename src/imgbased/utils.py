@@ -3,7 +3,7 @@ import functools
 import subprocess
 import os
 import logging
-from urllib import request
+from six.moves.urllib import request
 
 
 def log():
@@ -96,9 +96,11 @@ class mounted(object):
         if not self._target:
             self.run.call(["rmdir", self.tmpdir])
 
+
 def sorted_versions(versions, delim="."):
     return sorted(list(versions),
                   key=lambda s: list(map(int, s.split(delim))))
+
 
 class ExternalBinary(object):
     dry = False
@@ -122,10 +124,6 @@ class ExternalBinary(object):
 
     def vgcreate(self, args, **kwargs):
         return self.call(["vgcreate"] + args, **kwargs)
-
-    def vgchange(self, args, **kwargs):
-        return self.call(["vgchange"] + args, **kwargs)
-
 
     def lvchange(self, args, **kwargs):
         return self.call(["lvchange"] + args, **kwargs)

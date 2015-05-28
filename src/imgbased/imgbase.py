@@ -111,7 +111,6 @@ class ImageLayers(object):
         self.run = ExternalBinary()
         self.bootloader = bootloader.BlsBootloader(self)
 
-
     def _vg(self):
         vg = LVM.VG.from_tag(self.vg_tag)
         log().debug("VG candidate: %s" % vg)
