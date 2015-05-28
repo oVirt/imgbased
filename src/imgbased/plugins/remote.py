@@ -1,11 +1,10 @@
 
-from ..utils import log, sorted_versions
+from ..utils import log, sorted_versions, request_url
 from configparser import ConfigParser
 from io import StringIO
 import shlex
 import argparse
 import sys
-from urllib import request
 import re
 import os
 import glob
@@ -389,10 +388,8 @@ class RemoteImage():
         from sh import curl
         url = self.url()
         print("FETCHING %s" % url)
-        #request.urlretrieve(url, dstpath)
-        import subprocess
-        subprocess.check_call(["curl", "--location", "--fail",
-             "--output", dstpath, url])
+        curl("--location", "--fail",
+             "--output", dstpath, url)
 
 
 class ImageDiscoverer():
@@ -469,8 +466,7 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
         return images
 
     def list_images(self):
-        req = request.urlopen(self._remote_indexfile)
-        src = req.read()
+        src = request_url(self._remote_indexfile).strip()
         lines = src.splitlines()
         return self._list_images(lines)
 

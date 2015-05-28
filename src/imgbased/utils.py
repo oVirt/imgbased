@@ -3,10 +3,15 @@ import functools
 import subprocess
 import os
 import logging
+from urllib import request
 
 
 def log():
     return logging.getLogger()
+
+
+def request_url(url):
+    return request.urlopen(url).read().decode()
 
 
 def memoize(obj):
