@@ -44,8 +44,13 @@ class LVM(object):
         def find_by_tag(tag):
             vgs = LVM._vgs(["--noheadings", "--select",
                             "vg_tags = %s" % tag, "-o", "vg_name"]).decode()
-            assert len(vgs.split()) == 1
-            return vgs.split()[0]
+            return vgs.split()
+
+        @staticmethod
+        def from_tag(tag):
+            vgs = LVM.VG.find_by_tag(tag)
+            assert len(vgs) == 1
+            return vgs()[0]
 
         @staticmethod
         def create(vg_name, pv_paths):
@@ -82,6 +87,18 @@ class LVM(object):
 
         def __repr__(self):
             return "<LV '%s' />" % self.lvm_name
+
+        @staticmethod
+        def find_by_tag(tag):
+            lvs = LVM._vgs(["--noheadings", "--select",
+                            "lv_tags = %s" % tag, "-o", "vg_name"]).decode()
+            return lvs.split()
+
+        @staticmethod
+        def from_tag(tag):
+            lvs = LVM.LV.find_by_tag(tag)
+            assert len(lvs) == 1
+            return lvs[0]
 
         @staticmethod
         def from_lvm_name(lvm_name):

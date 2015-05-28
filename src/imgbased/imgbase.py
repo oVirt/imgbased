@@ -113,16 +113,14 @@ class ImageLayers(object):
 
 
     def _vg(self):
-        vgs = LVM.VG.find_by_tag(self.vg_tag)
-        log().debug("VG candidates: %s" % vgs)
-        assert len(vgs)
-        return vgs
+        vg = LVM.VG.from_tag(self.vg_tag)
+        log().debug("VG candidate: %s" % vg)
+        return vg
 
     def _thinpool(self):
-        lvs = LVM.LV.find_by_tag(self.thinpool_tag)
-        log().debug("Thinpool candidates: %s" % lvs)
-        assert len(lvs) == 1
-        return lvs[0]
+        lv = LVM.LV.from_tag(self.thinpool_tag)
+        log().debug("Thinpool candidate: %s" % lv)
+        return lv
 
     def _lvs(self):
         log().debug("Querying for LVs")
