@@ -196,7 +196,7 @@ class LocalRemotesConfiguration():
         self._save(p)
 
     def _save(self, p):
-        with open(self.CFG_PATH, 'wb') as configfile:
+        with open(self.CFG_PATH, 'wt') as configfile:
             p.write(configfile)
 
 
