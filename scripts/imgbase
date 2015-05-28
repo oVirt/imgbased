@@ -1,3 +1,5 @@
 #!/bin/bash
 
+[[ -d "src/imgbased" ]] && { echo "Enabling in-tree mode" ; export PYTHONPATH="$PWD/src" ;}
+
 python3 -m imgbased.__main__ $@
