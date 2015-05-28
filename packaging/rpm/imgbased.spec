@@ -20,7 +20,9 @@ BuildRequires:       python3-pylint python3-pep8 python3-pyflakes python3-nose
 Requires:       lvm2
 Requires:       python3-sh
 Requires:       python3-requests
-Requires:       python3-urllib
+Requires:       python3-urllib3
+Requires:       util-linux
+Requires:       curl
 
 
 %description
