@@ -379,7 +379,7 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
 
     >>> r = SimpleIndexImageDiscoverer(None)
 
-    >>> images = r._list_images(example.split("\\n"))
+    >>> images = r._list_images(example.splitlines())
     >>> sorted([i.name for i in images.values()])
     ['<name>', 'NodeAppliance', 'Some']
     """
@@ -405,8 +405,8 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
 
     def list_images(self):
         req = request.urlopen(self._remote_indexfile)
-        src = req.read().decode("utf-8")
-        lines = src.split("\n")
+        src = req.read()
+        lines = src.splitlines()
         return self._list_images(lines)
 
 # vim: sw=4 et sts=4

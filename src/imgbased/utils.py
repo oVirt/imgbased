@@ -104,7 +104,7 @@ class ExternalBinary(object):
         if not self.dry:
             stdout = call(*args, **kwargs)
             log().debug("Returned: %s" % stdout[0:1024])
-        return stdout.strip()
+        return stdout.decode().strip()
 
     def lvs(self, args, **kwargs):
         return self.call(["lvs"] + args, **kwargs)

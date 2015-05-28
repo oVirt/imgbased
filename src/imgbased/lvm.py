@@ -43,8 +43,8 @@ class LVM(object):
         @staticmethod
         def find_by_tag(tag):
             vgs = LVM._vgs(["--noheadings", "--select",
-                            "vg_tags = %s" % tag, "-o", "vg_name"]).decode()
-            return vgs.split()
+                            "vg_tags = %s" % tag, "-o", "vg_name"])
+            return vgs.splitlines()
 
         @staticmethod
         def from_tag(tag):
@@ -91,8 +91,8 @@ class LVM(object):
         @staticmethod
         def find_by_tag(tag):
             lvs = LVM._vgs(["--noheadings", "--select",
-                            "lv_tags = %s" % tag, "-o", "lv_name"]).decode()
-            return lvs.split()
+                            "lv_tags = %s" % tag, "-o", "lv_name"])
+            return lvs.splitlines()
 
         @staticmethod
         def from_tag(tag):
@@ -145,7 +145,7 @@ class LVM(object):
 
         def thinpool(self):
             pool_lv = LVM._lvs(["--noheadings", "-opool_lv",
-                               self.lvm_name]).decode().strip()
+                               self.lvm_name])
             return LVM.LV(self.vg_name, pool_lv) if pool_lv else None
 
         def addtag(self, tag):
