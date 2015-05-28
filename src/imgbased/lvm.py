@@ -91,7 +91,7 @@ class LVM(object):
         @staticmethod
         def find_by_tag(tag):
             lvs = LVM._vgs(["--noheadings", "--select",
-                            "lv_tags = %s" % tag, "-o", "vg_name"]).decode()
+                            "lv_tags = %s" % tag, "-o", "lv_name"]).decode()
             return lvs.split()
 
         @staticmethod
