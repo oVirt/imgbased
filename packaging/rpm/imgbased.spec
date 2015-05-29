@@ -1,6 +1,6 @@
 
 Name:           imgbased
-Version:        0.1
+Version:        0.2
 Release:        %{?_release}%{?!_release:0.1}%{?dist}
 Summary:        Tools to work with an image based rootfs
 
