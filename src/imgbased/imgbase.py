@@ -132,7 +132,7 @@ class ImageLayers(object):
         self.hooks.create("new-base-added",
                           ("new-lv",))
         self.hooks.create("new-base-with-tree-added",
-                          ("new-fs"))
+                          ("new-fs",))
 
         self.run = ExternalBinary()
         self.bootloader = bootloader.BlsBootloader(self)
@@ -402,6 +402,7 @@ class ImageLayers(object):
     def init_layout(self, pvs, poolsize):
         """Create the LVM layout needed by this tool
         """
+        raise NotImplementedError
         assert poolsize > 0
         if pvs:
             LVM.VG.create(self.vg, pvs)
@@ -435,7 +436,7 @@ class ImageLayers(object):
 
         new_base_lv = self._next_base(version=version, lvs=lvs)
         log().debug("New base will be: %s" % new_base_lv)
-        pool = LVM.Thinpool(self._vg(), self._thinpool())
+        pool = LVM.Thinpool(self._vg(), self._thinpool().lv_name)
         pool.create_thinvol(new_base_lv.name, size)
 
         self.hooks.emit("new-base-added", new_base_lv.path)
@@ -480,7 +481,8 @@ class ImageLayers(object):
 
             with mounted(new_base_lv.path) as mount:
                 dst = mount.target + "/"
-                cmd = ["rsync", "-pogAXtlHrDx", sourcetree, dst]
+                cmd = ["rsync", "-pogAXtlHrDx", sourcetree + "/", dst]
+                cmd += ["-Sc"]
                 log().debug("Running: %s" % cmd)
                 if not self.dry:
                     subprocess.check_call(cmd)

@@ -67,6 +67,10 @@ class LVM(object):
         def addtag(self, tag):
             LVM._vgchange(["--addtag", tag, self.vg_name])
 
+        def tags(self):
+            return LVM._vgs(["--noheadings", "-ovg_tags",
+                            self.vg_name]).split(",")
+
     class LV(object):
         vg_name = None
         lv_name = None
@@ -91,8 +95,8 @@ class LVM(object):
         @staticmethod
         def find_by_tag(tag):
             lvs = LVM._vgs(["--noheadings", "--select",
-                            "lv_tags = %s" % tag, "-o", "lv_name"])
-            return lvs.splitlines()
+                            "lv_tags = %s" % tag, "-o", "lv_full_name"])
+            return [LVM.LV.from_lvm_name(lv.strip()) for lv in lvs.splitlines()]
 
         @staticmethod
         def from_tag(tag):
@@ -151,6 +155,10 @@ class LVM(object):
 
         def addtag(self, tag):
             LVM._lvchange(["--addtag", tag, self.lvm_name])
+
+        def tags(self):
+            return LVM._lvs(["--noheadings", "-olv_tags",
+                            self.lvm_name]).split(",")
 
     class Thinpool(LV):
         def create_thinvol(self, vol_name, volsize):
