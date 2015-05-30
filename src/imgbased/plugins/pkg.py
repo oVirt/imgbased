@@ -1,8 +1,12 @@
 
 import difflib
 import sys
+import logging
 
-from ..utils import mounted, log
+from ..utils import mounted
+
+
+log = logging.getLogger(__package__)
 
 
 def init(app):
@@ -22,7 +26,7 @@ def add_argparse(app, parser, subparsers):
 
 
 def check_argparse(app, args):
-    log().debug("Operating on: %s" % app.imgbase)
+    log.debug("Operating on: %s" % app.imgbase)
     if args.command == "pkg" and args.diff:
         if len(args.image) == 2:
             sys.stdout.writelines(diff(app.imgbase, *args.image))
@@ -36,7 +40,7 @@ def diff(imgbase, left, right, mode="tree"):
         right: Base or layer
         mode: tree, content, unified
     """
-    log().info("Diff '%s' between '%s' and '%s'" % (left, right, mode))
+    log.info("Diff '%s' between '%s' and '%s'" % (left, right, mode))
 
     imgl = imgbase.image_from_name(left)
     imgr = imgbase.image_from_name(right)

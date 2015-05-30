@@ -21,8 +21,11 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 
-from ..utils import log
 import argparse
+import logging
+
+
+log = logging.getLogger(__package__)
 
 
 def init(app):
@@ -57,7 +60,7 @@ def add_argparse(app, parser, subparsers):
 
 
 def check_argparse(app, args):
-    log().debug("Operating on: %s" % app.imgbase)
+    log.debug("Operating on: %s" % app.imgbase)
     if args.command == "layout":
         if args.init:
             if not args.size:

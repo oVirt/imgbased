@@ -7,8 +7,7 @@ import sh
 from six.moves.urllib import request
 
 
-def log():
-    return logging.getLogger()
+log = logging.getLogger(__package__)
 
 
 def request_url(url):
@@ -36,7 +35,7 @@ def memoize(obj):
 
 def call(*args, **kwargs):
     kwargs["close_fds"] = True
-    log().debug("Calling: %s %s" % (args, kwargs))
+    log.debug("Calling: %s %s" % (args, kwargs))
     return subprocess.check_output(*args, **kwargs).strip()
 
 
@@ -114,11 +113,11 @@ class ExternalBinary(object):
     dry = False
 
     def call(self, *args, **kwargs):
-        log().debug("Calling: %s %s" % (args, kwargs))
+        log.debug("Calling: %s %s" % (args, kwargs))
         stdout = bytes()
         if not self.dry:
             stdout = call(*args, **kwargs)
-            log().debug("Returned: %s" % stdout[0:1024])
+            log.debug("Returned: %s" % stdout[0:1024])
         return stdout.decode().strip()
 
     def lvs(self, args, **kwargs):

@@ -20,7 +20,10 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-from .utils import log
+import logging
+
+
+log = logging.getLogger(__package__)
 
 
 class Hooks(object):
@@ -112,5 +115,5 @@ class Hooks(object):
         all_cbs = wildcard.union(specific)
 
         for cb in all_cbs:
-            log().debug("Triggering: %s (%s, %s)" % (cb, self.context, args))
+            log.debug("Triggering: %s (%s, %s)" % (cb, self.context, args))
             cb(self.context, *args)

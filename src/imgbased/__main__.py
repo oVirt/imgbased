@@ -26,7 +26,9 @@ from . import config
 from .imgbase import ImageLayers, ExternalBinary
 from .hooks import Hooks
 from . import plugins
-from .utils import log
+
+
+log = logging.getLogger(__package__)
 
 
 class Application(object):
@@ -43,7 +45,25 @@ class Application(object):
         plugins.init(self)
 
 
+def setup_logging():
+    log.setLevel(logging.INFO)
+
+    info = (logging.INFO, "%(message)s")
+    debug = (logging.DEBUG, "%(asctime)s - %(levelname)s - %(message)s")
+
+    def addHandler(lvl, fmt):
+        h = logging.StreamHandler()
+        h.setLevel(lvl)
+        h.setFormatter(logging.Formatter(fmt))
+        log.addHandler(h)
+
+    for lvl, fmt in [info, debug]:
+        addHandler(lvl, fmt)
+
+
 if __name__ == '__main__':
+    setup_logging()
+
     app = Application()
 
     parser = argparse.ArgumentParser(description="imgbase")
@@ -61,11 +81,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    lvl = logging.DEBUG if args.debug else logging.INFO
-    logging.basicConfig(level=lvl,
-                        format="%(asctime)s - %(levelname)s - %(message)s")
+    if args.debug:
+        log.setLevel(logging.DEBUG)
 
-    log().debug("Arguments: %s" % args)
+    log.debug("Arguments: %s" % args)
 
     #
     # Get started

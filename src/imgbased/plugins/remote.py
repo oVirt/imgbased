@@ -1,5 +1,5 @@
 
-from ..utils import log, sorted_versions, request_url, mounted
+from ..utils import sorted_versions, request_url, mounted
 from six.moves.configparser import ConfigParser
 from io import StringIO
 import shlex
@@ -12,6 +12,10 @@ import hashlib
 import tempfile
 import subprocess
 import glob
+import logging
+
+
+log = logging.getLogger(__package__)
 
 
 def init(app):
@@ -82,7 +86,7 @@ def check_argparse(app, args):
     """Check if we were asked to do something
     It will be called when the user selects a sub-command
     """
-    log().debug("Operating on: %s" % app.imgbase)
+    log.debug("Operating on: %s" % app.imgbase)
 
     remotecfg = LocalRemotesConfiguration()
 
@@ -99,14 +103,14 @@ def check_argparse_pull(app, args, remotecfg):
         remote, stream = args.set_upstream.split("/")
         remotecfg.set(remote, "pull", "%s:%s/%s" % (pool, remote, stream))
     else:
-        log().debug("Fetching new image")
+        log.debug("Fetching new image")
         remote = "jenkins"
         pool, remotestream = remotecfg.get(remote, "pull").split(":")
         remotename, stream = remotestream.split("/")
         remote = remotes[remotename]
-        log().debug("Available remote streams: %s" %
+        log.debug("Available remote streams: %s" %
                     remote.list_streams())
-        log().debug("Available versions for stream '%s': %s" %
+        log.debug("Available versions for stream '%s': %s" %
                     (stream, remote.list_versions(stream)))
         image = remote.get_image(stream)
         if remote.mode == "liveimg":
@@ -133,7 +137,7 @@ def check_argparse_remote(app, args, remotecfg):
         remotecfg.remove(args.NAME)
 
     elif args.subcmd == "get":
-        log().info("Pulling image '%s' from remote '%s':" %
+        log.info("Pulling image '%s' from remote '%s':" %
                    (args.IMAGE, args.NAME))
         image = remotes[args.NAME].list_images()[args.IMAGE]
         if output:
@@ -142,17 +146,17 @@ def check_argparse_remote(app, args, remotecfg):
             dst = os.path.basename(image.path)
         else:
             raise RuntimeError("Please pass -O or --output")
-        log().info("Pulling image '%s' into '%s'" % (image.path, dst))
+        log.info("Pulling image '%s' into '%s'" % (image.path, dst))
         image.pull(dst)
 
     elif args.subcmd == "streams":
-        log().info("Available streams in '%s':" % args.NAME)
+        log.info("Available streams in '%s':" % args.NAME)
         streams = remotes[args.NAME].list_streams()
         for stream in streams:
             print(stream)
 
     elif args.subcmd == "images":
-        log().info("Available images in remote '%s':" % args.NAME)
+        log.info("Available images in remote '%s':" % args.NAME)
         images = remotes[args.NAME].list_images()
         for image in images.values():
             print(image.shorthash(),
@@ -287,12 +291,12 @@ class LocalRemotesConfiguration():
         try:
             os.makedirs(self.USER_CFG_DIR)
         except FileExistsError:
-            log().debug("Config file dir already exists: %s" %
+            log.debug("Config file dir already exists: %s" %
                         self.USER_CFG_DIR)
         with open(self.USER_CFG_FILE, 'wt') as configfile:
             print(p)
             p.write(configfile)
-            log().debug("Wrote config file %s" % configfile)
+            log.debug("Wrote config file %s" % configfile)
 
 
 class Remote(object):
@@ -313,7 +317,7 @@ class Remote(object):
     @property
     def config(self):
         cfg = request_url(self._remote_configfile)
-        log().debug("Got remote config: %s", cfg)
+        log.debug("Got remote config: %s", cfg)
         p = ConfigParser()
         p.readfp(StringIO(cfg))
         return p
@@ -368,7 +372,7 @@ class Remote(object):
     def latest_version(self, stream):
         assert stream in self.list_streams()
         versions = self.list_versions(stream)
-        log().debug("All versions: %s" % versions)
+        log.debug("All versions: %s" % versions)
         return versions[-1]
 
     def get_image(self, stream, version=None):
@@ -474,7 +478,7 @@ class RemoteImage():
         'Hey!'
         """
         url = self.url()
-        log().info("Fetching image from url '%s'" % url)
+        log.info("Fetching image from url '%s'" % url)
         subprocess.check_call(["curl", "--location",
                                "--fail", "--output",
                                dstpath, url])
@@ -548,13 +552,13 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
                 img = self._imageinfo_from_name(filename)
                 images[img.shorthash()] = img
             except AssertionError as e:
-                log().info("Failed to parse imagename '%s': %s" %
+                log.info("Failed to parse imagename '%s': %s" %
                            (filename, e))
-        log().debug("Found images: %s" % images)
+        log.debug("Found images: %s" % images)
         return images
 
     def list_images(self):
-        log().debug("Requesting index from: %s" % self._remote_indexfile)
+        log.debug("Requesting index from: %s" % self._remote_indexfile)
         src = request_url(self._remote_indexfile).strip()
         lines = src.splitlines()
         return self._list_images(lines)

@@ -21,9 +21,11 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 import logging
-log = logging.getLogger("imgbase")
 import os
 import glob
+
+
+log = logging.getLogger(__package__)
 
 
 class Bootloader(object):
