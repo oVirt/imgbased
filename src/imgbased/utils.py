@@ -10,6 +10,13 @@ from six.moves.urllib import request
 log = logging.getLogger(__package__)
 
 
+def size_of_fstree(path):
+    """Returns the size of the tree in bytes
+
+    The size of sparse files is used, not the allocated amount.
+    """
+    return int(sh.du("-sxb", path).split()[0])
+
 def request_url(url):
     return request.urlopen(url).read().decode()
 

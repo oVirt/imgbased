@@ -1,5 +1,6 @@
 
-from ..utils import sorted_versions, request_url, mounted
+from ..utils import sorted_versions, request_url, mounted, \
+    size_of_fstree
 from six.moves.configparser import ConfigParser
 from io import StringIO
 import shlex
@@ -80,6 +81,8 @@ def add_argparse(app, parser, subparsers):
                               help="Pull remote images into local bases")
     p.add_argument("--set-upstream", help="Upstream: <remote>/<stream>")
     p.add_argument("--version", help="Pull a specific version")
+    p.add_argument("--fetch", help="Fetch the image and add a base, " +
+                                   "but don't add a boot layer.")
 
 
 def check_argparse(app, args):
@@ -113,20 +116,17 @@ def check_argparse_pull(app, args, remotecfg):
         log.debug("Available versions for stream '%s': %s" %
                     (stream, remote.list_versions(stream)))
         image = remote.get_image(stream)
+        # FIXME specify the base outside, so it can be used later
+        # for i.e. add_bootable_layer
         if remote.mode == "liveimg":
-            with tempfile.NamedTemporaryFile() as tmpfile:
-                image.pull(tmpfile.name)
-                from sh import cp
-                import os
-#                cp(tmpfile.name, "/var/tmp/" + os.path.basename(image.url()))
-                with mounted(tmpfile.name) as squashfs:
-                    print(squashfs)
-                    liveimg = glob.glob(squashfs.target + "/*/*.img").pop()
-                    print(liveimg)
-                    with mounted(liveimg) as rootfs:
-                        app.imgbase.add_base_with_tree(rootfs.target, "2048M")
+            LiveimgExtractor(app.imgbase).extract(image) 
         else:
             raise RuntimeError("Mode not implemented: %s" % mode)
+        if args.fetch:
+            log.info("Image was fetched successfully")
+        else:
+            app.imgbase.add_bootable_layer()
+            log.info("Image was pulled successfully")
 
 def check_argparse_remote(app, args, remotecfg):
     remotes = remotecfg.list()
@@ -294,7 +294,6 @@ class LocalRemotesConfiguration():
             log.debug("Config file dir already exists: %s" %
                         self.USER_CFG_DIR)
         with open(self.USER_CFG_FILE, 'wt') as configfile:
-            print(p)
             p.write(configfile)
             log.debug("Wrote config file %s" % configfile)
 
@@ -562,5 +561,36 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
         src = request_url(self._remote_indexfile).strip()
         lines = src.splitlines()
         return self._list_images(lines)
+
+class LiveimgExtractor():
+    imgbase = None
+    can_pipe = False
+
+    def __init__(self, imgbase):
+        self.imgbase = imgbase
+
+    def _recommend_size_for_tree(self, path, scale=2.0):
+        scaled = size_of_fstree(path) * scale
+        remainder = scaled % 512
+        return int(scaled + (512 - remainder))
+
+    def write(self, image):
+        raise NotImplementedError
+
+    def extract(self, image):
+        log.info("Extracting image '%s'" % image)
+        with tempfile.NamedTemporaryFile() as tmpfile:
+            image.pull(tmpfile.name)
+            with mounted(tmpfile.name) as squashfs:
+                log.debug("Mounted squashfs")
+                liveimg = glob.glob(squashfs.target + "/*/*.img").pop()
+                log.debug("Found fsimage at '%s'" % liveimg)
+                with mounted(liveimg) as rootfs:
+                    size = self._recommend_size_for_tree(rootfs.target)
+                    log.debug("Recommeneded base size: %s" % size)
+                    log.info("Extracting files to disk")
+                    self.imgbase.add_base_with_tree(rootfs.target, "%sB" % size)
+                    log.info("Files extracted")
+        log.debug("Extraction done")
 
 # vim: sw=4 et sts=4

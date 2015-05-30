@@ -478,16 +478,19 @@ class ImageLayers(object):
 
         with new_base_lv.unprotected():
             mkfscmd = ["mkfs.ext4", "-c", "-E", "discard", new_base_lv.path]
+            if not self.debug:
+                mkfscmd.append("-q")
             log.debug("Running: %s" % mkfscmd)
             if not self.dry:
                 pass
                 subprocess.check_call(mkfscmd)
-                subprocess.check_call("lvs")
 
             with mounted(new_base_lv.path) as mount:
                 dst = mount.target + "/"
-                cmd = ["rsync", "-pogAXtlHrDx", sourcetree + "/", dst]
+                cmd = ["ionice"]
+                cmd += ["rsync", "-pogAXtlHrDx", sourcetree + "/", dst]
                 cmd += ["-Sc"]
+                cmd += ["--info=progress2"]
                 log.debug("Running: %s" % cmd)
                 if not self.dry:
                     subprocess.check_call(cmd)
