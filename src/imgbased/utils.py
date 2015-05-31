@@ -120,7 +120,7 @@ class ExternalBinary(object):
     dry = False
 
     def call(self, *args, **kwargs):
-        log.debug("Calling: %s %s" % (args, kwargs))
+        log.debug("Calling binary: %s %s" % (args, kwargs))
         stdout = bytes()
         if not self.dry:
             stdout = call(*args, **kwargs)

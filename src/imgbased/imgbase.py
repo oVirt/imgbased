@@ -24,6 +24,8 @@ import subprocess
 import os
 import re
 import io
+import sh
+import glob
 import datetime
 from .hooks import Hooks
 from . import bootloader
@@ -141,6 +143,50 @@ class ImageLayers(object):
 
         self.run = ExternalBinary()
         self.bootloader = bootloader.BlsBootloader(self)
+
+    def check(self):
+        datap, metap = list(map(float, LVM._lvs(["--noheadings", "-odata_percent,metadata_percent",
+                      self._thinpool().lvm_name]).replace(",", ".").split()))
+
+        def thin_check():
+            log.info("Checking available space in thinpool")
+            fail = any(v > 80 for v in [datap, metap])
+            if fail:
+                log.warning("Data or Metadata usage is above threshold:")
+                print(LVM._lvs([self._thinpool().lvm_name]))
+            return fail
+
+        def mount_check():
+            log.info("Checking mount options of /")
+            # FIXME we need to check mopts of correct path
+            fail = "discard" not in sh.findmnt("-no", "options").split(",")
+            if fail:
+                log.warning("/ is not mounted with discard")
+                print(sh.findmnt("/"))
+            return fail
+
+        def bls_check():
+            fail = True
+            try:
+                sh.grep("bls_import", glob.glob("/etc/grub.d/*"))
+                fail = False
+            except:
+                log.warning("BLS is not enabled in grub")
+                print("echo 'echo bls_import' >> /etc/grub.d/05_bls")
+                print("chmod a+x /etc/grub.d/05_bls")
+            return fail
+
+        checks = [thin_check, mount_check, bls_check]
+
+        any_fail = False
+        for check in checks:
+            fail = check()
+            any_fail = True if fail else False
+
+        if any_fail:
+            log.warn("There were warnings")
+        else:
+            log.info("The check completed without warnings")
 
     def _vg(self):
         vg = LVM.VG.from_tag(self.vg_tag)
@@ -397,6 +443,11 @@ class ImageLayers(object):
         log.debug("Tagging existing pool")
         LVM.VG(existing.vg_name).addtag(self.vg_tag)
         existing.thinpool().addtag(self.thinpool_tag)
+        log.debug("Setting autoextend for thin pool, to prevent starvation")
+        sh.augtool("set", "-s",
+                   "/files/etc/lvm/lvm.conf/activation/dict/" +
+                   "thin_pool_autoextend_threshold/int",
+                   "80")
         today = int(datetime.date.today().strftime("%Y%m%d"))
         initial_base = self._next_base(version=today).lvm
         log.info("Creating an initial base '%s' for '%s'" %

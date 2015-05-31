@@ -140,9 +140,9 @@ def check_argparse_remote(app, args, remotecfg):
         log.info("Pulling image '%s' from remote '%s':" %
                    (args.IMAGE, args.NAME))
         image = remotes[args.NAME].list_images()[args.IMAGE]
-        if output:
+        if args.output:
             dst = output.name
-        elif O:
+        elif args.O:
             dst = os.path.basename(image.path)
         else:
             raise RuntimeError("Please pass -O or --output")

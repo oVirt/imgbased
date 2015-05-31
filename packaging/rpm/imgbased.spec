@@ -26,6 +26,7 @@ Requires:       python3-sh python3-requests python3-urllib3
 Requires:       lvm2
 Requires:       util-linux
 Requires:       curl
+Requires:       augeas
 
 
 %description

@@ -51,6 +51,9 @@ def add_argparse(app, parser, subparsers):
     base_parser.add_argument("--of-layer", metavar="LAYER",
                              help="Get the base of layer LAYER")
 
+    check_parser = subparsers.add_parser("check",
+                                         help="Perform some runtime checks")
+
 
 def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
@@ -71,5 +74,7 @@ def check_argparse(app, args):
             print(app.imgbase.latest_base())
         elif args.of_layer:
             print(str(app.imgbase.base_of_layer(args.of_layer)))
+    elif args.command == "check":
+        app.imgbase.check()
 
 # vim: sw=4 et sts=4
