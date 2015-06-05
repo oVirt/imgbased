@@ -160,6 +160,19 @@ class LVM(object):
             return LVM._lvs(["--noheadings", "-olv_tags",
                             self.lvm_name]).split(",")
 
+        def origin(self):
+            lv_name = self.options(["origin"]).pop()
+            return LVM.LV(self.vg_name, lv_name)
+
+        def options(self, options):
+            sep = "$"
+            cmd = ["--noheadings",
+                   "--separator", sep,
+                   "-o", ",".join(options),
+                   self.lvm_name]
+            return LVM._lvs(cmd).strip().split(sep)
+
+
     class Thinpool(LV):
         def create_thinvol(self, vol_name, volsize):
             vol = LVM.LV(self.vg_name, vol_name)

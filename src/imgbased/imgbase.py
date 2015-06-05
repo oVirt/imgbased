@@ -398,7 +398,18 @@ class ImageLayers(object):
         """
         log.info("Adding a new layer")
         previous_layer.create_snapshot(new_layer.lvm_name)
-        new_layer.activate(True, True)
+
+        try:
+            # If an error is raised here, then:
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1227046
+            # is not fixed yet.
+            new_layer.activate(True, True)
+        except:
+            origin = new_layer.origin()
+            log.debug("Found origin: %s" % origin)
+            origin.activate(True, True)
+            new_layer.activate(True, True)
+            origin.activate(False)
 
         # Assign a new filesystem UUID and label
         self.run.tune2fs(["-U", "random",
@@ -407,7 +418,7 @@ class ImageLayers(object):
 
         # Handle the previous layer
         # FIXME do a correct check if it's a base
-        skip_if_is_base = previous_layer.lvm_name.endswith(".0")
+        skip_if_is_base = previous_layer.lv_name.endswith(".0")
         previous_layer.setactivationskip(skip_if_is_base)
 
     def _add_boot_entry(self, lv):
