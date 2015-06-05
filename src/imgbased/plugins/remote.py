@@ -99,15 +99,14 @@ def check_argparse(app, args):
 
 def check_argparse_pull(app, args, remotecfg):
     remotes = remotecfg.list()
+    pool = app.imgbase._thinpool().lvm_name
     if args.set_upstream:
-        pool = app.imgbase._thinpool().lvm_name
         remote, stream = args.set_upstream.split("/")
-        remotecfg.set(remote, "pull", "%s:%s/%s" % (pool, remote, stream))
+        remotecfg.pool_upstream(pool, remote, stream)
     else:
         log.debug("Fetching new image")
-        remote = "jenkins"
-        pool, remotestream = remotecfg.get(remote, "pull").split(":")
-        remotename, stream = remotestream.split("/")
+        remotename, stream = remotecfg.pool_upstream(pool)
+        assert remotename and stream
         remote = remotes[remotename]
         log.debug("Available remote streams: %s" %
                     remote.list_streams())
@@ -261,6 +260,16 @@ class LocalRemotesConfiguration():
                 r.url = items["url"]
                 remotes[r.name] = r
         return remotes
+
+    def pool_upstream(self, pool, remote=None, stream=None):
+        p = self._parser()
+        section = "pool %s" % shlex.quote(pool)
+        if remote and stream:
+            p.add_section(section)
+            p.set(section, "pull", "%s/%s" % (remote, stream))
+            self._save(p)
+        return p.get(section, "pull").split("/")
+       
 
     def add(self, name, url):
         p = self._parser()
