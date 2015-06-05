@@ -51,6 +51,16 @@ def add_argparse(app, parser, subparsers):
     su_images = su.add_parser("images",
                               help="List availabel images in a remote")
     su_images.add_argument("NAME", type=str)
+    su_images.add_argument("IMAGE", type=str, nargs="?",
+                           help="Get this image")
+    su_images.add_argument("-o", "--output",
+                         help="Write the image to <file> instead of stdout",
+                         type=argparse.FileType('wb'))
+    su_images.add_argument("-O",
+                           help="Write image to a local file named like" +
+                                " the remote image we get.",
+                         action="store_true")
+
 
     su_images = su.add_parser("versions",
                               help="List availabel versions of a stream")
@@ -64,18 +74,6 @@ def add_argparse(app, parser, subparsers):
     su_fetch.add_argument("DEST", nargs="?", type=argparse.FileType('r'),
                           default=sys.stdin,
                           help="File or stdin to use")
-
-    su_pull = su.add_parser("get", help="Get a remote image")
-    su_pull.add_argument("NAME", type=str)
-    su_pull.add_argument("IMAGE", type=str)
-    su_pull.add_argument("-o", "--output",
-                         help="Specify an external destination for the " +
-                         "pulled image",
-                         type=argparse.FileType('wb'))
-    su_pull.add_argument("-O",
-                         help="Pull the remote image into a local file " +
-                         "named like the remote file.",
-                         action="store_true")
 
     p = subparsers.add_parser("pull",
                               help="Pull remote images into local bases")
@@ -136,19 +134,6 @@ def check_argparse_remote(app, args, remotecfg):
     elif args.subcmd == "remove":
         remotecfg.remove(args.NAME)
 
-    elif args.subcmd == "get":
-        log.info("Pulling image '%s' from remote '%s':" %
-                   (args.IMAGE, args.NAME))
-        image = remotes[args.NAME].list_images()[args.IMAGE]
-        if args.output:
-            dst = output.name
-        elif args.O:
-            dst = os.path.basename(image.path)
-        else:
-            raise RuntimeError("Please pass -O or --output")
-        log.info("Pulling image '%s' into '%s'" % (image.path, dst))
-        image.pull(dst)
-
     elif args.subcmd == "streams":
         log.info("Available streams in '%s':" % args.NAME)
         streams = remotes[args.NAME].list_streams()
@@ -158,11 +143,25 @@ def check_argparse_remote(app, args, remotecfg):
     elif args.subcmd == "images":
         log.info("Available images in remote '%s':" % args.NAME)
         images = remotes[args.NAME].list_images()
-        for image in images.values():
-            print(image.shorthash(),
-                  image.vendorid,
-                  image.name,
-                  image.version)
+
+        if args.IMAGE:
+            log.info("Pulling image '%s' from remote '%s':" %
+                       (args.IMAGE, args.NAME))
+            image = remotes[args.NAME].list_images()[args.IMAGE]
+            if args.output:
+                dst = output.name
+            elif args.O:
+                dst = os.path.basename(image.path)
+            else:
+                raise RuntimeError("Please pass -O or --output")
+            log.info("Pulling image '%s' into '%s'" % (image.path, dst))
+            image.pull(dst)
+        else:
+            for image in images.values():
+                print(image.shorthash(),
+                      image.vendorid,
+                      image.name,
+                      image.version)
 
     elif args.subcmd == "versions":
         print(remotes[args.NAME].list_versions(args.STREAM))
