@@ -30,7 +30,7 @@ import datetime
 from .hooks import Hooks
 from . import bootloader
 from .utils import memoize, ExternalBinary, format_to_pattern, \
-    mounted, find_mount_source
+    mounted, find_mount_source, ShellVarFile
 from .lvm import LVM
 
 import logging
@@ -421,6 +421,9 @@ class ImageLayers(object):
         skip_if_is_base = previous_layer.lv_name.endswith(".0")
         previous_layer.setactivationskip(skip_if_is_base)
 
+        skip_if_is_base = new_layer.lv_name.endswith(".0")
+        new_layer.setactivationskip(skip_if_is_base)
+
     def _add_boot_entry(self, lv):
         """Add a new BLS based boot entry and update the layers /etc/fstab
 
@@ -429,15 +432,44 @@ class ImageLayers(object):
         log.info("Adding a boot entry for the new layer")
 
         with mounted(lv.path) as mount:
+            chroot = sh.systemd_nspawn.bake("-q", 
+                "--bind", "/boot",
+                "--bind", "%s:/image" % mount.target,
+                "-D", mount.target)
+            kver = chroot("rpm", "-q", "kernel").strip().replace("kernel-", "")
+            kfiles = ["/image%s" % l for l in chroot("rpm", "-ql", "kernel").splitlines() if l.startswith("/boot")]
+            print(kfiles)
+            bootdir = "/boot/%s" % lv.lv_name
+            chroot("mkdir", bootdir)
+            cmd = ["cp", "-v"] + kfiles + [bootdir]
+            img = "/boot/%s/vmlinuz-%s" % (bootdir, kver)
+            log.debug(chroot(*cmd))
+            log.debug(chroot("passwd", "-d", "root"))
+
             fstab = "%s/etc/fstab" % mount.target
             if os.path.exists(fstab):
                 log.info("Updating fstab of new layer")
                 self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
                                lv.path, fstab])
-                self.bootloader.add_boot_entry(lv.lvm_name, lv.path)
+#                self.bootloader.add_boot_entry(lv.lvm_name, lv.path)
+                title = "%s (on %s)" % (ShellVarFile(mount.target + "/etc/os-release").parse()["PRETTY_NAME"], lv.lvm_name)
+                vmlinuz = [f for f in kfiles if "vmlinuz" in f].pop().replace("/image/boot", lv.lv_name)
+                initrd = [f for f in kfiles if "init" in f].pop().replace("/image/boot", lv.lv_name)
+                append = "rd.lvm.lv=%s root=/dev/%s" % (lv.lvm_name, lv.lvm_name)
+                self.bootloader._add_entry(title, vmlinuz, initrd, append)
             else:
                 log.info("No fstab found, not updating and not creating a" +
                            "boot entry.")
+
+            defgrub = "%s/etc/default/grub" % mount.target
+            if os.path.exists(defgrub):
+                log.info("Updating default/grub of new layer")
+                #self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
+                #               lv.path, fstab])
+            else:
+                log.info("No grub foo found, not updating and not creating a" +
+                           "boot entry.")
+
 
     def init_layout_from(self, lvm_name_or_mount_target):
         """Create a snapshot from an existing thin LV to make it suitable

@@ -141,6 +141,12 @@ class BlsBootloader(Bootloader):
 
     def add_boot_entry(self, name, rootlv):
         # FIXME this is missing the make-default part (not possible with bls)
+        linux = self._kernel()
+        initramfs = self._initramfs()
+        append = self._append(name, rootlv)
+        return self._add_entry(name, linux, initramfs, append)
+
+    def _add_entry(self, title, linux, initramfs, append):
         eid = uuid()
         edir = self.bls_dir
 
@@ -149,11 +155,7 @@ class BlsBootloader(Bootloader):
 
         efile = os.path.join(edir, "%s.conf" % eid)
 
-        linux = self._kernel()
-        initramfs = self._initramfs()
-        append = self._append(name, rootlv)
-
-        entry = ["title %s" % name,
+        entry = ["title %s" % title,
                  "linux /%s" % linux,
                  "initrd /%s" % initramfs,
                  "options %s" % append]
@@ -162,3 +164,5 @@ class BlsBootloader(Bootloader):
         if not self.p or not self.p.dry:
             with open(efile, "w+") as dst:
                 dst.write("\n".join(entry))
+
+# vim: sw=4 et sts=4
