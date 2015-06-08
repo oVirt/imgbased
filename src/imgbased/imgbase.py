@@ -442,7 +442,7 @@ class ImageLayers(object):
             bootdir = "/boot/%s" % lv.lv_name
             chroot("mkdir", bootdir)
             cmd = ["cp", "-v"] + kfiles + [bootdir]
-            img = "/boot/%s/vmlinuz-%s" % (bootdir, kver)
+            #img = "/boot/%s/vmlinuz-%s" % (bootdir, kver)
             log.debug(chroot(*cmd))
             log.debug(chroot("passwd", "-d", "root"))
 

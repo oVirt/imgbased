@@ -118,7 +118,8 @@ def check_argparse_pull(app, args, remotecfg):
         if remote.mode == "liveimg":
             LiveimgExtractor(app.imgbase).extract(image) 
         else:
-            raise RuntimeError("Mode not implemented: %s" % mode)
+            raise RuntimeError("Mode not implemented: %s" %
+                               remote.mode)
         if args.fetch:
             log.info("Image was fetched successfully")
         else:
@@ -148,7 +149,7 @@ def check_argparse_remote(app, args, remotecfg):
                        (args.IMAGE, args.NAME))
             image = remotes[args.NAME].list_images()[args.IMAGE]
             if args.output:
-                dst = output.name
+                dst = args.output.name
             elif args.O:
                 dst = os.path.basename(image.path)
             else:
@@ -188,7 +189,7 @@ class LocalRemotesConfiguration():
     >>> rs = LocalRemotesConfiguration()
     >>> rs.cfgstr = example
 
-    >>> rs.list()
+    >> rs.list()
     {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \>}
     """
     USER_CFG_DIR = os.path.expandvars("$HOME/.config/imgbase/")

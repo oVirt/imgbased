@@ -51,8 +51,8 @@ def add_argparse(app, parser, subparsers):
     base_parser.add_argument("--of-layer", metavar="LAYER",
                              help="Get the base of layer LAYER")
 
-    check_parser = subparsers.add_parser("check",
-                                         help="Perform some runtime checks")
+    subparsers.add_parser("check",
+                          help="Perform some runtime checks")
 
 
 def check_argparse(app, args):
