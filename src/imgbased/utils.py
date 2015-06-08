@@ -19,6 +19,7 @@ def size_of_fstree(path):
     """
     return int(sh.du("-sxb", path).split()[0])
 
+
 def request_url(url):
     return request.urlopen(url).read().decode()
 
@@ -156,6 +157,7 @@ class ExternalBinary(object):
     def tune2fs(self, args, **kwargs):
         return self.call(["tune2fs"] + args, **kwargs)
 
+
 class Fstab():
     _testdata = """/files/etc/fstab/1
 /files/etc/fstab/1/spec = "/dev/mapper/fedora_pc192--168--2--115-root"
@@ -202,13 +204,16 @@ spec='UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f', file='/boot')]
         for line in data.strip().splitlines():
             if " = " not in line:
                 if line != augpath and augpath:
-                    entries.append(Fstab.Entry(augpath, augvals["spec"], augvals["file"]))
+                    entries.append(Fstab.Entry(augpath,
+                                               augvals["spec"],
+                                               augvals["file"]))
                 augpath = line
             else:
                 augpath, value = line.split(" = ", 1)
                 field = augpath.split("/").pop()
                 augvals[field] = value.strip('"')
         return entries
+
 
 class ShellVarFile():
     filename = None
@@ -219,8 +224,8 @@ class ShellVarFile():
     def parse(self, data=None):
         """Parse
         >>> testdata= 'VERSION_ID=22\\nPRETTY_NAME="Fedora 22 (Twenty Two)"\\n'
-        >>> ShellVarFile(None).parse(testdata)
-        {'PRETTY_NAME': 'Fedora 22 (Twenty Two)', 'VERSION_ID': '22'}
+        >>> sorted(ShellVarFile(None).parse(testdata).items())
+        [('PRETTY_NAME', 'Fedora 22 (Twenty Two)'), ('VERSION_ID', '22')]
         """
         if not data:
             with open(self.filename) as src:

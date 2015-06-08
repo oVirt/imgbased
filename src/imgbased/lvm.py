@@ -96,7 +96,8 @@ class LVM(object):
         def find_by_tag(tag):
             lvs = LVM._vgs(["--noheadings", "--select",
                             "lv_tags = %s" % tag, "-o", "lv_full_name"])
-            return [LVM.LV.from_lvm_name(lv.strip()) for lv in lvs.splitlines()]
+            return [LVM.LV.from_lvm_name(lv.strip())
+                    for lv in lvs.splitlines()]
 
         @staticmethod
         def from_tag(tag):
@@ -171,7 +172,6 @@ class LVM(object):
                    "-o", ",".join(options),
                    self.lvm_name]
             return LVM._lvs(cmd).strip().split(sep)
-
 
     class Thinpool(LV):
         def create_thinvol(self, vol_name, volsize):

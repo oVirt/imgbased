@@ -54,13 +54,12 @@ def add_argparse(app, parser, subparsers):
     su_images.add_argument("IMAGE", type=str, nargs="?",
                            help="Get this image")
     su_images.add_argument("-o", "--output",
-                         help="Write the image to <file> instead of stdout",
-                         type=argparse.FileType('wb'))
+                           help="Write the image to <file> instead of stdout",
+                           type=argparse.FileType('wb'))
     su_images.add_argument("-O",
                            help="Write image to a local file named like" +
                                 " the remote image we get.",
-                         action="store_true")
-
+                           action="store_true")
 
     su_images = su.add_parser("versions",
                               help="List availabel versions of a stream")
@@ -109,14 +108,14 @@ def check_argparse_pull(app, args, remotecfg):
         assert remotename and stream
         remote = remotes[remotename]
         log.debug("Available remote streams: %s" %
-                    remote.list_streams())
+                  remote.list_streams())
         log.debug("Available versions for stream '%s': %s" %
-                    (stream, remote.list_versions(stream)))
+                  (stream, remote.list_versions(stream)))
         image = remote.get_image(stream)
         # FIXME specify the base outside, so it can be used later
         # for i.e. add_bootable_layer
         if remote.mode == "liveimg":
-            LiveimgExtractor(app.imgbase).extract(image) 
+            LiveimgExtractor(app.imgbase).extract(image)
         else:
             raise RuntimeError("Mode not implemented: %s" %
                                remote.mode)
@@ -125,6 +124,7 @@ def check_argparse_pull(app, args, remotecfg):
         else:
             app.imgbase.add_bootable_layer()
             log.info("Image was pulled successfully")
+
 
 def check_argparse_remote(app, args, remotecfg):
     remotes = remotecfg.list()
@@ -146,7 +146,7 @@ def check_argparse_remote(app, args, remotecfg):
 
         if args.IMAGE:
             log.info("Pulling image '%s' from remote '%s':" %
-                       (args.IMAGE, args.NAME))
+                     (args.IMAGE, args.NAME))
             image = remotes[args.NAME].list_images()[args.IMAGE]
             if args.output:
                 dst = args.output.name
@@ -190,7 +190,8 @@ class LocalRemotesConfiguration():
     >>> rs.cfgstr = example
 
     >> rs.list()
-    {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \>}
+    {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \
+mode=None />}
     """
     USER_CFG_DIR = os.path.expandvars("$HOME/.config/imgbase/")
     USER_CFG_FILE = USER_CFG_DIR + "/config"
@@ -228,8 +229,6 @@ class LocalRemotesConfiguration():
         """List all availabel remotes
 
         >>> example = '''
-        ... [general]
-        ...
         ... [remote jenkins]
         ... url = http://jenkins.ovirt.org/
         ... '''
@@ -238,7 +237,8 @@ class LocalRemotesConfiguration():
         >>> rs.cfgstr = example
 
         >>> rs.list()
-        {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \>}
+        {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \
+mode=None />}
 
         >>> rs = LocalRemotesConfiguration()
         >>> rs.cfgstr = ""
@@ -247,11 +247,11 @@ class LocalRemotesConfiguration():
 
         >>> rs.cfgstr = "[remote thing]\\nurl = bar"
         >>> rs.list()
-        {'thing': <Remote name=thing url=bar \>}
+        {'thing': <Remote name=thing url=bar mode=None />}
 
         >>> rs.cfgstr = "[remote 'a thing']\\nurl = bar"
         >>> rs.list()
-        {'a thing': <Remote name=a thing url=bar \>}
+        {'a thing': <Remote name=a thing url=bar mode=None />}
         """
         remotes = {}
         for section, items in self._iter_sections():
@@ -270,7 +270,6 @@ class LocalRemotesConfiguration():
             p.set(section, "pull", "%s/%s" % (remote, stream))
             self._save(p)
         return p.get(section, "pull").split("/")
-       
 
     def add(self, name, url):
         p = self._parser()
@@ -301,7 +300,7 @@ class LocalRemotesConfiguration():
             os.makedirs(self.USER_CFG_DIR)
         except FileExistsError:
             log.debug("Config file dir already exists: %s" %
-                        self.USER_CFG_DIR)
+                      self.USER_CFG_DIR)
         with open(self.USER_CFG_FILE, 'wt') as configfile:
             p.write(configfile)
             log.debug("Wrote config file %s" % configfile)
@@ -332,7 +331,10 @@ class Remote(object):
 
     @property
     def mode(self):
-        return self.config.get("core", "mode")
+        try:
+            return self.config.get("core", "mode")
+        except:
+            return None
 
     def __init__(self, name=None, url=None):
         self._discoverer = SimpleIndexImageDiscoverer(self)
@@ -415,7 +417,7 @@ class RemoteImage():
         self.remote = remote
 
     def __repr__(self):
-        return "<Image name=%s vendorid=%s version=%s path=%s \>" % \
+        return "<Image name=%s vendorid=%s version=%s path=%s />" % \
             (self.name, self.vendorid, self.version, self.path)
 
     def __str__(self):
@@ -504,7 +506,7 @@ class ImageDiscoverer():
         >>> fmt = "rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es>"
         >>> ImageDiscoverer(None)._imageinfo_from_name(fmt)
         <Image name=<name> vendorid=<vendor> version=<version> \
-path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es> \>
+path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es> />
         """
         filename = os.path.basename(path)
 
@@ -561,7 +563,7 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
                 images[img.shorthash()] = img
             except AssertionError as e:
                 log.info("Failed to parse imagename '%s': %s" %
-                           (filename, e))
+                         (filename, e))
         log.debug("Found images: %s" % images)
         return images
 
@@ -570,6 +572,7 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
         src = request_url(self._remote_indexfile).strip()
         lines = src.splitlines()
         return self._list_images(lines)
+
 
 class LiveimgExtractor():
     imgbase = None
@@ -598,7 +601,8 @@ class LiveimgExtractor():
                     size = self._recommend_size_for_tree(rootfs.target)
                     log.debug("Recommeneded base size: %s" % size)
                     log.info("Extracting files to disk")
-                    self.imgbase.add_base_with_tree(rootfs.target, "%sB" % size)
+                    self.imgbase.add_base_with_tree(rootfs.target, "%sB" %
+                                                    size)
                     log.info("Files extracted")
         log.debug("Extraction done")
 

@@ -145,8 +145,9 @@ class ImageLayers(object):
         self.bootloader = bootloader.BlsBootloader(self)
 
     def check(self):
-        datap, metap = list(map(float, LVM._lvs(["--noheadings", "-odata_percent,metadata_percent",
-                      self._thinpool().lvm_name]).replace(",", ".").split()))
+        lvs = LVM._lvs(["--noheadings", "-odata_percent,metadata_percent",
+                        self._thinpool().lvm_name])
+        datap, metap = map(float, lvs.replace(",", ".").split())
 
         def thin_check():
             log.info("Checking available space in thinpool")
@@ -432,17 +433,20 @@ class ImageLayers(object):
         log.info("Adding a boot entry for the new layer")
 
         with mounted(lv.path) as mount:
-            chroot = sh.systemd_nspawn.bake("-q", 
-                "--bind", "/boot",
-                "--bind", "%s:/image" % mount.target,
-                "-D", mount.target)
-            kver = chroot("rpm", "-q", "kernel").strip().replace("kernel-", "")
-            kfiles = ["/image%s" % l for l in chroot("rpm", "-ql", "kernel").splitlines() if l.startswith("/boot")]
-            print(kfiles)
+            chroot = \
+                sh.systemd_nspawn.bake("-q",
+                                       "--bind", "/boot",
+                                       "--bind", "%s:/image" % mount.target,
+                                       "-D", mount.target)
+            # kver = chroot("rpm", "-q", "kernel").strip().replace("kernel-",
+            # "")
+            kfiles = ["/image%s" % l for l in
+                      chroot("rpm", "-ql", "kernel").splitlines()
+                      if l.startswith("/boot")]
             bootdir = "/boot/%s" % lv.lv_name
             chroot("mkdir", bootdir)
             cmd = ["cp", "-v"] + kfiles + [bootdir]
-            #img = "/boot/%s/vmlinuz-%s" % (bootdir, kver)
+            # img = "/boot/%s/vmlinuz-%s" % (bootdir, kver)
             log.debug(chroot(*cmd))
             log.debug(chroot("passwd", "-d", "root"))
 
@@ -452,30 +456,35 @@ class ImageLayers(object):
                 self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
                                lv.path, fstab])
 #                self.bootloader.add_boot_entry(lv.lvm_name, lv.path)
-                title = "%s (on %s)" % (ShellVarFile(mount.target + "/etc/os-release").parse()["PRETTY_NAME"], lv.lvm_name)
-                vmlinuz = [f for f in kfiles if "vmlinuz" in f].pop().replace("/image/boot", lv.lv_name)
-                initrd = [f for f in kfiles if "init" in f].pop().replace("/image/boot", lv.lv_name)
-                append = "rd.lvm.lv=%s root=/dev/%s" % (lv.lvm_name, lv.lvm_name)
+                osrelease = ShellVarFile(mount.target + "/etc/os-release")
+                name = osrelease.parse()["PRETTY_NAME"]
+                title = "%s (on %s)" % (name, lv.lvm_name)
+                bfile = lambda n: [f for f in kfiles if n in f].pop()\
+                    .replace("/image/boot", lv.lv_name)
+                vmlinuz = bfile("vmlinuz")
+                initrd = bfile("init")
+                append = "rd.lvm.lv=%s root=/dev/%s" % (lv.lvm_name,
+                                                        lv.lvm_name)
                 self.bootloader._add_entry(title, vmlinuz, initrd, append)
             else:
                 log.info("No fstab found, not updating and not creating a" +
-                           "boot entry.")
+                         "boot entry.")
 
             defgrub = "%s/etc/default/grub" % mount.target
             if os.path.exists(defgrub):
                 log.info("Updating default/grub of new layer")
-                #self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
-                #               lv.path, fstab])
+                # self.run.call(["sed",
+                #   "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
+                #                lv.path, fstab])
             else:
                 log.info("No grub foo found, not updating and not creating a" +
-                           "boot entry.")
-
+                         "boot entry.")
 
     def init_layout_from(self, lvm_name_or_mount_target):
         """Create a snapshot from an existing thin LV to make it suitable
         """
         log.info("Trying to create a manageable base from '%s'" %
-                   lvm_name_or_mount_target)
+                 lvm_name_or_mount_target)
         if os.path.ismount(lvm_name_or_mount_target):
             lvm_path = find_mount_source(lvm_name_or_mount_target)
             existing = LVM.LV.from_path(lvm_path)
@@ -494,7 +503,7 @@ class ImageLayers(object):
         today = int(datetime.date.today().strftime("%Y%m%d"))
         initial_base = self._next_base(version=today).lvm
         log.info("Creating an initial base '%s' for '%s'" %
-                   (initial_base, existing))
+                 (initial_base, existing))
         self._add_layer(existing, initial_base)
         self.add_bootable_layer()
 
@@ -511,7 +520,7 @@ class ImageLayers(object):
         """Add a new layer which can be booted from the boot menu
         """
         log.info("Adding a new layer which can be booted from"
-                   " the bootloader")
+                 " the bootloader")
         try:
             last_layer = self._last_layer()
             log.debug("Last layer: %s" % last_layer)
