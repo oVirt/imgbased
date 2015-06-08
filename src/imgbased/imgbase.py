@@ -29,7 +29,7 @@ import glob
 import datetime
 from .hooks import Hooks
 from . import bootloader
-from .utils import memoize, ExternalBinary, format_to_pattern, \
+from .utils import ExternalBinary, \
     mounted, find_mount_source, ShellVarFile
 from .lvm import LVM
 
@@ -48,72 +48,9 @@ class ImageLayers(object):
     vg_tag = "imgbased:vg"
     thinpool_tag = "imgbased:pool"
 
-    layerformat = "Image-%d.%d"
-
     run = None
 
     bootloader = None
-
-    class Image(object):
-        p = None
-        version = None
-        release = None
-        layers = None
-
-        @property
-        def name(self):
-            return str(self)
-
-        @property
-        @memoize
-        def path(self):
-            return self.lvm.path
-
-        @property
-        def lvm(self):
-            return LVM.LV(self.p._vg(), self.name)
-
-        def __init__(self, p, v=None, r=None):
-            self.p = p
-            self.version = v
-            self.release = r
-            self.layers = []
-
-        def __str__(self):
-            return self.p.layerformat % (self.version, self.release)
-
-        def __repr__(self):
-            return "<%s %s/>" % (self, self.layers or "")
-
-        def is_base(self):
-            return self.release == 0
-
-        def is_layer(self):
-            return not self.is_base()
-
-    class Base(Image):
-        def protect(self):
-            self.lvm.permission("r")
-            self.lvm.setactivationskip(True)
-            self.lvm.activate(False, True)
-
-        def unprotect(self):
-            self.lvm.permission("rw")
-            self.lvm.setactivationskip(False)
-            self.lvm.activate(True, True)
-
-        def unprotected(self):
-            this = self
-
-            class UnprotectedBase(object):
-                base = this
-
-                def __enter__(self):
-                    self.base.unprotect()
-
-                def __exit__(self, exc_type, exc_value, tb):
-                    self.base.protect()
-            return UnprotectedBase()
 
     def __init__(self):
         self.hooks = Hooks(self)
@@ -208,60 +145,10 @@ class ImageLayers(object):
         return sorted(lvs)
 
     def _lvs_tree(self, lvs=None):
-        """
-        >>> layers = ImageLayers()
-
-        >>> lvs = []
-        >>> layers._lvs_tree(lvs)
-        Traceback (most recent call last):
-        ...
-        RuntimeError: No bases found: []
-
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
-        >>> layers._lvs_tree(lvs)
-        [<Image-0.0 />, <Image-2.0 [<Image-2.1 />]/>, <Image-13.0 />]
-        """
-        laypat = format_to_pattern(self.layerformat)
-        sorted_lvs = []
-
-        if lvs is None:
-            lvs = self._lvs()
-
-        for lv in lvs:
-            if not re.match(laypat, lv):
-                continue
-            baseidx, layidx = map(int, re.search(laypat, lv).groups())
-            sorted_lvs.append((baseidx, layidx))
-
-        sorted_lvs = sorted(sorted_lvs)
-
-        lst = []
-        imgs = []
-        for v in sorted_lvs:
-            if v[1] == 0:
-                img = ImageLayers.Base(self, *v)
-            else:
-                img = ImageLayers.Image(self, *v)
-            imgs.append(img)
-        for img in imgs:
-            if img.release == 0:
-                lst.append(img)
-            else:
-                lst[-1].layers.append(img)
-
-        if len(lst) == 0:
-            raise RuntimeError("No bases found: %s" % lvs)
-
-        return lst
+        return self.naming.tree()
 
     def image_from_name(self, name):
-        laypat = format_to_pattern(self.layerformat)
-        log.info("Fetching %s from %s" % (laypat, name))
-        match = re.search(laypat, name)
-        if not match:
-            raise RuntimeError("Failed to parse image name: %s" % name)
-        version, release = match.groups()
-        return ImageLayers.Image(self, int(version), int(release))
+        return self.naming.image_from_name(name)
 
     def image_from_path(self, path):
         name = LVM.LV.from_path(path).lv_name
@@ -274,125 +161,7 @@ class ImageLayers(object):
         return self.image_from_name(lv.lv_name)
 
     def layout(self, lvs=None):
-        """List all bases and layers for humans
-
-        >>> layers = ImageLayers()
-
-        >>> lvs = []
-        >>> print(layers.layout(lvs))
-        Traceback (most recent call last):
-        ...
-        RuntimeError: No valid layout found. Initialize if needed.
-
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
-        >>> lvs += ["Image-2.2"]
-        >>> print(layers.layout(lvs))
-        Image-0.0
-        Image-2.0
-         ├╼ Image-2.1
-         └╼ Image-2.2
-        Image-13.0
-        """
-        idx = []
-        try:
-            tree = self._lvs_tree(lvs)
-        except RuntimeError:
-            raise RuntimeError("No valid layout found. Initialize if needed.")
-
-        for base in tree:
-            idx.append("%s" % base.name)
-            for layer in base.layers:
-                c = "└" if layer is base.layers[-1] else "├"
-                idx.append(" %s╼ %s" % (c, layer.name))
-        return "\n".join(idx)
-
-    def _last_base(self, lvs=None):
-        """Determine the last base LV name
-
-        >>> layers = ImageLayers()
-
-        >>> layers._last_base([])
-        Traceback (most recent call last):
-        ...
-        RuntimeError: No bases found: []
-
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
-        >>> layers._last_base(lvs)
-        <Image-13.0 />
-        """
-        return self._lvs_tree(lvs)[-1]
-
-    def _next_base(self, version=None, lvs=None):
-        """Dertermine the name for the next base LV name (based on the scheme)
-
-        >>> layers = ImageLayers()
-
-        >>> layers._next_base(lvs=[])
-        <Image-0.0 />
-
-        >>> lvs = ["Image-0.0"]
-        >>> layers._next_base(lvs=lvs)
-        <Image-1.0 />
-
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
-        >>> layers._next_base(lvs=lvs)
-        <Image-14.0 />
-
-        >>> layers._next_base(version=20140401, lvs=lvs)
-        <Image-20140401.0 />
-        """
-        log.debug("Finding next base")
-        try:
-            base = self._last_base(lvs)
-            base.version = version or int(base.version) + 1
-            base.release = 0
-            base.layers = []
-        except RuntimeError:
-            log.debug("No previous base found, creating an initial one")
-            base = ImageLayers.Base(self, version or 0, 0)
-            log.debug("Initial base is now: %s" % base)
-        return base
-
-    def _last_layer(self, base=None, lvs=None):
-        """Determine the LV name of the last layer of a base
-
-        >>> layers = ImageLayers()
-
-        >>> lvs = []
-        >>> layers._last_layer(lvs=lvs)
-        Traceback (most recent call last):
-        ...
-        RuntimeError: No bases found: []
-
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
-        >>> layers._last_layer(lvs=lvs)
-        <Image-13.1 />
-        """
-        base = base or self._last_base(lvs)
-        images = dict((x.name, x) for x in self._lvs_tree(lvs))
-        return images[base.name].layers[-1]
-
-    def _next_layer(self, base=None, lvs=None):
-        """Determine the LV name of the next layer (based on the scheme)
-
-        >>> layers = ImageLayers()
-
-        >>> lvs = ["Image-0.0"]
-        >>> layers._next_layer(lvs=lvs)
-        <Image-0.1 />
-
-        >>> lvs = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
-        >>> layers._next_layer(lvs=lvs)
-        <Image-13.2 />
-        """
-        try:
-            layer = self._last_layer(base, lvs)
-            layer.release = int(layer.release) + 1
-            layer.layers = []
-        except IndexError:
-            base = self._last_base(lvs)
-            layer = ImageLayers.Image(self, base.version, 1)
-        return layer
+        return self.naming.layout(lvs)
 
     def _add_layer(self, previous_layer, new_layer):
         """Add a new thin LV
@@ -443,6 +212,7 @@ class ImageLayers(object):
             kfiles = ["/image%s" % l for l in
                       chroot("rpm", "-ql", "kernel").splitlines()
                       if l.startswith("/boot")]
+            print(kfiles)
             bootdir = "/boot/%s" % lv.lv_name
             chroot("mkdir", bootdir)
             cmd = ["cp", "-v"] + kfiles + [bootdir]
@@ -501,7 +271,7 @@ class ImageLayers(object):
                    "thin_pool_autoextend_threshold/int",
                    "80")
         today = int(datetime.date.today().strftime("%Y%m%d"))
-        initial_base = self._next_base(version=today).lvm
+        initial_base = self.naming.next_base(version=today).lvm
         log.info("Creating an initial base '%s' for '%s'" %
                  (initial_base, existing))
         self._add_layer(existing, initial_base)
@@ -522,12 +292,12 @@ class ImageLayers(object):
         log.info("Adding a new layer which can be booted from"
                  " the bootloader")
         try:
-            last_layer = self._last_layer()
+            last_layer = self.naming.last_layer()
             log.debug("Last layer: %s" % last_layer)
         except IndexError:
-            last_layer = self._last_base()
+            last_layer = self.naming.last_base()
             log.debug("Last layer is a base: %s" % last_layer)
-        new_layer = self._next_layer()
+        new_layer = self.naming.next_layer()
 
         log.debug("New layer: %s" % last_layer)
 
@@ -542,7 +312,7 @@ class ImageLayers(object):
         """
         assert size
 
-        new_base_lv = self._next_base(version=version, lvs=lvs)
+        new_base_lv = self.naming.next_base(version=version, lvs=lvs)
         log.debug("New base will be: %s" % new_base_lv)
         pool = LVM.Thinpool(self._vg(), self._thinpool().lv_name)
         pool.create_thinvol(new_base_lv.name, size)
@@ -616,10 +386,10 @@ class ImageLayers(object):
         return free
 
     def latest_base(self):
-        return self._last_base()
+        return self.naming.last_base()
 
     def latest_layer(self):
-        return self._last_layer()
+        return self.naming.last_layer()
 
     def current_layer(self):
         path = "/"
@@ -646,10 +416,5 @@ class ImageLayers(object):
         if not base:
             raise RuntimeError("No base found for: %s" % layer)
         return base
-
-    def verify(self, base):
-        """Verify that a base has not been changed
-        """
-        raise NotImplemented()
 
 # vim: sw=4 et sts=4
