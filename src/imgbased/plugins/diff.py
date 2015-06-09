@@ -17,6 +17,9 @@ def init(app):
 def add_argparse(app, parser, subparsers):
     s = subparsers.add_parser("diff",
                               help="Compare layers and bases")
+    s.add_argument("-m", "--mode",
+                   help="Mode: tree, content",
+                   default="tree")
     s.add_argument("image", nargs=2,
                    help="Base/Layer to compare")
 
@@ -25,7 +28,7 @@ def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "diff":
         if len(args.image) == 2:
-            sys.stdout.writelines(diff(app.imgbase, *args.image))
+            diff(app.imgbase, *args.image, mode=args.mode)
 
 
 def diff(imgbase, left, right, mode="tree"):
@@ -48,7 +51,12 @@ def diff(imgbase, left, right, mode="tree"):
             r = imgbase.run.find(["-ls"], cwd=mountr.target).splitlines(True)
             udiff = difflib.unified_diff(r, l, fromfile=left, tofile=right,
                                          n=0)
-            return (l for l in udiff if not l.startswith("@"))
+            lines = (l for l in udiff if not l.startswith("@"))
+            sys.stdout.writelines(lines)
+        if mode == "content":
+            import subprocess
+            subprocess.call(["diff", "-urN",
+                             mountl.target, mountr.target], stderr=subprocess.DEVNULL)
         else:
             raise RuntimeError("Unknown diff mode: %s" % mode)
 

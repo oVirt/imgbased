@@ -82,7 +82,8 @@ class ImageLayers(object):
 
         self.run = ExternalBinary()
         self.bootloader = bootloader.BlsBootloader(self)
-        self.naming = naming.NvrLikeNaming(vg=self._vg())
+        self.naming = naming.NvrLikeNaming()
+        self.naming.vg = self._vg
         self.naming.names = self._lvs
 
     def check(self):
@@ -206,23 +207,26 @@ class ImageLayers(object):
         log.info("Adding a boot entry for the new layer")
 
         with mounted(lv.path) as mount:
-            chroot = \
-                sh.systemd_nspawn.bake("-q",
-                                       "--bind", "/boot",
-                                       "--bind", "%s:/image" % mount.target,
-                                       "-D", mount.target)
-            # kver = chroot("rpm", "-q", "kernel").strip().replace("kernel-",
-            # "")
-            kfiles = ["/image%s" % l for l in
-                      chroot("rpm", "-ql", "kernel").splitlines()
-                      if l.startswith("/boot")]
-            print(kfiles)
-            bootdir = "/boot/%s" % lv.lv_name
-            chroot("mkdir", bootdir)
-            cmd = ["cp", "-v"] + kfiles + [bootdir]
-            # img = "/boot/%s/vmlinuz-%s" % (bootdir, kver)
-            log.debug(chroot(*cmd))
-            log.debug(chroot("passwd", "-d", "root"))
+            try:
+                chroot = \
+                    sh.systemd_nspawn.bake("-q",
+                                           "--bind", "/boot",
+                                           "--bind", "%s:/image" % mount.target,
+                                           "-D", mount.target)
+                # kver = chroot("rpm", "-q", "kernel").strip().replace("kernel-",
+                # "")
+                kfiles = ["/image%s" % l for l in
+                          chroot("rpm", "-ql", "kernel").splitlines()
+                          if l.startswith("/boot")]
+                print(kfiles)
+                bootdir = "/boot/%s" % lv.lv_name
+                chroot("mkdir", bootdir)
+                cmd = ["cp", "-v"] + kfiles + [bootdir]
+                # img = "/boot/%s/vmlinuz-%s" % (bootdir, kver)
+                log.debug(chroot(*cmd))
+                log.debug(chroot("passwd", "-d", "root"))
+            except:
+                log.warn("No kernel found in %s" % lv)
 
             oldfstabfn = "%s/etc/fstab" % mount.target
             if os.path.exists(oldfstabfn):
@@ -235,6 +239,7 @@ class ImageLayers(object):
                 rootentry.source = lv.path
                 fstab.update(rootentry)
 
+                log.debug("Checking grub")
                 defgrub = File("%s/etc/default/grub" % mount.target)
                 if defgrub.exists():
                     oldrootlv = LVM.LV.try_find(oldrootsource)
@@ -251,16 +256,19 @@ class ImageLayers(object):
                              "creating a boot entry.")
 
 #                self.bootloader.add_boot_entry(lv.lvm_name, lv.path)
-                osrelease = ShellVarFile(mount.target + "/etc/os-release")
-                name = osrelease.parse()["PRETTY_NAME"]
-                title = "%s (on %s)" % (name, lv.lvm_name)
-                bfile = lambda n: [f for f in kfiles if n in f].pop()\
-                    .replace("/image/boot", lv.lv_name)
-                vmlinuz = bfile("vmlinuz")
-                initrd = bfile("init")
-                append = "rd.lvm.lv=%s root=/dev/%s" % (lv.lvm_name,
-                                                        lv.lvm_name)
-                self.bootloader._add_entry(title, vmlinuz, initrd, append)
+                log.debug("Checking osrelease")
+                osfile = mount.target + "/etc/os-release"
+                if os.path.exists(osfile):
+                    osrelease = ShellVarFile(osfile)
+                    name = osrelease.parse()["PRETTY_NAME"]
+                    title = "%s (on %s)" % (name, lv.lvm_name)
+                    bfile = lambda n: [f for f in kfiles if n in f].pop()\
+                        .replace("/image/boot", lv.lv_name)
+                    vmlinuz = bfile("vmlinuz")
+                    initrd = bfile("init")
+                    append = "rd.lvm.lv=%s root=/dev/%s" % (lv.lvm_name,
+                                                            lv.lvm_name)
+                    self.bootloader._add_entry(title, vmlinuz, initrd, append)
             else:
                 log.info("No fstab found, not updating and not creating a" +
                          "boot entry.")
@@ -285,12 +293,12 @@ class ImageLayers(object):
                    "/files/etc/lvm/lvm.conf/activation/dict/" +
                    "thin_pool_autoextend_threshold/int",
                    "80")
-        today = int(datetime.date.today().strftime("%Y%m%d"))
-        initial_base = self.naming.suggest_next_base(version=today).lvm
+        version = 0 # int(datetime.date.today().strftime("%Y%m%d"))
+        initial_base = self.naming.suggest_next_base(version=version)
         log.info("Creating an initial base '%s' for '%s'" %
                  (initial_base, existing))
-        self._add_layer(existing, initial_base)
-        self.add_bootable_layer()
+        self._add_layer(existing, initial_base.lvm)
+        self.add_bootable_layer(initial_base)
 
     def init_layout(self, pvs, poolsize):
         """Create the LVM layout needed by this tool
@@ -301,20 +309,23 @@ class ImageLayers(object):
             LVM.VG.create(self.vg, pvs)
         LVM.VG(self._vg()).create_thinpool(self._thinpool(), poolsize)
 
-    def add_bootable_layer(self):
+    def add_bootable_layer(self, last_layer, onto_latest_layer=False):
         """Add a new layer which can be booted from the boot menu
         """
         log.info("Adding a new layer which can be booted from"
                  " the bootloader")
-        try:
+        if onto_latest_layer:
             last_layer = self.naming.last_layer()
             log.debug("Last layer: %s" % last_layer)
-        except IndexError:
-            last_layer = self.naming.last_base()
-            log.debug("Last layer is a base: %s" % last_layer)
-        new_layer = self.naming.suggest_next_layer()
+#        except IndexError:
+#            last_layer = self.naming.last_base()
+#            log.debug("Last layer is a base: %s" % last_layer)
 
-        log.debug("New layer: %s" % last_layer)
+        assert last_layer
+
+        new_layer = self.naming.suggest_next_layer(last_layer)
+
+        log.info("New layer will be: %s" % new_layer)
 
         self._add_layer(last_layer.lvm, new_layer.lvm)
         self._add_boot_entry(new_layer.lvm)
@@ -327,8 +338,8 @@ class ImageLayers(object):
         """
         assert size
 
-        new_base_lv = self.naming.suggest_next_base(version=version, lvs=lvs)
-        log.debug("New base will be: %s" % new_base_lv)
+        new_base_lv = self.naming.suggest_next_base(version=version)
+        log.info("New base will be: %s" % new_base_lv)
         pool = LVM.Thinpool(self._vg(), self._thinpool().lv_name)
         pool.create_thinvol(new_base_lv.name, size)
 
@@ -359,8 +370,10 @@ class ImageLayers(object):
         if not self.dry:
             subprocess.check_call(cmd, **kwargs)
 
+        return new_base_lv
+
     def add_base_with_tree(self, sourcetree, size, version=None, lvs=None):
-        latest_layer = self.latest_layer()
+        latest_layer = self.naming.images().pop()
         new_base_lv = self.add_base(size, version, lvs)
 
         if not os.path.exists(sourcetree):
@@ -393,6 +406,8 @@ class ImageLayers(object):
                         log.debug("Copied prev fstab")
 
                 self.hooks.emit("new-base-with-tree-added", dst)
+
+        return new_base_lv
 
     def free_space(self, units="m"):
         """Free space in the thinpool for bases and layers

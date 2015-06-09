@@ -114,15 +114,17 @@ def check_argparse_pull(app, args, remotecfg):
         image = remote.get_image(stream)
         # FIXME specify the base outside, so it can be used later
         # for i.e. add_bootable_layer
+        new_base = None
         if remote.mode == "liveimg":
-            LiveimgExtractor(app.imgbase).extract(image)
+            new_base = LiveimgExtractor(app.imgbase).extract(image)
         else:
             raise RuntimeError("Mode not implemented: %s" %
                                remote.mode)
         if args.fetch:
             log.info("Image was fetched successfully")
         else:
-            app.imgbase.add_bootable_layer()
+            assert new_base
+            app.imgbase.add_bootable_layer(new_base)
             log.info("Image was pulled successfully")
 
 
@@ -590,6 +592,7 @@ class LiveimgExtractor():
         raise NotImplementedError
 
     def extract(self, image):
+        new_base = None
         log.info("Extracting image '%s'" % image)
         with tempfile.NamedTemporaryFile() as tmpfile:
             image.pull(tmpfile.name)
@@ -601,10 +604,12 @@ class LiveimgExtractor():
                     size = self._recommend_size_for_tree(rootfs.target)
                     log.debug("Recommeneded base size: %s" % size)
                     log.info("Extracting files to disk")
-                    self.imgbase.add_base_with_tree(rootfs.target,
-                                                    "%sB" % size,
-                                                    version=image.version)
+                    new_base = \
+                        self.imgbase.add_base_with_tree(rootfs.target,
+                                                        "%sB" % size,
+                                                        version=image.version)
                     log.info("Files extracted")
         log.debug("Extraction done")
+        return new_base
 
 # vim: sw=4 et sts=4

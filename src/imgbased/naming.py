@@ -33,9 +33,8 @@ class NamingScheme():
     vg = None
     names = None
 
-    def __init__(self, names=None, vg=None):
+    def __init__(self, names=None):
         self.names = names or []
-        self.vg = vg
 
     def image_from_name(self, name):
         raise NotImplementedError
@@ -44,6 +43,13 @@ class NamingScheme():
         """Returns an ordered list of bases and children
         """
         raise NotImplementedError
+
+    def images(self):
+        images = []
+        for base in self.bases():
+            images.append(base)
+            images.extend(base.layers)
+        return sorted(images)
 
     def bases(self):
         return sorted(self.tree())
@@ -54,18 +60,18 @@ class NamingScheme():
             layers.extend(b.layers)
         return sorted(layers)
 
-    def last_base(self, lvs=None):
+    def last_base(self):
         return self.bases().pop()
 
-    def last_layer(self, base=None, lvs=None):
+    def last_layer(self):
         return self.layers().pop()
 
-    def suggest_next_base(self, version=None, lvs=None):
+    def suggest_next_base(self, version=None):
         """Dertermine the name for the next base LV name (based on the scheme)
         """
         log.debug("Finding next base")
         try:
-            base = self.last_base(lvs)
+            base = self.last_base()
             base.version = version or int(base.version) + 1
             base.release = 0
             base.layers = []
@@ -75,16 +81,21 @@ class NamingScheme():
             log.debug("Initial base is now: %s" % base)
         return base
 
-    def suggest_next_layer(self, base=None, lvs=None):
+    def suggest_next_layer(self, base=None):
         """Determine the LV name of the next layer (based on the scheme)
         """
-        try:
-            layer = self.last_layer(base, lvs)
-            layer.release = int(layer.release) + 1
-            layer.layers = []
-        except IndexError:
-            base = self.last_base(lvs)
-            layer = Image(self.vg, base.version, 1)
+        layer = Image(self.vg)
+
+        if not base:
+            base = self.last_base()
+
+        layer.version = base.version
+        if base.layers:
+            last_layer = sorted(base.layers).pop()
+            layer.release = int(last_layer.release) + 1
+        else:
+            layer.release = 1
+
         return layer
 
     def layout(self, lvs=None):

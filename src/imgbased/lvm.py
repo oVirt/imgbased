@@ -20,7 +20,12 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
+import shlex
+import logging
 from .utils import ExternalBinary
+
+
+log = logging.getLogger(__package__)
 
 
 class LVM(object):
@@ -94,6 +99,7 @@ class LVM(object):
 
         @staticmethod
         def try_find(mixed):
+            log.debug("Trying to find LV for: %s" % mixed)
             if mixed.startswith("/dev"):
                 return LVM.LV.from_path(mixed)
             elif "/" in mixed:
@@ -134,7 +140,8 @@ class LVM(object):
             """
             data = LVM._lvs(["--noheadings", "-ovg_name,lv_name", path])
             assert data, "Failed to find LV for path: %s" % path
-            return LVM.LV(*data.split(" "))
+            log.debug("Found LV for path %s: %s" % (path, data))
+            return LVM.LV(*shlex.split(data))
 
         def create_snapshot(self, new_name):
             LVM._lvcreate(["--snapshot",

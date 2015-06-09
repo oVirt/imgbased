@@ -48,7 +48,7 @@ class Image(object):
 
     @property
     def lvm(self):
-        return LVM.LV(self.vg, self.name)
+        return LVM.LV(self.vg(), self.name)
 
     @property
     def version_release(self):

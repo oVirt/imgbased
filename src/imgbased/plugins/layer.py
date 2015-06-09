@@ -46,7 +46,7 @@ def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "layer":
         if args.add:
-            app.imgbase.add_bootable_layer()
+            app.imgbase.add_bootable_layer(onto_latest_layer=True)
         elif args.current:
             print(app.imgbase.current_layer())
         elif args.latest:
