@@ -601,8 +601,9 @@ class LiveimgExtractor():
                     size = self._recommend_size_for_tree(rootfs.target)
                     log.debug("Recommeneded base size: %s" % size)
                     log.info("Extracting files to disk")
-                    self.imgbase.add_base_with_tree(rootfs.target, "%sB" %
-                                                    size)
+                    self.imgbase.add_base_with_tree(rootfs.target,
+                                                    "%sB" % size,
+                                                    version=image.version)
                     log.info("Files extracted")
         log.debug("Extraction done")
 
