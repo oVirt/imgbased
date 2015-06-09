@@ -220,20 +220,23 @@ class ImageLayers(object):
             log.debug(chroot(*cmd))
             log.debug(chroot("passwd", "-d", "root"))
 
-            fstab = "%s/etc/fstab" % mount.target
-            if os.path.exists(fstab):
+            oldfstabfn = "%s/etc/fstab" % mount.target
+            if os.path.exists(oldfstabfn):
                 log.info("Updating fstab of new layer")
-                fstab = Fstab()
+                fstab = Fstab(oldfstabfn)
                 rootentry = fstab.by_target("/")
+                log.debug("Found old rootentry: %s" % rootentry)
                 oldrootsource = rootentry.source
+                log.debug("Old root source: %s" % oldrootsource)
                 rootentry.source = lv.path
                 fstab.update(rootentry)
 
                 defgrub = File("%s/etc/default/grub" % mount.target)
                 if defgrub.exists():
                     oldrootlv = LVM.LV.try_find(oldrootsource)
+                    log.debug("Found old root lv: %s" % oldrootlv)
                     # FIXME this is quite greedy
-                    if oldrootlv.lvm_name in File(defgrub).contents:
+                    if oldrootlv.lvm_name in defgrub.contents:
                         log.info("Updating default/grub of new layer")
                         defgrub.replace(oldrootlv.lvm_name,
                                         lv.lvm_name)
@@ -352,6 +355,7 @@ class ImageLayers(object):
             subprocess.check_call(cmd, **kwargs)
 
     def add_base_with_tree(self, sourcetree, size, version=None, lvs=None):
+        latest_layer = self.latest_layer()
         new_base_lv = self.add_base(size, version, lvs)
 
         if not os.path.exists(sourcetree):
@@ -375,6 +379,13 @@ class ImageLayers(object):
                 log.debug("Running: %s" % cmd)
                 if not self.dry:
                     subprocess.check_call(cmd)
+                    log.debug("Trying to copy prev fstab")
+                    with mounted(latest_layer.path) as prev:
+                        cpcmd = ["cp", "-v",
+                                 prev.target + "/etc/fstab",
+                                 dst + "/etc/fstab"]
+                        self.run.call(cpcmd)
+                        log.debug("Copied prev fstab")
 
                 self.hooks.emit("new-base-with-tree-added", dst)
 

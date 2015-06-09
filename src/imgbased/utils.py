@@ -158,31 +158,13 @@ class ExternalBinary(object):
 
 
 class Fstab():
-    _testdata = """/files/etc/fstab/1
-/files/etc/fstab/1/spec = "/dev/mapper/fedora_pc192--168--2--115-root"
-/files/etc/fstab/1/file = "/"
-/files/etc/fstab/1/vfstype = "ext4"
-/files/etc/fstab/1/opt[1] = "defaults"
-/files/etc/fstab/1/opt[2] = "discard"
-/files/etc/fstab/1/dump = "1"
-/files/etc/fstab/1/passno = "1"
-/files/etc/fstab/2
-/files/etc/fstab/2/spec = "UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f"
-/files/etc/fstab/2/file = "/boot"
-/files/etc/fstab/2/vfstype = "ext4"
-/files/etc/fstab/2/opt = "defaults"
-/files/etc/fstab/2/dump = "1"
-/files/etc/fstab/2/passno = "2"
-/files/etc/fstab/3
-/files/etc/fstab/3/spec = "/dev/mapper/fedora_pc192--168--2--115-swap"
-/files/etc/fstab/3/file = "swap"
-/files/etc/fstab/3/vfstype = "swap"
-/files/etc/fstab/3/opt = "defaults"
-/files/etc/fstab/3/dump = "0"
-/files/etc/fstab/3/passno = "0"
-"""
+    _testdata = """#Comment
+/dev/mapper/fedora_root /                       ext4    defaults,discard        1 1
+UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaults        1 2
+/dev/mapper/fedora_swap swap                    swap    defaults        0 0
 
-    _augtool = sh.augtool
+"""
+    filename = None
 
     class Entry():
         _index = None
@@ -193,75 +175,87 @@ class Fstab():
             return "<Entry {self._index} {self.source} {self.target} />"\
                 .format(self=self)
 
+    def __init__(self, fn=None):
+        self.filename = fn
+
+    def _read(self):
+        return File(self.filename).contents
+
     def parse(self):
-        data = self._augtool("print", "/files/etc/fstab")
-        return self._parse(data)
-
-    def _parse(self, data=None):
-        """Parse augtool output
-
-        >>> Fstab()._parse(Fstab._testdata)
-        [<Entry /files/etc/fstab/1 \
-/dev/mapper/fedora_pc192--168--2--115-root / />, <Entry /files/etc/fstab/2 \
-UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />, <Entry /files/etc/fstab/3 \
-/dev/mapper/fedora_pc192--168--2--115-swap swap />]
+        """
+        >>> fstab = Fstab()
+        >>> fstab._read = lambda: Fstab._testdata
+        >>> fstab.parse()
+        [<Entry 1 /dev/mapper/fedora_root / />,\
+ <Entry 2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />,\
+ <Entry 3 /dev/mapper/fedora_swap swap />]
         """
         entries = []
-        augvals = {}
-        for line in data.strip().splitlines():
-            if "=" in line:
-                augsubpath, value = line.split(" = ", 1)
-                augpath, field = augsubpath.rsplit("/", 1)
-                # [1:-1] remove teh always there quotes
-                augvals.setdefault(augpath, {})[field] = value[1:-1]
-
-        for path, vals in augvals.items():
-            if "spec" not in vals:
+        data = self._read()
+        for idx, line in enumerate(data.splitlines()):
+            if line.startswith("#") or line.strip() == "":
                 continue
+            source, target, fs, options, _, _ = shlex.split(line)
             entry = Fstab.Entry()
-            entry._index = path
-            entry.source = vals["spec"]
-            entry.target = vals["file"]
+            entry._index = idx
+            entry.source = source
+            entry.target = target
             entries.append(entry)
 
         return sorted(entries, key=lambda e: e._index)
 
     def update(self, entry):
         """
-
-        >>> def printer(*args):
+        >>> Fstab._read = lambda x: Fstab._testdata
+        >>> def printer(args):
         ...     print(args)
         >>> fstab = Fstab()
-        >>> fstab._augtool = printer
-        >>> entries = fstab._parse(Fstab._testdata)
+        >>> fstab._write = printer
+        >>> entries = fstab.parse()
         >>> entry = entries[0]
         >>> entry.source = "foo"
         >>> fstab.update(entry)
-        ('set', '/files/etc/fstab/1/spec', 'foo')
-        ('set', '/files/etc/fstab/1/file', '/')
+        #Comment
+	foo / ext4 defaults,discard 1 1
+        UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaults        1 2
+        /dev/mapper/fedora_swap swap                    swap    defaults        0 0
+
         >>> entry.target = "bar"
         >>> fstab.update(entry)
-        ('set', '/files/etc/fstab/1/spec', 'foo')
-        ('set', '/files/etc/fstab/1/file', 'bar')
+        #Comment
+        foo bar ext4 defaults,discard 1 1
+        UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaults        1 2
+        /dev/mapper/fedora_swap swap                    swap    defaults        0 0
         """
-        for field, val in [("spec", entry.source), ("file", entry.target)]:
-            augpath = "%s/%s" % (entry._index, field)
-            self._augtool("set", augpath, val)
+        log.debug("Got new fstab entry: %s" % entry)
+        data = self._read()
+        newdata = []
+        for idx, line in enumerate(data.strip().splitlines()):
+            if idx != entry._index:
+                newdata.append(line)
+                continue
+            tokens = shlex.split(line)
+            tokens[0] = entry.source
+            tokens[1] = entry.target
+            newdata.append(" ".join(tokens))
+        self._write("\n".join(newdata))
+
+    def _write(self, data):
+        File(self.filename).write(data)
 
     def by_source(self, source=None):
         """
-        >>> parsed = Fstab()._parse(Fstab._testdata)
-        >>> Fstab.parse = lambda *args: parsed
-        >>> sorted(Fstab().by_source().items())
-        [('/dev/mapper/fedora_pc192--168--2--115-root', <Entry \
-/files/etc/fstab/1 /dev/mapper/fedora_pc192--168--2--115-root / />), \
-('/dev/mapper/fedora_pc192--168--2--115-swap', <Entry /files/etc/fstab/3 \
-/dev/mapper/fedora_pc192--168--2--115-swap swap />), \
-('UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f', <Entry /files/etc/fstab/2 \
-UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />)]
-        >>> Fstab().by_source('/dev/mapper/fedora_pc192--168--2--115-root')
-        <Entry /files/etc/fstab/1 /dev/mapper/fedora_pc192--168--2--115-root \
-/ />
+        >>> Fstab._read = lambda x: Fstab._testdata
+        >>> fstab = Fstab()
+        >>> sorted(fstab.by_source().items())
+        [('/dev/mapper/fedora_root', \
+<Entry 1 /dev/mapper/fedora_root / />), \
+('/dev/mapper/fedora_swap', \
+<Entry 3 /dev/mapper/fedora_swap swap />), \
+('UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f', \
+<Entry 2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />)]
+        >>> Fstab().by_source('/dev/mapper/fedora_root')
+        <Entry 1 /dev/mapper/fedora_root / />
         """
         sources = dict((e.source, e) for e in self.parse())
         if source:
@@ -271,16 +265,14 @@ UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />)]
 
     def by_target(self, target=None):
         """
-        >>> parsed = Fstab()._parse(Fstab._testdata)
-        >>> Fstab.parse = lambda *args: parsed
-        >>> sorted(Fstab().by_target().items())
-        [('/', <Entry /files/etc/fstab/1 \
-/dev/mapper/fedora_pc192--168--2--115-root / />), ('/boot', \
-<Entry /files/etc/fstab/2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f \
-/boot />), ('swap', <Entry /files/etc/fstab/3 \
-/dev/mapper/fedora_pc192--168--2--115-swap swap />)]
+        >>> Fstab._read = lambda x: Fstab._testdata
+        >>> fstab = Fstab()
+        >>> sorted(fstab.by_target().items())
+        [('/', <Entry 1 /dev/mapper/fedora_root / />), \
+('/boot', <Entry 2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />), \
+('swap', <Entry 3 /dev/mapper/fedora_swap swap />)]
         >>> Fstab().by_target('/')
-        <Entry /files/etc/fstab/1 /dev/mapper/fedora_pc192--168--2--115-root \
+        <Entry 1 /dev/mapper/fedora_root \
 / />
         """
         targets = dict((e.target, e) for e in self.parse())
@@ -318,6 +310,8 @@ class ShellVarFile():
 
 
 class File():
+    filename = None
+
     @property
     def contents(self):
         return self.read()
@@ -334,5 +328,9 @@ class File():
 
     def replace(self, pat, repl):
         self.write(self.contents.replace(pat, repl))
+
+    def write(self, data, mode="w"):
+        with open(self.filename, mode) as dst:
+            dst.write(data)
 
 # vim: sw=4 et sts=4
