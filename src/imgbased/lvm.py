@@ -93,6 +93,17 @@ class LVM(object):
             return "<LV '%s' />" % self.lvm_name
 
         @staticmethod
+        def try_find(mixed):
+            if mixed.startswith("/dev"):
+                return LVM.LV.from_path(mixed)
+            elif "/" in mixed:
+                return LVM.LV.from_lvm_name(mixed)
+            elif "@" in mixed:
+                return LVM.LV.from_tag(mixed)
+            else:
+                raise RuntimeError("Can't find LV for: %s" % mixed)
+
+        @staticmethod
         def find_by_tag(tag):
             lvs = LVM._vgs(["--noheadings", "--select",
                             "lv_tags = %s" % tag, "-o", "lv_full_name"])

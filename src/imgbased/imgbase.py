@@ -29,8 +29,8 @@ import glob
 import datetime
 from .hooks import Hooks
 from . import bootloader
-from .utils import ExternalBinary, \
-    mounted, find_mount_source, ShellVarFile
+from .utils import ExternalBinary, File, \
+    mounted, find_mount_source, ShellVarFile, Fstab
 from .lvm import LVM
 
 import logging
@@ -223,8 +223,26 @@ class ImageLayers(object):
             fstab = "%s/etc/fstab" % mount.target
             if os.path.exists(fstab):
                 log.info("Updating fstab of new layer")
-                self.run.call(["sed", "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
-                               lv.path, fstab])
+                fstab = Fstab()
+                rootentry = fstab.by_target("/")
+                oldrootsource = rootentry.source
+                rootentry.source = lv.path
+                fstab.update(rootentry)
+
+                defgrub = File("%s/etc/default/grub" % mount.target)
+                if defgrub.exists():
+                    oldrootlv = LVM.LV.try_find(oldrootsource)
+                    # FIXME this is quite greedy
+                    if oldrootlv.lvm_name in File(defgrub).contents:
+                        log.info("Updating default/grub of new layer")
+                        defgrub.replace(oldrootlv.lvm_name,
+                                        lv.lvm_name)
+                    else:
+                        log.info("No defaults fiel found")
+                else:
+                    log.info("No grub foo found, not updating and not " +
+                             "creating a boot entry.")
+
 #                self.bootloader.add_boot_entry(lv.lvm_name, lv.path)
                 osrelease = ShellVarFile(mount.target + "/etc/os-release")
                 name = osrelease.parse()["PRETTY_NAME"]
@@ -238,16 +256,6 @@ class ImageLayers(object):
                 self.bootloader._add_entry(title, vmlinuz, initrd, append)
             else:
                 log.info("No fstab found, not updating and not creating a" +
-                         "boot entry.")
-
-            defgrub = "%s/etc/default/grub" % mount.target
-            if os.path.exists(defgrub):
-                log.info("Updating default/grub of new layer")
-                # self.run.call(["sed",
-                #   "-i", r"/[ \t]\/[ \t]/ s#^[^ \t]\+#%s#" %
-                #                lv.path, fstab])
-            else:
-                log.info("No grub foo found, not updating and not creating a" +
                          "boot entry.")
 
     def init_layout_from(self, lvm_name_or_mount_target):

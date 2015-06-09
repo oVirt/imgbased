@@ -5,7 +5,6 @@ import os
 import logging
 import sh
 import shlex
-from collections import namedtuple
 from six.moves.urllib import request
 
 
@@ -183,36 +182,112 @@ class Fstab():
 /files/etc/fstab/3/passno = "0"
 """
 
-    Entry = namedtuple("FstabEntry", ["augpath", "spec", "file"])
+    _augtool = sh.augtool
 
-    def parse(self, filename="/etc/fstab"):
-        with open(filename) as src:
-            return self._parse(src.read())
+    class Entry():
+        _index = None
+        source = None
+        target = None
+
+        def __repr__(self):
+            return "<Entry {self._index} {self.source} {self.target} />"\
+                .format(self=self)
+
+    def parse(self):
+        data = self._augtool("print", "/files/etc/fstab")
+        return self._parse(data)
 
     def _parse(self, data=None):
         """Parse augtool output
 
         >>> Fstab()._parse(Fstab._testdata)
-        [FstabEntry(augpath='/files/etc/fstab/1/passno', \
-spec='/dev/mapper/fedora_pc192--168--2--115-root', file='/'), \
-FstabEntry(augpath='/files/etc/fstab/2/passno', \
-spec='UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f', file='/boot')]
+        [<Entry /files/etc/fstab/1 \
+/dev/mapper/fedora_pc192--168--2--115-root / />, <Entry /files/etc/fstab/2 \
+UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />, <Entry /files/etc/fstab/3 \
+/dev/mapper/fedora_pc192--168--2--115-swap swap />]
         """
         entries = []
-        augpath = None
         augvals = {}
         for line in data.strip().splitlines():
-            if " = " not in line:
-                if line != augpath and augpath:
-                    entries.append(Fstab.Entry(augpath,
-                                               augvals["spec"],
-                                               augvals["file"]))
-                augpath = line
-            else:
-                augpath, value = line.split(" = ", 1)
-                field = augpath.split("/").pop()
-                augvals[field] = value.strip('"')
-        return entries
+            if "=" in line:
+                augsubpath, value = line.split(" = ", 1)
+                augpath, field = augsubpath.rsplit("/", 1)
+                # [1:-1] remove teh always there quotes
+                augvals.setdefault(augpath, {})[field] = value[1:-1]
+
+        for path, vals in augvals.items():
+            if "spec" not in vals:
+                continue
+            entry = Fstab.Entry()
+            entry._index = path
+            entry.source = vals["spec"]
+            entry.target = vals["file"]
+            entries.append(entry)
+
+        return sorted(entries, key=lambda e: e._index)
+
+    def update(self, entry):
+        """
+
+        >>> def printer(*args):
+        ...     print(args)
+        >>> fstab = Fstab()
+        >>> fstab._augtool = printer
+        >>> entries = fstab._parse(Fstab._testdata)
+        >>> entry = entries[0]
+        >>> entry.source = "foo"
+        >>> fstab.update(entry)
+        ('set', '/files/etc/fstab/1/spec', 'foo')
+        ('set', '/files/etc/fstab/1/file', '/')
+        >>> entry.target = "bar"
+        >>> fstab.update(entry)
+        ('set', '/files/etc/fstab/1/spec', 'foo')
+        ('set', '/files/etc/fstab/1/file', 'bar')
+        """
+        for field, val in [("spec", entry.source), ("file", entry.target)]:
+            augpath = "%s/%s" % (entry._index, field)
+            self._augtool("set", augpath, val)
+
+    def by_source(self, source=None):
+        """
+        >>> parsed = Fstab()._parse(Fstab._testdata)
+        >>> Fstab.parse = lambda *args: parsed
+        >>> sorted(Fstab().by_source().items())
+        [('/dev/mapper/fedora_pc192--168--2--115-root', <Entry \
+/files/etc/fstab/1 /dev/mapper/fedora_pc192--168--2--115-root / />), \
+('/dev/mapper/fedora_pc192--168--2--115-swap', <Entry /files/etc/fstab/3 \
+/dev/mapper/fedora_pc192--168--2--115-swap swap />), \
+('UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f', <Entry /files/etc/fstab/2 \
+UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />)]
+        >>> Fstab().by_source('/dev/mapper/fedora_pc192--168--2--115-root')
+        <Entry /files/etc/fstab/1 /dev/mapper/fedora_pc192--168--2--115-root \
+/ />
+        """
+        sources = dict((e.source, e) for e in self.parse())
+        if source:
+            return sources[source]
+        else:
+            return sources
+
+    def by_target(self, target=None):
+        """
+        >>> parsed = Fstab()._parse(Fstab._testdata)
+        >>> Fstab.parse = lambda *args: parsed
+        >>> sorted(Fstab().by_target().items())
+        [('/', <Entry /files/etc/fstab/1 \
+/dev/mapper/fedora_pc192--168--2--115-root / />), ('/boot', \
+<Entry /files/etc/fstab/2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f \
+/boot />), ('swap', <Entry /files/etc/fstab/3 \
+/dev/mapper/fedora_pc192--168--2--115-swap swap />)]
+        >>> Fstab().by_target('/')
+        <Entry /files/etc/fstab/1 /dev/mapper/fedora_pc192--168--2--115-root \
+/ />
+        """
+        targets = dict((e.target, e) for e in self.parse())
+        if target:
+            return targets[target]
+        else:
+            return targets
 
 
 class ShellVarFile():
@@ -240,5 +315,24 @@ class ShellVarFile():
 
     def _getitem__(self, key):
         return self.parsed()[key]
+
+
+class File():
+    @property
+    def contents(self):
+        return self.read()
+
+    def __init__(self, fn):
+        self.filename = fn
+
+    def read(self):
+        with open(self.filename) as src:
+            return src.read()
+
+    def exists(self):
+        return os.path.exists(self.filename)
+
+    def replace(self, pat, repl):
+        self.write(self.contents.replace(pat, repl))
 
 # vim: sw=4 et sts=4
