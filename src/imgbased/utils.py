@@ -108,7 +108,7 @@ class mounted(object):
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        self.run.call(["umount", self.source])
+        self.run.call(["umount", self.target])
         if not self._target:
             self.run.call(["rmdir", self.tmpdir])
 
