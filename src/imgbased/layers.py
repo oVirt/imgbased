@@ -30,7 +30,9 @@ from .utils import memoize
 
 
 class Image(object):
-    layerformat = "Image-%d.%d"
+    vg = None
+
+    layerformat = "Image-%s.%s"
     version = None
     release = None
     layers = None
@@ -46,15 +48,14 @@ class Image(object):
 
     @property
     def lvm(self):
-        return LVM.LV(self.p._vg(), self.name)
+        return LVM.LV(self.vg, self.name)
 
     @property
     def version_release(self):
         return (int(self.version), int(self.release))
 
-    def __init__(self, p, v=None, r=None):
-        if p:
-            self.layerformat = p.layerformat
+    def __init__(self, vg=None, v=None, r=None):
+        self.vg = vg
         self.version = v
         self.release = r
         self.layers = []

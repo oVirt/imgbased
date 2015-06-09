@@ -28,7 +28,7 @@ import sh
 import glob
 import datetime
 from .hooks import Hooks
-from . import bootloader
+from . import bootloader, naming
 from .utils import ExternalBinary, File, \
     mounted, find_mount_source, ShellVarFile, Fstab
 from .lvm import LVM
@@ -51,6 +51,8 @@ class ImageLayers(object):
     run = None
 
     bootloader = None
+
+    naming = None
 
     def __init__(self):
         self.hooks = Hooks(self)
@@ -80,6 +82,8 @@ class ImageLayers(object):
 
         self.run = ExternalBinary()
         self.bootloader = bootloader.BlsBootloader(self)
+        self.naming = naming.NvrLikeNaming(vg=self._vg())
+        self.naming.names = self._lvs
 
     def check(self):
         lvs = LVM._lvs(["--noheadings", "-odata_percent,metadata_percent",
@@ -282,7 +286,7 @@ class ImageLayers(object):
                    "thin_pool_autoextend_threshold/int",
                    "80")
         today = int(datetime.date.today().strftime("%Y%m%d"))
-        initial_base = self.naming.next_base(version=today).lvm
+        initial_base = self.naming.suggest_next_base(version=today).lvm
         log.info("Creating an initial base '%s' for '%s'" %
                  (initial_base, existing))
         self._add_layer(existing, initial_base)
@@ -308,7 +312,7 @@ class ImageLayers(object):
         except IndexError:
             last_layer = self.naming.last_base()
             log.debug("Last layer is a base: %s" % last_layer)
-        new_layer = self.naming.next_layer()
+        new_layer = self.naming.suggest_next_layer()
 
         log.debug("New layer: %s" % last_layer)
 
@@ -323,7 +327,7 @@ class ImageLayers(object):
         """
         assert size
 
-        new_base_lv = self.naming.next_base(version=version, lvs=lvs)
+        new_base_lv = self.naming.suggest_next_base(version=version, lvs=lvs)
         log.debug("New base will be: %s" % new_base_lv)
         pool = LVM.Thinpool(self._vg(), self._thinpool().lv_name)
         pool.create_thinvol(new_base_lv.name, size)
@@ -335,6 +339,7 @@ class ImageLayers(object):
         return new_base_lv
 
     def add_base_from_image(self, imagefile, size, version=None, lvs=None):
+        raise NotImplementedError
         new_base_lv = self.add_base(size, version, lvs)
 
         cmd = ["dd", "conv=sparse"]

@@ -30,10 +30,12 @@ log = logging.getLogger(__package__)
 
 
 class NamingScheme():
+    vg = None
     names = None
 
-    def __init__(self, names=None):
+    def __init__(self, names=None, vg=None):
         self.names = names or []
+        self.vg = vg
 
     def image_from_name(self, name):
         raise NotImplementedError
@@ -69,7 +71,7 @@ class NamingScheme():
             base.layers = []
         except RuntimeError:
             log.debug("No previous base found, creating an initial one")
-            base = Base(self, version or 0, 0)
+            base = Base(self.vg, version or 0, 0)
             log.debug("Initial base is now: %s" % base)
         return base
 
@@ -82,7 +84,7 @@ class NamingScheme():
             layer.layers = []
         except IndexError:
             base = self.last_base(lvs)
-            layer = Image(self, base.version, 1)
+            layer = Image(self.vg, base.version, 1)
         return layer
 
     def layout(self, lvs=None):
@@ -179,7 +181,10 @@ class NvrLikeNaming(NamingScheme):
         >>> layers.tree()
         [<Image-0.0 />, <Image-2.0 [<Image-2.1 />]/>, <Image-13.0 />]
         """
-        lvs = lvs or self.names
+        if callable(self.names):
+            lvs = self.names()
+        else:
+            lvs = lvs or self.names
         laypat = format_to_pattern(self.layerformat)
         sorted_lvs = []
 
@@ -198,9 +203,9 @@ class NvrLikeNaming(NamingScheme):
         imgs = []
         for v in sorted_lvs:
             if v[1] == 0:
-                img = Base(self, *v)
+                img = Base(self.vg, *v)
             else:
-                img = Image(self, *v)
+                img = Image(self.vg, *v)
             imgs.append(img)
         for img in imgs:
             if img.release == 0:
@@ -220,6 +225,6 @@ class NvrLikeNaming(NamingScheme):
         if not match:
             raise RuntimeError("Failed to parse image name: %s" % name)
         version, release = match.groups()
-        return Image(self, int(version), int(release))
+        return Image(self.vg, int(version), int(release))
 
 # vim: sw=4 et sts=4
