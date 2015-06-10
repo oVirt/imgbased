@@ -46,25 +46,16 @@ class Application(object):
         plugins.init(self)
 
 
-def setup_logging():
-    log.setLevel(logging.INFO)
-
-    info = (logging.INFO, "%(message)s")
-    debug = (logging.DEBUG, "%(asctime)s - %(levelname)s - "
-             "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
-
-    def addHandler(lvl, fmt):
-        h = logging.StreamHandler()
-        h.setLevel(lvl)
-        h.setFormatter(logging.Formatter(fmt))
-        log.addHandler(h)
-
-    for lvl, fmt in [info, debug]:
-        addHandler(lvl, fmt)
+def add_log_handler(lvl, fmt):
+    h = logging.StreamHandler()
+    h.setLevel(lvl)
+    h.setFormatter(logging.Formatter(fmt))
+    log.addHandler(h)
 
 
 if __name__ == '__main__':
-    setup_logging()
+    log.setLevel(logging.INFO)
+    add_log_handler(logging.INFO, "%(message)s")
 
     app = Application()
 
@@ -85,6 +76,8 @@ if __name__ == '__main__':
 
     if args.debug:
         log.setLevel(logging.DEBUG)
+        add_log_handler(logging.DEBUG, "%(asctime)s - %(levelname)s - "
+             "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
 
     log.debug("Arguments: %s" % args)
 
