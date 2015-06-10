@@ -20,6 +20,7 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
+import sys
 import logging
 import argparse
 from . import config
@@ -33,6 +34,7 @@ log = logging.getLogger(__package__)
 
 
 class Application(object):
+    experimental = False
     imgbase = None
     hooks = None
 
@@ -58,6 +60,7 @@ if __name__ == '__main__':
     add_log_handler(logging.INFO, "%(message)s")
 
     app = Application()
+    app.experimental = "--experimental" in sys.argv
 
     parser = argparse.ArgumentParser(description="imgbase")
     parser.add_argument("--version", action="version",
@@ -67,6 +70,8 @@ if __name__ == '__main__':
 
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--dry", action="store_true")
+    parser.add_argument("--experimental", action="store_true",
+                        help="Enable experimental functionality")
     parser.add_argument("--layerformat", help="Format to discover layers",
                         default=Image.layerformat)
 
@@ -74,16 +79,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    log.debug("Arguments: %s" % args)
+
     if args.debug:
         log.setLevel(logging.DEBUG)
         add_log_handler(logging.DEBUG, "%(asctime)s - %(levelname)s - "
              "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
 
-    log.debug("Arguments: %s" % args)
 
-    #
-    # Get started
-    #
     app.imgbase.layerformat = args.layerformat
     app.imgbase.debug = args.debug
     app.imgbase.dry = args.dry

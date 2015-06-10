@@ -12,6 +12,9 @@ def init(app):
 
 
 def add_argparse(app, parser, subparsers):
+    if not app.experimental:
+        return
+
     s = subparsers.add_parser("nspawn",
                               help="Boot into an image")
     s.add_argument("IMAGE", help="Image to use")

@@ -11,6 +11,9 @@ def init(app):
 
 
 def add_argparse(app, parser, subparsers):
+    if not app.experimental:
+        return
+
     s = subparsers.add_parser("boot",
                               help="Manage the bootloader")
     s.add_argument("--default",

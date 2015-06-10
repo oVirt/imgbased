@@ -106,10 +106,12 @@ def run_check(app):
 
     checks += [thin_check]
 
+    log.debug("Running checks: %s" % checks)
+
     any_fail = False
     for check in checks:
-        fail = check()
-        any_fail = True if fail else False
+        if not check():
+            fail = True
 
     if any_fail:
         log.warn("There were warnings")

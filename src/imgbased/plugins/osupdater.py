@@ -46,6 +46,7 @@ def init(app):
 def on_register_checks(app, register):
     @register
     def bls_check():
+        log.info("Checking BLS configuration")
         fail = True
         try:
             sh.grep("bls_import", glob.glob("/etc/grub.d/*"))
@@ -59,7 +60,7 @@ def on_register_checks(app, register):
 
     @register
     def mount_check():
-        log.info("Checking mount options of /")
+        log.info("Checking if 'discard' is used")
         # FIXME we need to check mopts of correct path
         fail = "discard" not in sh.findmnt("-no", "options").split(",")
         if fail:

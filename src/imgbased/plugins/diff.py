@@ -15,6 +15,9 @@ def init(app):
 
 
 def add_argparse(app, parser, subparsers):
+    if not app.experimental:
+        return
+
     s = subparsers.add_parser("diff",
                               help="Compare layers and bases")
     s.add_argument("-m", "--mode",

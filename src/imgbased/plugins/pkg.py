@@ -15,6 +15,9 @@ def init(app):
 
 
 def add_argparse(app, parser, subparsers):
+    if not app.experimental:
+        return
+
     s = subparsers.add_parser("pkg",
                               help="Package related tooling")
 
