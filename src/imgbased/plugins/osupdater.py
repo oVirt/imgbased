@@ -27,7 +27,8 @@ import glob
 import os
 from .. import bootloader
 from ..lvm import LVM
-from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab
+from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
+    File
 
 
 log = logging.getLogger(__package__)
@@ -75,8 +76,7 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
 
     new_lvm_name = new_lv.lvm_name
 
-    log.info("Adding a new layer which can be booted from"
-             " the bootloader")
+    log.info("Inspecting if the layer contains OS data")
 
     """Add a new BLS based boot entry and update the layers /etc/fstab
 
@@ -108,16 +108,13 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
             log.debug("Old def grub: %s" % old_grub_append)
 
     def update_fstab(newroot):
-        log.debug("Previous layer of %s is: %s" %
-                  (new_layer, previous_layer))
-
         newfstab = Fstab("%s/etc/fstab" % newroot)
 
-        log.debug("Checking new fstab: %s" % newfstab)
         if not newfstab.exists():
-            log.warn("Can not update fstab, the "
-                     "new root is missing /etc/fstab")
+            log.info("The new layer contains no fstab, skipping.")
+            return
 
+        log.debug("Checking new fstab: %s" % newfstab)
         log.info("Updating fstab of new layer")
         rootentry = newfstab.by_target("/")
         rootentry.source = new_lv.path
@@ -125,24 +122,30 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
 
     def update_grub_default(newroot):
         defgrub = ShellVarFile("%s/etc/default/grub" % newroot)
-        log.debug("Checking grub defaults: %s" % defgrub)
-        if defgrub.exists():
-            defgrub.set("GRUB_CMDLINE_LINUX", old_grub_append)
-            oldrootlv = LVM.LV.try_find(oldrootsource)
-            log.debug("Found old root lv: %s" % oldrootlv)
-            # FIXME this is quite greedy
-            if oldrootlv.lvm_name in defgrub.contents:
-                log.info("Updating default/grub of new layer")
-                defgrub.replace(oldrootlv.lvm_name,
-                                new_lvm_name)
-            else:
-                log.info("No LVM part found in grub default")
-                log.debug("Contents: %s" % defgrub.contents)
-        else:
+
+        if not defgrub.exists():
             log.info("No grub foo found, not updating and not " +
                      "creating a boot entry.")
+            return
+
+        log.debug("Checking grub defaults: %s" % defgrub)
+        defgrub.set("GRUB_CMDLINE_LINUX", old_grub_append)
+        oldrootlv = LVM.LV.try_find(oldrootsource)
+        log.debug("Found old root lv: %s" % oldrootlv)
+        # FIXME this is quite greedy
+        if oldrootlv.lvm_name in defgrub.contents:
+            log.info("Updating default/grub of new layer")
+            defgrub.replace(oldrootlv.lvm_name,
+                            new_lvm_name)
+        else:
+            log.info("No LVM part found in grub default")
+            log.debug("Contents: %s" % defgrub.contents)
 
     def copy_kernel(newroot):
+        if not File("%s/boot" % newroot).exists():
+            log.info("New root does not contain a kernel, skipping.")
+            return
+
         try:
             chroot = \
                 sh.systemd_nspawn.bake("-q",
@@ -173,6 +176,10 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
             log.debug("Kernel copy failed", exc_info=True)
 
     def add_bootentry(newroot):
+        if not File("%s/boot" % newroot).exists():
+            log.info("New root does not contain a /boot, skipping.")
+            return
+
         bootdir = "/boot/%s" % new_lv.lv_name
         log.debug("Looking for kernel dir %s" % bootdir)
         if not os.path.isdir(bootdir):
