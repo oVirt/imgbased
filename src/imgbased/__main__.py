@@ -62,7 +62,7 @@ if __name__ == '__main__':
     app = Application()
     app.experimental = "--experimental" in sys.argv
 
-    parser = argparse.ArgumentParser(description="imgbase")
+    parser = argparse.ArgumentParser(prog="imgbase")
     parser.add_argument("--version", action="version",
                         version=config.version())
 
