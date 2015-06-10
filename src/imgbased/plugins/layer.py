@@ -40,13 +40,22 @@ def add_argparse(app, parser, subparsers):
                               help="Get the latest layer")
     layer_parser.add_argument("--current", action="store_true",
                               help="Get the current layer used to boot this")
+    layer_parser.add_argument("IMAGE", nargs="?",
+                              help="Optional to be used with --add")
 
 
 def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "layer":
         if args.add:
-            app.imgbase.add_layer(None, onto_latest_layer=True)
+            # FIXME we could optionally allopw latest/current/specific
+            if args.latest:
+                app.imgbase.add_layer_on_latest()
+            elif args.IMAGE:
+                app.imgbase.add_layer(args.IMAGE)
+            else:
+                # current is default
+                app.imgbase.add_layer_on_latest()
         elif args.current:
             print(app.imgbase.current_layer())
         elif args.latest:

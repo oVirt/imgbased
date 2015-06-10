@@ -120,22 +120,21 @@ class ImageLayers(object):
     def layout(self, lvs=None):
         return self.naming.layout(lvs)
 
-    def add_layer(self, previous_layer, onto_latest_layer=False):
+    def add_layer_on_latest(self):
+        previous_layer = self.latest_layer()
+        return self.add_layer(previous_layer)
+
+    def add_layer_on_current(self):
+        previous_layer = self.current_layer()
+        return self.add_layer(previous_layer)
+
+    def add_layer(self, previous_layer):
         """Add a new thin LV
         """
         log.info("Adding a new layer")
 
-        if onto_latest_layer:
-            previous_layer = self.naming.previous_layer()
-            log.debug("Basing new layer on previous: %s" % previous_layer)
-#        except IndexError:
-#            previous_layer = self.naming.previous_base()
-#            log.debug("Last layer is a base: %s" % previous_layer)
-
-        assert previous_layer
-
+        log.debug("Basing new layer on previous: %s" % previous_layer)
         new_layer = self.naming.suggest_next_layer(previous_layer)
-
         log.info("New layer will be: %s" % new_layer)
 
         try:

@@ -111,7 +111,7 @@ def run_check(app):
     any_fail = False
     for check in checks:
         if not check():
-            fail = True
+            any_fail = True
 
     if any_fail:
         log.warn("There were warnings")

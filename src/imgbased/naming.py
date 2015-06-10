@@ -87,22 +87,31 @@ class NamingScheme():
             log.debug("Initial base is now: %s" % base)
         return base
 
-    def suggest_next_layer(self, base=None):
+    def suggest_next_layer(self, prev):
         """Determine the LV name of the next layer (based on the scheme)
+
+        image: Layer or Base
         """
-        layer = Image(self.vg)
+        suggestion = Image(self.vg)
 
-        if not base:
-            base = self.last_base()
+        suggestion.version = prev.version
 
-        layer.version = base.version
-        if base.layers:
-            last_layer = sorted(base.layers).pop()
-            layer.release = int(last_layer.release) + 1
+        if prev.is_base():
+            log.debug("Suggesting for layer for base %s" % prev)
+            # FIXME If prev is a freshly generated Image(), then it
+            # has no layers, only images form tree() have layers.
+            if prev.layers:
+                log.debug("... with layers")
+                last_layer = sorted(prev.layers).pop()
+                suggestion.release = int(last_layer.release) + 1
+            else:
+                log.debug("... without layers")
+                suggestion.release = 1
         else:
-            layer.release = 1
+            log.debug("Suggesting for layer for prev layer %s" % prev)
+            suggestion.release = int(prev.release) + 1
 
-        return layer
+        return suggestion
 
     def layout(self, lvs=None):
         """List all bases and layers for humans
@@ -160,11 +169,18 @@ class NvrLikeNaming(NamingScheme):
 
     >>> layers = NvrLikeNaming()
     >>> layers.names = ["Image-0.0"]
-    >>> layers.suggest_next_layer()
+    >>> layers.suggest_next_layer(Image(None, "0", "0"))
     <Image-0.1 />
-    >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
-    >>> layers.suggest_next_layer()
+    >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1",
+    ... "Image-2.0", "Image-2.1"]
+    >>> layers.suggest_next_layer(Image(None, "13", "1"))
     <Image-13.2 />
+
+    # FIXME This case must be fixed!
+    # It should be Image-2.2 suggested, but currently 2.1, becaue
+    # the new image has no layers
+    >>> layers.suggest_next_layer(Image(None, 2, 0))
+    <Image-2.1 />
 
 
 
@@ -237,7 +253,7 @@ class NvrLikeNaming(NamingScheme):
 
     def image_from_name(self, name):
         laypat = format_to_pattern(self.layerformat)
-        log.info("Fetching %s from %s" % (laypat, name))
+        log.debug("Prasing %s from %s" % (laypat, name))
         match = re.search(laypat, name)
         if not match:
             raise RuntimeError("Failed to parse image name: %s" % name)

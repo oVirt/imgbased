@@ -67,7 +67,7 @@ class Image(object):
         return "<%s %s/>" % (self, self.layers or "")
 
     def is_base(self):
-        return self.release == 0
+        return int(self.release) == 0
 
     def is_layer(self):
         return not self.is_base()

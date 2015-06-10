@@ -84,8 +84,7 @@ if __name__ == '__main__':
     if args.debug:
         log.setLevel(logging.DEBUG)
         add_log_handler(logging.DEBUG, "%(asctime)s - %(levelname)s - "
-             "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
-
+                        "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
 
     app.imgbase.layerformat = args.layerformat
     app.imgbase.debug = args.debug
