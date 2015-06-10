@@ -28,4 +28,4 @@ imgbasehooksdir = '@PKGDATADIR@'
 
 
 def version():
-    return "%s %s %s" % (PACKAGE_NAME, PACKAGE_VERSION, REVISION)
+    return "%s-%s-%s" % (PACKAGE_NAME, PACKAGE_VERSION, REVISION)
