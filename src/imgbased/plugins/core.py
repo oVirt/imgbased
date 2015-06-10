@@ -28,6 +28,11 @@ import logging
 log = logging.getLogger(__package__)
 
 
+def pre_init(app):
+    app.hooks.create("register-checks",
+                     ("register_func",))
+
+
 def init(app):
     app.hooks.connect("pre-arg-parse", add_argparse)
     app.hooks.connect("post-arg-parse", check_argparse)
@@ -75,6 +80,41 @@ def check_argparse(app, args):
         elif args.of_layer:
             print(str(app.imgbase.base_of_layer(args.of_layer)))
     elif args.command == "check":
-        app.imgbase.check()
+        run_check(app)
 
-# vim: sw=4 et sts=4
+
+def run_check(app):
+    checks = []
+
+    def register_func(check):
+        checks.append(check)
+
+    app.hooks.emit("register-checks", register_func)
+
+    from ..lvm import LVM
+    lvs = LVM._lvs(["--noheadings", "-odata_percent,metadata_percent",
+                    app.imgbase._thinpool().lvm_name])
+    datap, metap = map(float, lvs.replace(",", ".").split())
+
+    def thin_check():
+        log.info("Checking available space in thinpool")
+        fail = any(v > 80 for v in [datap, metap])
+        if fail:
+            log.warning("Data or Metadata usage is above threshold:")
+            print(LVM._lvs([app.imgbase._thinpool().lvm_name]))
+        return fail
+
+    checks += [thin_check]
+
+    any_fail = False
+    for check in checks:
+        fail = check()
+        any_fail = True if fail else False
+
+    if any_fail:
+        log.warn("There were warnings")
+    else:
+        log.info("The check completed without warnings")
+
+
+# vim: sw=4 et sts=4:

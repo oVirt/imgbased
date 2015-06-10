@@ -66,6 +66,12 @@ class NamingScheme():
     def last_layer(self):
         return self.layers().pop()
 
+    def layer_before(self, other_layer):
+        layers = self.layers()
+        assert other_layer in layers
+        oidx = layers.index(other_layer)
+        return layers[oidx-1]
+
     def suggest_next_base(self, version=None):
         """Dertermine the name for the next base LV name (based on the scheme)
         """

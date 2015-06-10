@@ -103,8 +103,8 @@ class Image(object):
         >>> a == b
         True
         """
-
-        return self.version_release == other.version_release
+        # FIXME check type
+        return repr(self) == repr(other)
 
 
 class Base(Image):

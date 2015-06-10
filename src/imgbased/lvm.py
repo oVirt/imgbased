@@ -100,6 +100,7 @@ class LVM(object):
         @staticmethod
         def try_find(mixed):
             log.debug("Trying to find LV for: %s" % mixed)
+            assert mixed
             if mixed.startswith("/dev"):
                 return LVM.LV.from_path(mixed)
             elif "/" in mixed:

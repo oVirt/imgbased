@@ -50,7 +50,8 @@ def setup_logging():
     log.setLevel(logging.INFO)
 
     info = (logging.INFO, "%(message)s")
-    debug = (logging.DEBUG, "%(asctime)s - %(levelname)s - %(message)s")
+    debug = (logging.DEBUG, "%(asctime)s - %(levelname)s - "
+             "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
 
     def addHandler(lvl, fmt):
         h = logging.StreamHandler()

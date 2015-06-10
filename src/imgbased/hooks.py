@@ -117,3 +117,5 @@ class Hooks(object):
         for cb in all_cbs:
             log.debug("Triggering: %s (%s, %s)" % (cb, self.context, args))
             cb(self.context, *args)
+
+# vim: sw=4 et sts=4:

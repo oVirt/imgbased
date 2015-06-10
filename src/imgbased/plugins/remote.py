@@ -112,8 +112,6 @@ def check_argparse_pull(app, args, remotecfg):
         log.debug("Available versions for stream '%s': %s" %
                   (stream, remote.list_versions(stream)))
         image = remote.get_image(stream)
-        # FIXME specify the base outside, so it can be used later
-        # for i.e. add_bootable_layer
         new_base = None
         if remote.mode == "liveimg":
             new_base = LiveimgExtractor(app.imgbase).extract(image)
@@ -124,7 +122,7 @@ def check_argparse_pull(app, args, remotecfg):
             log.info("Image was fetched successfully")
         else:
             assert new_base
-            app.imgbase.add_bootable_layer(new_base)
+            app.imgbase.add_layer(new_base)
             log.info("Image was pulled successfully")
 
 

@@ -21,6 +21,7 @@ def _on_all_plugins(funcname, *args):
 
 
 def init(app):
+    _on_all_plugins("pre_init", app)
     _on_all_plugins("init", app)
 
 # vim: et sw=4 sts=4

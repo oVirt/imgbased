@@ -22,33 +22,15 @@
 #
 import logging
 import os
-import glob
 
 
 log = logging.getLogger(__package__)
 
 
 class Bootloader(object):
-    p = None
+    dry = False
 
-    def __init__(self, p):
-        self.p = p
-
-    def _glob_boot(self, pat):
-        g = sorted(glob.glob("/boot/%s" % pat))[-1]
-        return os.path.basename(g)
-
-    def _kernel(self):
-        return self._glob_boot("vmlinuz-*.x86_64")
-
-    def _initramfs(self):
-        return self._glob_boot("initramfs-*.x86_64.img")
-
-    def _append(self, name, rootlv):
-        args = {"name": name, "rootlv": rootlv}
-        return "rd.lvm.lv={name} root={rootlv} console=ttyS0".format(**args)
-
-    def add_boot_entry(self, name, rootlv):
+    def add_entry(self, title, linux, initramfs, append):
         """Add a boot entry to the bootloader, and make it the default
         """
         raise NotImplementedError()
@@ -61,17 +43,13 @@ class SyslinuxBootloader(Bootloader):
         with open(self.config_file) as src:
             return src.read().splitlines()
 
-    def add_boot_entry(self, name, rootlv):
+    def add_entry(self, title, linux, initramfs, append):
         """
         >>> import tempfile
-        >>> b = SyslinuxBootloader(None)
-
-        # A bit of mockup
-        >>> b._kernel = lambda: "<kernel>"
-        >>> b._initramfs = lambda: "<initramfs>"
+        >>> b = SyslinuxBootloader()
         >>> _, b.config_file = tempfile.mkstemp()
 
-        >>> b.add_boot_entry("<name>", "<rootlv>")
+        >>> b.add_entry("<name>", "<kernel>", "<initramfs>", "<append>")
 
         >>> print("\\n".join(b._config()))
         DEFAULT '<name>'
@@ -80,9 +58,9 @@ class SyslinuxBootloader(Bootloader):
           SAY Booting '<name>' ...
           KERNEL <kernel>
           INITRD <initramfs>
-          APPEND rd.lvm.lv=<name> root=<rootlv> console=ttyS0
+          APPEND <append>
 
-        >>> b.add_boot_entry("<name1>", "<rootlv>")
+        >>> b.add_entry("<name1>", "<kernel>", "<initramfs>", "<append>")
 
         >>> print("\\n".join(b._config()))
         DEFAULT '<name1>'
@@ -91,24 +69,20 @@ class SyslinuxBootloader(Bootloader):
           SAY Booting '<name>' ...
           KERNEL <kernel>
           INITRD <initramfs>
-          APPEND rd.lvm.lv=<name> root=<rootlv> console=ttyS0
+          APPEND <append>
         <BLANKLINE>
         LABEL '<name1>'
           SAY Booting '<name1>' ...
           KERNEL <kernel>
           INITRD <initramfs>
-          APPEND rd.lvm.lv=<name1> root=<rootlv> console=ttyS0
+          APPEND <append>
 
         >>> os.unlink(b.config_file)
         """
 
-        linux = self._kernel()
-        initramfs = self._initramfs()
-        append = self._append(name, rootlv)
-
         entry = ["",
-                 "LABEL '%s'" % name,
-                 "  SAY Booting '%s' ..." % name,
+                 "LABEL '%s'" % title,
+                 "  SAY Booting '%s' ..." % title,
                  "  KERNEL %s" % linux,
                  "  INITRD %s" % initramfs,
                  "  APPEND %s" % append]
@@ -121,9 +95,9 @@ class SyslinuxBootloader(Bootloader):
         # Drop old default
         entries = [e for e in entries if not e.startswith("DEFAULT ")]
         # Set new default
-        entries.insert(0, "DEFAULT '%s'" % name)
+        entries.insert(0, "DEFAULT '%s'" % title)
 
-        if not self.p or not self.p.dry:
+        if not self.dry:
             # Write the new config
             with open(self.config_file, "w+") as dst:
                 dst.write("\n".join(entries + [""]))
@@ -139,14 +113,7 @@ class BlsBootloader(Bootloader):
     """
     bls_dir = "/boot/loader/entries"
 
-    def add_boot_entry(self, name, rootlv):
-        # FIXME this is missing the make-default part (not possible with bls)
-        linux = self._kernel()
-        initramfs = self._initramfs()
-        append = self._append(name, rootlv)
-        return self._add_entry(name, linux, initramfs, append)
-
-    def _add_entry(self, title, linux, initramfs, append):
+    def add_entry(self, title, linux, initramfs, append):
         eid = uuid()
         edir = self.bls_dir
 
@@ -161,8 +128,8 @@ class BlsBootloader(Bootloader):
                  "options %s" % append]
 
         log.debug("Entry: %s" % entry)
-        if not self.p or not self.p.dry:
+        if not self.dry:
             with open(efile, "w+") as dst:
                 dst.write("\n".join(entry))
 
-# vim: sw=4 et sts=4
+# vim: sw=4 et sts=4:

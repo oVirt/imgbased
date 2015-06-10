@@ -56,7 +56,8 @@ def diff(imgbase, left, right, mode="tree"):
         if mode == "content":
             import subprocess
             subprocess.call(["diff", "-urN",
-                             mountl.target, mountr.target], stderr=subprocess.DEVNULL)
+                             mountl.target, mountr.target],
+                            stderr=subprocess.DEVNULL)
         else:
             raise RuntimeError("Unknown diff mode: %s" % mode)
 

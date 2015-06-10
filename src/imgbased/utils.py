@@ -4,11 +4,21 @@ import subprocess
 import os
 import logging
 import sh
+import re
 import shlex
 from six.moves.urllib import request
 
 
 log = logging.getLogger(__package__)
+
+
+def copy_files(dst, srcs, *args):
+    """Copy files
+
+    Use the native copy command to also copy xattrs (for SELinux)
+    """
+    args = list(args) + srcs + [dst]
+    return sh.cp(*args)
 
 
 def size_of_fstree(path):
@@ -111,6 +121,7 @@ class mounted(object):
         self.run.call(["umount", self.target])
         if not self._target:
             self.run.call(["rmdir", self.tmpdir])
+        return exc_type is None
 
 
 def sorted_versions(versions, delim="."):
@@ -157,14 +168,46 @@ class ExternalBinary(object):
         return self.call(["tune2fs"] + args, **kwargs)
 
 
-class Fstab():
+class File():
+    filename = None
+
+    @property
+    def contents(self):
+        return self.read()
+
+    def __init__(self, fn):
+        self.filename = fn
+
+    def __str__(self):
+        return "<%s %s>" % (self.__class__.__name__, self.filename)
+
+    def read(self):
+        with open(self.filename) as src:
+            return src.read()
+
+    def exists(self):
+        return os.path.exists(self.filename)
+
+    def replace(self, pat, repl):
+        self.write(self.contents.replace(pat, repl))
+
+    def sub(self, pat, repl):
+        self.write(re.sub(pat, repl, self.contents))
+
+    def write(self, data, mode="w"):
+        with open(self.filename, mode) as dst:
+            dst.write(data)
+
+
+class Fstab(File):
     _testdata = """#Comment
-/dev/mapper/fedora_root /                       ext4    defaults,discard        1 1
-UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaults        1 2
+/dev/mapper/fedora_root /                       ext4    \
+defaults,discard        1 1
+UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   \
+ext4    defaults        1 2
 /dev/mapper/fedora_swap swap                    swap    defaults        0 0
 
 """
-    filename = None
 
     class Entry():
         _index = None
@@ -175,15 +218,12 @@ UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaul
             return "<Entry {self._index} {self.source} {self.target} />"\
                 .format(self=self)
 
-    def __init__(self, fn=None):
-        self.filename = fn
-
     def _read(self):
-        return File(self.filename).contents
+        return self.contents
 
     def parse(self):
         """
-        >>> fstab = Fstab()
+        >>> fstab = Fstab(None)
         >>> fstab._read = lambda: Fstab._testdata
         >>> fstab.parse()
         [<Entry 1 /dev/mapper/fedora_root / />,\
@@ -209,23 +249,27 @@ UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaul
         >>> Fstab._read = lambda x: Fstab._testdata
         >>> def printer(args):
         ...     print(args)
-        >>> fstab = Fstab()
-        >>> fstab._write = printer
+        >>> fstab = Fstab(None)
+        >>> fstab.write = printer
         >>> entries = fstab.parse()
         >>> entry = entries[0]
         >>> entry.source = "foo"
         >>> fstab.update(entry)
         #Comment
-	foo / ext4 defaults,discard 1 1
-        UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaults        1 2
-        /dev/mapper/fedora_swap swap                    swap    defaults        0 0
+        foo / ext4 defaults,discard 1 1
+        UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   \
+ext4    defaults        1 2
+        /dev/mapper/fedora_swap swap                    swap    \
+defaults        0 0
 
         >>> entry.target = "bar"
         >>> fstab.update(entry)
         #Comment
         foo bar ext4 defaults,discard 1 1
-        UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaults        1 2
-        /dev/mapper/fedora_swap swap                    swap    defaults        0 0
+        UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   \
+ext4    defaults        1 2
+        /dev/mapper/fedora_swap swap                    swap    \
+defaults        0 0
         """
         log.debug("Got new fstab entry: %s" % entry)
         data = self._read()
@@ -238,15 +282,12 @@ UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaul
             tokens[0] = entry.source
             tokens[1] = entry.target
             newdata.append(" ".join(tokens))
-        self._write("\n".join(newdata))
-
-    def _write(self, data):
-        File(self.filename).write(data)
+        self.write("\n".join(newdata))
 
     def by_source(self, source=None):
         """
         >>> Fstab._read = lambda x: Fstab._testdata
-        >>> fstab = Fstab()
+        >>> fstab = Fstab(None)
         >>> sorted(fstab.by_source().items())
         [('/dev/mapper/fedora_root', \
 <Entry 1 /dev/mapper/fedora_root / />), \
@@ -254,7 +295,7 @@ UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaul
 <Entry 3 /dev/mapper/fedora_swap swap />), \
 ('UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f', \
 <Entry 2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />)]
-        >>> Fstab().by_source('/dev/mapper/fedora_root')
+        >>> Fstab(None).by_source('/dev/mapper/fedora_root')
         <Entry 1 /dev/mapper/fedora_root / />
         """
         sources = dict((e.source, e) for e in self.parse())
@@ -266,12 +307,12 @@ UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaul
     def by_target(self, target=None):
         """
         >>> Fstab._read = lambda x: Fstab._testdata
-        >>> fstab = Fstab()
+        >>> fstab = Fstab(None)
         >>> sorted(fstab.by_target().items())
         [('/', <Entry 1 /dev/mapper/fedora_root / />), \
 ('/boot', <Entry 2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />), \
 ('swap', <Entry 3 /dev/mapper/fedora_swap swap />)]
-        >>> Fstab().by_target('/')
+        >>> Fstab(None).by_target('/')
         <Entry 1 /dev/mapper/fedora_root \
 / />
         """
@@ -282,55 +323,56 @@ UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   ext4    defaul
             return targets
 
 
-class ShellVarFile():
-    filename = None
-
-    def __init__(self, fn):
-        self.filename = fn
-
+class ShellVarFile(File):
     def parse(self, data=None):
         """Parse
         >>> testdata= 'VERSION_ID=22\\nPRETTY_NAME="Fedora 22 (Twenty Two)"\\n'
         >>> sorted(ShellVarFile(None).parse(testdata).items())
         [('PRETTY_NAME', 'Fedora 22 (Twenty Two)'), ('VERSION_ID', '22')]
+
+        >>> def printer(*args):
+        ...     print(args)
+        >>> varfile = ShellVarFile(None)
+        >>> varfile.read = lambda: "A=a\\nB=b\\nAh=ah"
+        >>> varfile.write = printer
+        >>> varfile.contents
+        'A=a\\nB=b\\nAh=ah'
+        >>> varfile.set("A", "1")
+        ('A=1\\nB=b\\nAh=ah',)
         """
-        if not data:
-            with open(self.filename) as src:
-                data = src.read()
+        data = data or self.contents
 
         parsed = {}
-        for keyval in shlex.split(data):
-            key, val = keyval.split("=", 1)
-            parsed[key] = val
-
+        try:
+            for line in data.splitlines(False):
+                if "=" not in line:
+                    continue
+                key, val = line.split("=", 1)
+                parsed[key] = val.strip('"').strip("'")
+        except:
+            log.error("Failed to parse: %s" % line)
+            raise
         return parsed
 
-    def _getitem__(self, key):
-        return self.parsed()[key]
+    def get(self, key, default):
+        return self.parse().get(key, default)
+
+    def set(self, key, val):
+        self.sub(r"%s=.*" % key, "%s=%s" % (key, str(val)))
 
 
-class File():
-    filename = None
+class PackageDb():
+    def get_files(self, pkgname):
+        raise NotImplementedError
 
-    @property
-    def contents(self):
-        return self.read()
 
-    def __init__(self, fn):
-        self.filename = fn
+class RpmPackageDb(PackageDb):
+    _rpm_cmd = sh.rpm
 
-    def read(self):
-        with open(self.filename) as src:
-            return src.read()
+    def rpm(self, *args, **kwargs):
+        return self._rpm_cmd(*args, **kwargs).splitlines(False)
 
-    def exists(self):
-        return os.path.exists(self.filename)
-
-    def replace(self, pat, repl):
-        self.write(self.contents.replace(pat, repl))
-
-    def write(self, data, mode="w"):
-        with open(self.filename, mode) as dst:
-            dst.write(data)
+    def get_files(self, pkgname):
+        return self.rpm("-ql", pkgname)
 
 # vim: sw=4 et sts=4
