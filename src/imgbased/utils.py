@@ -375,4 +375,64 @@ class RpmPackageDb(PackageDb):
     def get_files(self, pkgname):
         return self.rpm("-ql", pkgname)
 
+
+class Rsync():
+    _rsync_cmd = ["ionice", "rsync"]
+
+    existing = False
+    exclude = None
+
+    def __init__(self):
+        self.exclude = []
+
+    def _run(self, cmd):
+        log.debug("Running: %s" % cmd)
+        subprocess.check_call(cmd)
+
+    def sync(self, sourcetree, dst):
+        assert os.path.isdir(sourcetree)
+        assert os.path.isdir(dst)
+
+        cmd = list(self._rsync_cmd)
+        cmd += ["-pogAXtlHrDx"]
+        cmd += ["-Sc", "--no-i-r"]
+        cmd += ["--info=progress2"]
+        if self.existing:
+            cmd += ["--existing"]
+        if self.exclude:
+            for pat in self.exclude:
+                cmd += ["--exclude", pat]
+        cmd += [sourcetree + "/", dst]
+
+        self._run(cmd)
+
+
+class SystemRelease(File):
+    """Informations about the OS based on /etc/system-release-cpe
+
+    Use openscap_api.cpe.name_new(str) from openscap-python for an official
+    way.
+    """
+    CPE_FILE = "/etc/system-release-cpe"
+
+    VENDOR = None
+    PRODUCT = None
+    VERSION = None
+
+    @property
+    def uri(self):
+        return self.contents.strip()
+
+    def __str__(self):
+        return "<CPE uri='%s' />" % self.uri
+
+    def __init__(self, fn):
+        self.filename = fn
+        cpe_uri = self.contents
+        cpe_parts = cpe_uri.split(":")
+        if cpe_parts[0] != "cpe":
+            raise RuntimeError("Can not parse CPE string in %s" %
+                               self.CPE_FILE)
+        self.VENDOR, self.PRODUCT, self.VERSION = cpe_parts[2:5]
+
 # vim: sw=4 et sts=4

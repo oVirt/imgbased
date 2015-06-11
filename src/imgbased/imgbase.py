@@ -27,7 +27,8 @@ import io
 import sh
 from .hooks import Hooks
 from . import naming
-from .utils import ExternalBinary, mounted, find_mount_source
+from .utils import ExternalBinary, mounted, find_mount_source, \
+    Rsync
 from .lvm import LVM
 
 import logging
@@ -133,6 +134,9 @@ class ImageLayers(object):
         """
         log.info("Adding a new layer")
 
+        if type(previous_layer) in [str]:
+            previous_layer = self.naming.image_from_name(previous_layer)
+
         log.debug("Basing new layer on previous: %s" % previous_layer)
         new_layer = self.naming.suggest_next_layer(previous_layer)
         log.info("New layer will be: %s" % new_layer)
@@ -159,7 +163,6 @@ class ImageLayers(object):
 
         # Assign a new filesystem UUID and label
         self.run.tune2fs(["-U", "random",
-                          "-L", new_layer.lvm.lv_name + "-fs",
                           new_layer.lvm.path])
 
         # Handle the previous layer
@@ -251,13 +254,13 @@ class ImageLayers(object):
         return new_base_lv
 
     def add_base_with_tree(self, sourcetree, size, version=None, lvs=None):
-        latest_layer = self.naming.images().pop()
         new_base_lv = self.add_base(size, version, lvs)
 
         if not os.path.exists(sourcetree):
             raise RuntimeError("Sourcetree does not exist: %s" % sourcetree)
 
         with new_base_lv.unprotected():
+            log.info("Creating new filesystem on base")
             mkfscmd = ["mkfs.ext4", "-c", "-E", "discard", new_base_lv.path]
             if not self.debug:
                 mkfscmd.append("-q")
@@ -266,22 +269,13 @@ class ImageLayers(object):
                 pass
                 subprocess.check_call(mkfscmd)
 
+            log.info("Writing tree to base")
             with mounted(new_base_lv.path) as mount:
                 dst = mount.target + "/"
-                cmd = ["ionice"]
-                cmd += ["rsync", "-pogAXtlHrDx", sourcetree + "/", dst]
-                cmd += ["-Sc", "--no-i-r"]
-                cmd += ["--info=progress2"]
-                log.debug("Running: %s" % cmd)
+                rsync = Rsync()
                 if not self.dry:
-                    subprocess.check_call(cmd)
+                    rsync.sync(sourcetree, dst)
                     log.debug("Trying to copy prev fstab")
-                    with mounted(latest_layer.path) as prev:
-                        cpcmd = ["cp", "-v",
-                                 prev.target + "/etc/fstab",
-                                 dst + "/etc/fstab"]
-                        self.run.call(cpcmd)
-                        log.debug("Copied prev fstab")
 
                 self.hooks.emit("new-base-with-tree-added", dst)
 

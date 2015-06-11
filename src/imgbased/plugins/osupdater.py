@@ -28,7 +28,7 @@ import os
 from .. import bootloader
 from ..lvm import LVM
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File
+    File, SystemRelease, Rsync
 
 
 log = logging.getLogger(__package__)
@@ -71,21 +71,65 @@ def on_register_checks(app, register):
 
 
 def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
-    previous_lv = LVM.LV.from_lvm_name(previous_lv_lvm_name)
+    # previous_lv = LVM.LV.from_lvm_name(previous_lv_lvm_name)
     new_lv = LVM.LV.from_lvm_name(new_lv_lvm_name)
 
-    new_lvm_name = new_lv.lvm_name
+    new_layer = imgbase.naming.image_from_name(new_lv.lv_name)
+    previous_layer = imgbase.naming.layer_before(new_layer)
 
+    migrate_etc(imgbase, new_layer, previous_layer)
+    adjust_mounts_and_boot(imgbase, new_layer, previous_layer)
+
+
+def migrate_etc(imgbase, new_layer, previous_layer):
+    with mounted(new_layer.lvm.path) as new_fs,\
+            mounted(previous_layer.lvm.path) as old_fs:
+        old_etc = old_fs.target + "/etc"
+        new_etc = new_fs.target + "/etc"
+
+        old_rel = SystemRelease(old_etc + "/system-release-cpe")
+        new_rel = SystemRelease(new_etc + "/system-release-cpe")
+
+        log.info("Verifying stream compatability")
+        log.debug("%s vs %s" % (old_rel, new_rel))
+
+        if new_rel.PRODUCT not in ["fedora", "centos"]:
+            log.error("Unsupported üproduct: %s" % new_rel)
+
+        is_same_product = old_rel.PRODUCT == new_rel.PRODUCT
+
+        if not is_same_product:
+            log.error("The previous and new layers seem to contain "
+                      "different products")
+            log.error("Old: %s" % old_rel)
+            log.error("New: %s" % new_rel)
+
+        if is_same_product:
+            log.info("Migrating /etc")
+            rsync = Rsync()
+            # Don't copy release files to have up to date release infos
+            rsync.exclude = ["etc/*-release*"]
+            rsync.sync(old_etc + "/", new_etc)
+        else:
+            log.info("Just copying important files")
+            copy_files(new_etc,
+                       [old_etc + "/fstab",
+                        old_etc + "/passwd",
+                        old_etc + "/shadow",
+                        old_etc + "/group"])
+
+
+def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
     log.info("Inspecting if the layer contains OS data")
 
     """Add a new BLS based boot entry and update the layers /etc/fstab
 
     http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec/
     """
-    log.info("Adding a boot entry for the new layer")
+    log.info("Adjusting mount and boot related points")
 
-    new_layer = imgbase.naming.image_from_name(new_lv.lv_name)
-    previous_layer = imgbase.naming.layer_before(new_layer)
+    new_lv = new_layer.lvm
+    new_lvm_name = new_lv.lvm_name
 
     oldrootsource = None
     with mounted(previous_layer.lvm.path) as oldrootmnt:
@@ -146,6 +190,7 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
             log.info("New root does not contain a kernel, skipping.")
             return
 
+        bootdir = "/boot/%s" % new_lv.lv_name
         try:
             chroot = \
                 sh.systemd_nspawn.bake("-q",
@@ -167,13 +212,24 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
                       if f.startswith("/boot/")]
             log.debug("Found kernel files: %s" % kfiles)
 
-            bootdir = "/boot/%s" % new_lv.lv_name
             chroot("mkdir", bootdir)
             copy_files(bootdir, kfiles)
-        except Exception as e:
-            print(e)
+        except:
             log.warn("No kernel found in %s" % new_lv, exc_info=True)
             log.debug("Kernel copy failed", exc_info=True)
+            return
+
+        log.info("FIXME Regenerating initramfs")
+        chroot = \
+            sh.systemd_nspawn.bake("-q",
+                                   "--bind", "%s:/boot" % bootdir,
+                                   "-D", newroot)
+#        kfiles = glob.glob(bootdir + "/*")
+#        bfile = lambda n: [f for f in kfiles if n in f].pop()\
+#            .replace(newroot, new_lvm_name).lstrip("/")
+#        vmlinuz = bfile("vmlinuz")
+#        initrd = bfile("init")
+        # FIXME chroot("dracut", image, "--kver", kver)
 
     def add_bootentry(newroot):
         if not File("%s/boot" % newroot).exists():
@@ -220,7 +276,7 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
         add_bootentry(newroot.target)
 
     imgbase.hooks.emit("os-upgraded",
-                       previous_lv.lvm_name,
+                       previous_layer.lvm.lv_name,
                        new_lvm_name)
 
 # vim: sw=4 et sts=4:

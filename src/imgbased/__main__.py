@@ -57,7 +57,7 @@ def add_log_handler(lvl, fmt):
 
 if __name__ == '__main__':
     log.setLevel(logging.INFO)
-    add_log_handler(logging.INFO, "%(message)s")
+    add_log_handler(logging.INFO, "[%(levelname)s] %(message)s")
 
     app = Application()
     app.experimental = "--experimental" in sys.argv
