@@ -193,14 +193,14 @@ class LocalRemotesConfiguration():
     {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \
 mode=None />}
     """
-    USER_CFG_DIR = os.path.expandvars("$HOME/.config/imgbase/")
-    USER_CFG_FILE = USER_CFG_DIR + "/config"
+    SYSTEM_CFG_FILE = "/etc/imgbased/imgbase.conf"
     cfgstr = None
 
     def _parser(self):
         p = ConfigParser()
+
         if self.cfgstr is None:
-            p.read(self.USER_CFG_FILE)
+            p.read(self.SYSTEM_CFG_FILE)
         else:
             # Used for doctests
             p.readfp(StringIO(self.cfgstr))
@@ -297,11 +297,10 @@ mode=None />}
 
     def _save(self, p):
         try:
-            os.makedirs(self.USER_CFG_DIR)
-        except FileExistsError:
-            log.debug("Config file dir already exists: %s" %
-                      self.USER_CFG_DIR)
-        with open(self.USER_CFG_FILE, 'wt') as configfile:
+            os.mkdir(os.path.dirname(self.self.SYSTEM_CFG_FILE,))
+        except:
+            log.debug("Could not create imgbased cfg dir")
+        with open(self.SYSTEM_CFG_FILE, 'wt') as configfile:
             p.write(configfile)
             log.debug("Wrote config file %s" % configfile)
 
