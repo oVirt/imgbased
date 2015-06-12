@@ -271,8 +271,9 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
             .split()
         # Make sure we don't have duplicate args
         append = " ".join(list(set(grub_append).union(set(append))))
-        loader = bootloader.BlsBootloader()
+        loader = bootloader.SyslinuxBootloader()
         loader.add_entry(title, vmlinuz, initrd, append)
+        loader.set_default(title)
 
     with mounted(new_lv.path) as newroot:
         update_fstab(newroot.target)

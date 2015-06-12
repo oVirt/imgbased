@@ -31,6 +31,11 @@ log = logging.getLogger(__package__)
 class Bootloader(object):
     dry = False
 
+    def set_default(self, title):
+        """
+        """
+        raise NotImplementedError()
+
     def add_entry(self, title, linux, initramfs, append):
         """Add a boot entry to the bootloader, and make it the default
         """
@@ -41,7 +46,11 @@ class SyslinuxBootloader(Bootloader):
     config_file = "/boot/syslinux.cfg"
 
     def _config(self):
-        return File(self.config_file).contents.splitlines()
+        cfg = File(self.config_file)
+        if cfg.exists():
+            return cfg.contents.splitlines()
+        else:
+            return []
 
     def _get_key(self, k, default):
         candidate = default
@@ -58,6 +67,34 @@ class SyslinuxBootloader(Bootloader):
     def get_timeout(self):
         return self._get_key("TIMEOUT", None)
 
+    def set_default(self, title):
+        """
+        >>> import tempfile
+        >>> b = SyslinuxBootloader()
+        >>> _, b.config_file = tempfile.mkstemp()
+
+        >>> b.add_entry("<name>", "<kernel>", "<initramfs>", "<append>")
+        >>> b.set_default("<name>")
+
+        >>> print("\\n".join(b._config()))
+        DEFAULT '<name>'
+        TIMEOUT 300
+        <BLANKLINE>
+        LABEL '<name>'
+          SAY Booting '<name>' ...
+          KERNEL <kernel>
+          INITRD <initramfs>
+          APPEND <append>
+        """
+        entries = self._config()
+
+        # Drop old default
+        entries = [e for e in entries if not e.startswith("DEFAULT ")]
+        # Set new default
+        entries.insert(0, "DEFAULT '%s'" % title)
+
+        self._save(entries)
+
     def add_entry(self, title, linux, initramfs, append):
         """
         >>> import tempfile
@@ -67,7 +104,6 @@ class SyslinuxBootloader(Bootloader):
         >>> b.add_entry("<name>", "<kernel>", "<initramfs>", "<append>")
 
         >>> print("\\n".join(b._config()))
-        DEFAULT '<name>'
         TIMEOUT 300
         <BLANKLINE>
         LABEL '<name>'
@@ -79,7 +115,6 @@ class SyslinuxBootloader(Bootloader):
         >>> b.add_entry("<name1>", "<kernel>", "<initramfs>", "<append>")
 
         >>> print("\\n".join(b._config()))
-        DEFAULT '<name1>'
         TIMEOUT 300
         <BLANKLINE>
         LABEL '<name>'
@@ -109,15 +144,13 @@ class SyslinuxBootloader(Bootloader):
         entries = self._config()
         entries += entry
 
-        # Drop old default
-        entries = [e for e in entries if not e.startswith("DEFAULT ")]
-        # Set new default
-        entries.insert(0, "DEFAULT '%s'" % title)
-
         # Set some timeout, otherwise it's 0
         if not self.get_timeout():
-            entries.insert(1, "TIMEOUT 300")
+            entries.insert(0, "TIMEOUT 300")
 
+        self._save(entries)
+
+    def _save(self, entries):
         if not self.dry:
             # Write the new config
             File(self.config_file).writen("\n".join(entries), "w+")
