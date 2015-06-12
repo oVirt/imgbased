@@ -1,6 +1,7 @@
 
 import subprocess
 import logging
+from ..utils import mounted
 
 
 log = logging.getLogger(__package__)
@@ -26,21 +27,24 @@ def add_argparse(app, parser, subparsers):
 def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "nspawn":
-        if args.image:
-            nspawn(app.imgbase, args.image, args.command)
+        if args.IMAGE:
+            nspawn(app.imgbase, args.IMAGE, args.COMMAND)
 
 
 def nspawn(imgbase, layer, cmd=""):
     """Spawn a container off the root of layer layer
     """
-    log.info("Adding a boot entry for the new layer")
+    log.info("Spawning the layer in a new namespace")
 
-    img = imgbase.image_from_name(layer)
+    img = imgbase.naming.image_from_name(layer)
 
     cmds = [cmd] if cmd else []
-    subprocess.call(["systemd-nspawn",
-                     "--image", img.path,
-                     "--machine", layer,
-                     "--read-only"] + cmds)
+    with mounted(img.lvm.path) as mnt:
+        cmd = ["systemd-nspawn",
+               "-n",
+               "-D", mnt.target,
+               "--machine", layer,
+               "--read-only"] + cmds
+        subprocess.call(cmd)
 
 # vim: sw=4 et sts=4
