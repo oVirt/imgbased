@@ -22,6 +22,7 @@
 #
 import logging
 import os
+from .utils import File
 
 
 log = logging.getLogger(__package__)
@@ -129,7 +130,6 @@ class BlsBootloader(Bootloader):
 
         log.debug("Entry: %s" % entry)
         if not self.dry:
-            with open(efile, "w+") as dst:
-                dst.write("\n".join(entry))
+            File(efile).writen("\n".join(entry))
 
 # vim: sw=4 et sts=4:

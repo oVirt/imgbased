@@ -255,8 +255,10 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
 
         log.info("Adding a boot entry")
         kfiles = glob.glob(bootdir + "/*")
+        # For the loader we are relative to /boot and need to
+        # strip this part from the paths
         bfile = lambda n: [f for f in kfiles if n in f].pop()\
-            .replace(newroot, new_lvm_name).lstrip("/")
+            .replace("/boot", "").lstrip("/")
         vmlinuz = bfile("vmlinuz")
         initrd = bfile("init")
         # FIXME default/grub cmdine and /etc/kernel… /var/kernel…
