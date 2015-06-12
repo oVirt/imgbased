@@ -132,7 +132,7 @@ def sorted_versions(versions, delim="."):
 
 def kernel_versions_in_path(path):
     files = glob.glob("%s/vmlinu?-*" % path)
-    versions = [os.path.basename(f).split("-",1 ).pop() for f in files]
+    versions = [os.path.basename(f).split("-", 1).pop() for f in files]
     return versions
 
 

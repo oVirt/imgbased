@@ -25,6 +25,9 @@ import os
 import re
 import io
 import sh
+import shlex
+from configparser import ConfigParser
+from io import StringIO
 from .hooks import Hooks
 from . import naming
 from .utils import ExternalBinary, mounted, find_mount_source, \
@@ -327,5 +330,202 @@ class ImageLayers(object):
         if not base:
             raise RuntimeError("No base found for: %s" % layer)
         return base
+
+
+class LocalConfiguration():
+    """Datastructure to access localy configured remotes
+
+    We configure remote repositories/locations locally,
+    then we can use remote.pull(img) to add a remote image to our
+    local VG.
+    Just like git.
+
+    >>> example = '''
+    ... [core]
+    ... '''
+
+    >>> rs = LocalConfiguration()
+    >>> rs.cfgstr = example
+    """
+    SYSTEM_CFG_DIR = "/etc/imgbased.conf.d/"
+    SYSTEM_CFG_FILE = "/etc/imgbased.conf"
+    cfgstr = None
+
+    class Section(object):
+        def __repr__(self):
+            vals = sorted(self.__dict__.items())
+            return "<%s (%s) %s />" % (self.__class__.__name__,
+                                       self._type, vals)
+
+        def section_name(self):
+            if hasattr(self, "name"):
+                n = "%s %s" % (self._type, shlex.quote(self.name))
+            else:
+                n = self._type
+            return n
+
+        def save(self):
+            raise NotImplementedError()
+
+    class CoreSection(Section):
+        _type = "core"
+        mode = None
+
+    class PoolSection(Section):
+        _type = "pool"
+        name = None
+        pull = None
+
+    _known_section_types = [
+        # Add some default classes
+        CoreSection,
+        PoolSection
+    ]
+
+    @staticmethod
+    def register_section(klass):
+        LocalConfiguration._known_section_types.append(klass)
+
+    def _parser(self, only_file=False):
+        p = ConfigParser()
+
+        def read_dir():
+            """Also read the dir"""
+            if not os.path.exists(self.SYSTEM_CFG_DIR):
+                return
+            for fn in os.listdir(self.SYSTEM_CFG_DIR):
+                if not os.path.isfile(fn):
+                    continue
+                fullfn = self.SYSTEM_CFG_DIR + "/" + fn
+                p.read(fullfn)
+
+        if self.cfgstr is None:
+            p.read(self.SYSTEM_CFG_FILE)
+            if not only_file:
+                read_dir()
+        else:
+            # Used for doctests
+            p.readfp(StringIO(self.cfgstr))
+        return p
+
+    def core(self):
+        return self.section(LocalConfiguration.CoreSection)
+
+    def pool(self, name):
+        return self.section(LocalConfiguration.PoolSection, name)
+
+    def section(self, filter_type, name=None):
+        sections = [s for s in self.sections(filter_type)
+                    if (name is None
+                        or (hasattr(s, "name") and s.name == name))]
+        return sections[0]
+
+    def sections(self, filter_type=None):
+        """A config parser which reads a string
+
+        >>> example = '''
+        ... [core]
+        ... mode=1'''
+
+        >>> rs = LocalConfiguration()
+        >>> rs.cfgstr = example
+
+        >>> def writer(p):
+        ...     dst = StringIO()
+        ...     p.write(dst)
+        ...     dst.seek(0)
+        ...     rs.cfgstr = dst.read()
+        ...     print(rs.cfgstr)
+
+        >>> rs._write = writer
+
+        >>> list(rs.sections())
+        [<CoreSection (core) [('mode', '1')] />]
+
+        >>> list(rs.sections("core"))
+        [<CoreSection (core) [('mode', '1')] />]
+
+        >>> list(rs.sections(LocalConfiguration.CoreSection))
+        [<CoreSection (core) [('mode', '1')] />]
+
+        >>> core = rs.section(LocalConfiguration.CoreSection)
+        >>> core
+        <CoreSection (core) [('mode', '1')] />
+        >>> core.mode = 11
+        >>> rs.save(core)
+        [core]
+        mode = 11
+        <BLANKLINE>
+        <BLANKLINE>
+
+        >>> rs.remove(rs.section("core"))
+        <BLANKLINE>
+
+        >>> pool = LocalConfiguration.PoolSection()
+        >>> pool.name = "<pool>"
+        >>> pool.url = "<url>"
+        >>> rs.save(pool)
+        [pool '<pool>']
+        url = <url>
+        <BLANKLINE>
+        <BLANKLINE>
+        """
+        p = self._parser()
+
+        klasses = LocalConfiguration._known_section_types
+        createSection = dict((k._type, k) for k in klasses)
+
+        for sectionname in p.sections():
+            # Tokens should be:
+            # [<type>]
+            # or
+            # [<type>, <name>]
+            tokens = sectionname.split(" ", 1)
+
+            _type = tokens.pop(0)
+
+            if filter_type:
+                # A bit magic to allow filtering by type and class
+                if type(filter_type) is type:
+                    filter_type = filter_type._type
+                if filter_type != _type:
+                    continue
+
+            section = createSection[_type]()
+
+            if len(tokens) > 0:
+                section.name = tokens.pop()
+            assert len(tokens) == 0
+
+            sectiondict = dict(p.items(sectionname))
+            section.__dict__.update(sectiondict)
+
+            yield section
+
+    def remove(self, section):
+        p = self._parser(True)
+        sname = section.section_name()
+        if p.has_section(sname):
+            p.remove_section(sname)
+            self._write(p)
+        else:
+            log.warn("Unknown section: %s" % sname)
+
+    def save(self, section):
+        p = self._parser(True)
+        sname = section.section_name()
+        if not p.has_section(sname):
+            p.add_section(sname)
+        for k, v in section.__dict__.items():
+            if k == "name":
+                continue
+            p.set(sname, k, str(v))
+        self._write(p)
+
+    def _write(self, p):
+        with open(self.SYSTEM_CFG_FILE, 'wt') as configfile:
+            p.write(configfile)
+            log.debug("Wrote config file %s" % configfile)
+
 
 # vim: sw=4 et sts=4

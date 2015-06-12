@@ -1,6 +1,7 @@
 
 from ..utils import sorted_versions, request_url, mounted, \
     size_of_fstree
+from ..imgbase import LocalConfiguration
 from six.moves.configparser import ConfigParser
 from io import StringIO
 import shlex
@@ -97,7 +98,7 @@ def check_argparse(app, args):
 
 
 def check_argparse_pull(app, args, remotecfg):
-    remotes = remotecfg.list()
+    remotes = remotecfg.remotes()
     pool = app.imgbase._thinpool().lvm_name
     if args.set_upstream:
         remote, stream = args.set_upstream.split("/")
@@ -105,7 +106,7 @@ def check_argparse_pull(app, args, remotecfg):
     else:
         log.debug("Fetching new image")
         remotename, stream = remotecfg.pool_upstream(pool)
-        assert remotename and stream
+        assert remotename and stream, "Please set an upstream for '%s'" % pool
         remote = remotes[remotename]
         log.debug("Available remote streams: %s" %
                   remote.list_streams())
@@ -127,7 +128,7 @@ def check_argparse_pull(app, args, remotecfg):
 
 
 def check_argparse_remote(app, args, remotecfg):
-    remotes = remotecfg.list()
+    remotes = remotecfg.remotes()
     if args.subcmd == "add":
         remotecfg.add(args.NAME, args.URL)
 
@@ -187,45 +188,27 @@ class LocalRemotesConfiguration():
     ... '''
 
     >>> rs = LocalRemotesConfiguration()
-    >>> rs.cfgstr = example
+    >>> rs.localcfg.cfgstr = example
 
-    >> rs.list()
+    >>> rs.remotes()
     {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \
 mode=None />}
     """
-    SYSTEM_CFG_FILE = "/etc/imgbased/imgbase.conf"
-    cfgstr = None
 
-    def _parser(self):
-        p = ConfigParser()
+    localcfg = None
 
-        if self.cfgstr is None:
-            p.read(self.SYSTEM_CFG_FILE)
-        else:
-            # Used for doctests
-            p.readfp(StringIO(self.cfgstr))
-        return p
+    class RemoteSection(LocalConfiguration.Section):
+        # FIXME move to plugin
+        _type = "remote"
+        name = None
+        url = None
 
-    def _iter_sections(self):
-        """A config parser which reads a string
+    def __init__(self):
+        RS = LocalRemotesConfiguration.RemoteSection
+        self.localcfg = LocalConfiguration()
+        self.localcfg.register_section(RS)
 
-        >>> example = '''
-        ... [foo]
-        ... a = 1
-        ... [bar]
-        ... b = 2
-        ... '''
-
-        >>> rs = LocalRemotesConfiguration()
-        >>> rs.cfgstr = example
-        >>> list(rs._iter_sections())
-        [('foo', {'a': '1'}), ('bar', {'b': '2'})]
-        """
-        p = self._parser()
-        for section in p.sections():
-            yield (section, dict(p.items(section)))
-
-    def list(self):
+    def remotes(self):
         """List all availabel remotes
 
         >>> example = '''
@@ -234,55 +217,53 @@ mode=None />}
         ... '''
 
         >>> rs = LocalRemotesConfiguration()
-        >>> rs.cfgstr = example
+        >>> rs.localcfg.cfgstr = example
 
-        >>> rs.list()
+        >>> rs.remotes()
         {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \
 mode=None />}
 
         >>> rs = LocalRemotesConfiguration()
-        >>> rs.cfgstr = ""
-        >>> rs.list()
+        >>> rs.localcfg.cfgstr = ""
+        >>> rs.remotes()
         {}
 
-        >>> rs.cfgstr = "[remote thing]\\nurl = bar"
-        >>> rs.list()
+        >>> rs.localcfg.cfgstr = "[remote thing]\\nurl = bar"
+        >>> rs.remotes()
         {'thing': <Remote name=thing url=bar mode=None />}
 
-        >>> rs.cfgstr = "[remote 'a thing']\\nurl = bar"
-        >>> rs.list()
+        >>> rs.localcfg.cfgstr = "[remote a thing]\\nurl = bar"
+        >>> rs.remotes()
         {'a thing': <Remote name=a thing url=bar mode=None />}
+
+        >>> rs.remote("a thing")
+        <RemoteSection (remote) [('name', 'a thing'), ('url', 'bar')] />
         """
+        RS = LocalRemotesConfiguration.RemoteSection
         remotes = {}
-        for section, items in self._iter_sections():
-            if section.startswith("remote "):
-                r = Remote()
-                r.name = shlex.split(section)[1]
-                r.url = items["url"]
-                remotes[r.name] = r
+        for section in self.localcfg.sections(RS):
+            r = Remote()
+            r.name = section.name
+            r.url = section.url
+            remotes[r.name] = r
         return remotes
 
+    def remote(self, name):
+        return self.localcfg.section(LocalRemotesConfiguration.RemoteSection,
+                                     name)
+
     def pool_upstream(self, pool, remote=None, stream=None):
-        p = self._parser()
-        section = "pool %s" % shlex.quote(pool)
+        s = self.localcfg.pool(pool)
         if remote and stream:
-            p.add_section(section)
-            p.set(section, "pull", "%s/%s" % (remote, stream))
-            self._save(p)
-        return p.get(section, "pull").split("/")
+            s.pull = "%s/%s" % (remote, stream)
+            self.localcfg.save(s)
+        return s.pull.split("/", 1)
 
     def add(self, name, url):
-        p = self._parser()
-        section = "remote %s" % shlex.quote(name)
-        p.add_section(section)
-        p.set(section, "url", url)
-        self._save(p)
-
-    def set(self, name, key, val):
-        p = self._parser()
-        section = "remote %s" % shlex.quote(name)
-        p.set(section, key, val)
-        self._save(p)
+        s = self.RemoteSection()
+        s.name = name
+        s.url = url
+        self.localcfg.save(s)
 
     def get(self, name, key):
         p = self._parser()
