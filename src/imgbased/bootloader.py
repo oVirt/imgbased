@@ -41,8 +41,22 @@ class SyslinuxBootloader(Bootloader):
     config_file = "/boot/syslinux.cfg"
 
     def _config(self):
-        with open(self.config_file) as src:
-            return src.read().splitlines()
+        return File(self.config_file).contents.splitlines()
+
+    def _get_key(self, k, default):
+        candidate = default
+        candidates = [e for e in self._config()
+                      if e.startswith("%s " % k)]
+        assert len(candidates) < 2
+        if candidates:
+            candidate = candidates.pop()
+        return candidate
+
+    def get_default(self):
+        return self._get_key("DEFAULT", None)
+
+    def get_timeout(self):
+        return self._get_key("TIMEOUT", None)
 
     def add_entry(self, title, linux, initramfs, append):
         """
@@ -54,6 +68,7 @@ class SyslinuxBootloader(Bootloader):
 
         >>> print("\\n".join(b._config()))
         DEFAULT '<name>'
+        TIMEOUT 300
         <BLANKLINE>
         LABEL '<name>'
           SAY Booting '<name>' ...
@@ -65,6 +80,7 @@ class SyslinuxBootloader(Bootloader):
 
         >>> print("\\n".join(b._config()))
         DEFAULT '<name1>'
+        TIMEOUT 300
         <BLANKLINE>
         LABEL '<name>'
           SAY Booting '<name>' ...
@@ -98,10 +114,13 @@ class SyslinuxBootloader(Bootloader):
         # Set new default
         entries.insert(0, "DEFAULT '%s'" % title)
 
+        # Set some timeout, otherwise it's 0
+        if not self.get_timeout():
+            entries.insert(1, "TIMEOUT 300")
+
         if not self.dry:
             # Write the new config
-            with open(self.config_file, "w+") as dst:
-                dst.write("\n".join(entries + [""]))
+            File(self.config_file).writen("\n".join(entries), "w+")
 
 
 def uuid():

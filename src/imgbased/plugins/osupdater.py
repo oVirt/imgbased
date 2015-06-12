@@ -47,16 +47,19 @@ def init(app):
 def on_register_checks(app, register):
     @register
     def bls_check():
-        log.info("Checking BLS configuration")
+        log.info("Checking bootloader configuration")
         fail = True
         try:
-            sh.grep("bls_import", glob.glob("/etc/grub.d/*"))
+            sh.grep("-e" "syslinux_source|bls_import",
+                    glob.glob("/etc/grub.d/*"))
             fail = False
         except:
-            log.debug("Failed to find bls", exc_info=True)
-            log.warning("BLS is not enabled in grub")
-            print("echo 'echo bls_import' >> /etc/grub.d/05_bls")
-            print("chmod a+x /etc/grub.d/05_bls")
+            log.warning("Bootloader is not configured propperly")
+            print("cat <<EOF > /etc/grub.d/50_imgbased")
+            print("echo -e syslinux_source /syslinux.cfg")
+            print("echo -e bls_import")
+            print("EOF")
+            print("chmod a+x /etc/grub.d/50_imgbased")
         return fail
 
     @register
