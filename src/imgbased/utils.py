@@ -198,15 +198,21 @@ class File():
         with open(self.filename, mode) as dst:
             dst.write(data)
 
+    def writen(self, data, mode="w"):
+        self.write(data + "\n")
+
 
 class Fstab(File):
-    _testdata = """#Comment
-/dev/mapper/fedora_root /                       ext4    \
-defaults,discard        1 1
-UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   \
-ext4    defaults        1 2
-/dev/mapper/fedora_swap swap                    swap    defaults        0 0
-
+    _testdata = """#
+# /etc/fstab
+# Created by anaconda on Fri Jun  5 11:25:14 2015
+#
+# Accessible filesystems, by reference, are maintained ...
+# See man pages fstab(5), findfs(8), mount(8) and/or ...
+#
+<root> / ext4 defaults,discard 1 1
+<boot> /boot ext4 defaults 1 2
+<swap> swap swap defaults 0 0
 """
 
     class Entry():
@@ -226,9 +232,8 @@ ext4    defaults        1 2
         >>> fstab = Fstab(None)
         >>> fstab._read = lambda: Fstab._testdata
         >>> fstab.parse()
-        [<Entry 1 /dev/mapper/fedora_root / />,\
- <Entry 2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />,\
- <Entry 3 /dev/mapper/fedora_swap swap />]
+        [<Entry 7 <root> / />, <Entry 8 <boot> /boot />, \
+<Entry 9 <swap> swap />]
         """
         entries = []
         data = self._read()
@@ -248,28 +253,51 @@ ext4    defaults        1 2
         """
         >>> Fstab._read = lambda x: Fstab._testdata
         >>> def printer(args):
+        ...     Fstab._testdata = args
         ...     print(args)
         >>> fstab = Fstab(None)
-        >>> fstab.write = printer
+        >>> fstab.writen = printer
         >>> entries = fstab.parse()
         >>> entry = entries[0]
         >>> entry.source = "foo"
         >>> fstab.update(entry)
-        #Comment
+        #
+        # /etc/fstab
+        # Created by anaconda on Fri Jun  5 11:25:14 2015
+        #
+        # Accessible filesystems, by reference, are maintained ...
+        # See man pages fstab(5), findfs(8), mount(8) and/or ...
+        #
         foo / ext4 defaults,discard 1 1
-        UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   \
-ext4    defaults        1 2
-        /dev/mapper/fedora_swap swap                    swap    \
-defaults        0 0
+        <boot> /boot ext4 defaults 1 2
+        <swap> swap swap defaults 0 0
 
         >>> entry.target = "bar"
         >>> fstab.update(entry)
-        #Comment
+        #
+        # /etc/fstab
+        # Created by anaconda on Fri Jun  5 11:25:14 2015
+        #
+        # Accessible filesystems, by reference, are maintained ...
+        # See man pages fstab(5), findfs(8), mount(8) and/or ...
+        #
         foo bar ext4 defaults,discard 1 1
-        UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot                   \
-ext4    defaults        1 2
-        /dev/mapper/fedora_swap swap                    swap    \
-defaults        0 0
+        <boot> /boot ext4 defaults 1 2
+        <swap> swap swap defaults 0 0
+
+        >>> entry = entries[1]
+        >>> entry.target = "bar"
+        >>> fstab.update(entry)
+        #
+        # /etc/fstab
+        # Created by anaconda on Fri Jun  5 11:25:14 2015
+        #
+        # Accessible filesystems, by reference, are maintained ...
+        # See man pages fstab(5), findfs(8), mount(8) and/or ...
+        #
+        foo bar ext4 defaults,discard 1 1
+        <boot> bar ext4 defaults 1 2
+        <swap> swap swap defaults 0 0
         """
         log.debug("Got new fstab entry: %s" % entry)
         data = self._read()
@@ -282,21 +310,18 @@ defaults        0 0
             tokens[0] = entry.source
             tokens[1] = entry.target
             newdata.append(" ".join(tokens))
-        self.write("\n".join(newdata))
+        self.writen("\n".join(newdata))
 
     def by_source(self, source=None):
         """
         >>> Fstab._read = lambda x: Fstab._testdata
         >>> fstab = Fstab(None)
         >>> sorted(fstab.by_source().items())
-        [('/dev/mapper/fedora_root', \
-<Entry 1 /dev/mapper/fedora_root / />), \
-('/dev/mapper/fedora_swap', \
-<Entry 3 /dev/mapper/fedora_swap swap />), \
-('UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f', \
-<Entry 2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />)]
-        >>> Fstab(None).by_source('/dev/mapper/fedora_root')
-        <Entry 1 /dev/mapper/fedora_root / />
+        [('<boot>', <Entry 8 <boot> /boot />), \
+('<root>', <Entry 7 <root> / />), \
+('<swap>', <Entry 9 <swap> swap />)]
+        >>> Fstab(None).by_source('<root>')
+        <Entry 7 <root> / />
         """
         sources = dict((e.source, e) for e in self.parse())
         if source:
@@ -309,12 +334,11 @@ defaults        0 0
         >>> Fstab._read = lambda x: Fstab._testdata
         >>> fstab = Fstab(None)
         >>> sorted(fstab.by_target().items())
-        [('/', <Entry 1 /dev/mapper/fedora_root / />), \
-('/boot', <Entry 2 UUID=9ebd96d2-f42c-466b-96b6-a97e7690e78f /boot />), \
-('swap', <Entry 3 /dev/mapper/fedora_swap swap />)]
+        [('/', <Entry 7 <root> / />), \
+('/boot', <Entry 8 <boot> /boot />), \
+('swap', <Entry 9 <swap> swap />)]
         >>> Fstab(None).by_target('/')
-        <Entry 1 /dev/mapper/fedora_root \
-/ />
+        <Entry 7 <root> / />
         """
         targets = dict((e.target, e) for e in self.parse())
         if target:
