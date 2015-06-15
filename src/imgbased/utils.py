@@ -5,6 +5,7 @@ import os
 import logging
 import sh
 import re
+import glob
 import shlex
 from six.moves.urllib import request
 
@@ -127,6 +128,12 @@ class mounted(object):
 def sorted_versions(versions, delim="."):
     return sorted(list(versions),
                   key=lambda s: list(map(int, s.split(delim))))
+
+
+def kernel_versions_in_path(path):
+    files = glob.glob("%s/vmlinu?-*" % path)
+    versions = [os.path.basename(f).split("-",1 ).pop() for f in files]
+    return versions
 
 
 class ExternalBinary(object):

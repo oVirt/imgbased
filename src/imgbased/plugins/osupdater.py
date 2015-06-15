@@ -28,7 +28,7 @@ import os
 from .. import bootloader
 from ..lvm import LVM
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File, SystemRelease, Rsync
+    File, SystemRelease, Rsync, kernel_versions_in_path
 
 
 log = logging.getLogger(__package__)
@@ -222,17 +222,14 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
             log.debug("Kernel copy failed", exc_info=True)
             return
 
-        log.info("FIXME Regenerating initramfs")
+        log.info("Regenerating initramfs ...")
         chroot = \
             sh.systemd_nspawn.bake("-q",
                                    "--bind", "%s:/boot" % bootdir,
                                    "-D", newroot)
-#        kfiles = glob.glob(bootdir + "/*")
-#        bfile = lambda n: [f for f in kfiles if n in f].pop()\
-#            .replace(newroot, new_lvm_name).lstrip("/")
-#        vmlinuz = bfile("vmlinuz")
-#        initrd = bfile("init")
-        # FIXME chroot("dracut", image, "--kver", kver)
+        kver = kernel_versions_in_path(bootdir).pop()
+        initrd = "initramfs-%s" % kver
+        chroot("dracut", "-f", initrd, "--kver", kver)
 
     def add_bootentry(newroot):
         if not File("%s/boot" % newroot).exists():
