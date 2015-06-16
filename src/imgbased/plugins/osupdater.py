@@ -223,7 +223,9 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
             return
 
         log.info("Regenerating initramfs ...")
-        chroot = \
+
+        def chroot(*args):
+            log.debug("Running: %s" % str(args))
             sh.systemd_nspawn.bake("-q",
                                    "--bind", "%s:/boot" % bootdir,
                                    "-D", newroot)

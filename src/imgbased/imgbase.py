@@ -400,10 +400,12 @@ class LocalConfiguration():
                 p.read(fullfn)
 
         if self.cfgstr is None:
+            log.debug("Reading config file: %s" % self.SYSTEM_CFG_FILE)
             p.read(self.SYSTEM_CFG_FILE)
             if not only_file:
                 read_dir()
         else:
+            log.debug("Using cfgstr")
             # Used for doctests
             p.readfp(StringIO(self.cfgstr))
         return p
@@ -478,6 +480,7 @@ class LocalConfiguration():
         klasses = LocalConfiguration._known_section_types
         createSection = dict((k._type, k) for k in klasses)
 
+        log.debug("Parsing all sections: %s" % p.sections())
         for sectionname in p.sections():
             # Tokens should be:
             # [<type>]
