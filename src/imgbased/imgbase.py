@@ -418,6 +418,9 @@ class LocalConfiguration():
         sections = [s for s in self.sections(filter_type)
                     if (name is None
                         or (hasattr(s, "name") and s.name == name))]
+        if not sections:
+            raise RuntimeError("Failed to retrieve section: %s %s" %
+                               (filter_type, name))
         return sections[0]
 
     def sections(self, filter_type=None):
