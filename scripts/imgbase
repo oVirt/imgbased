@@ -2,4 +2,10 @@
 
 [[ -d "src/imgbased" ]] && { echo "Enabling in-tree mode" ; export PYTHONPATH="$PWD/src" ;}
 
-python3 -m imgbased.__main__ $@
+PYTHON=python
+
+if [[ -n "$(which python3)" ]]; then
+  PYTHON=python3
+fi
+
+$PYTHON -m imgbased.__main__ $@
