@@ -22,13 +22,13 @@
 #
 
 import logging
-import sh
 import glob
 import os
 from .. import bootloader
 from ..lvm import LVM
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File, SystemRelease, Rsync, kernel_versions_in_path, findmnt
+    File, SystemRelease, Rsync, kernel_versions_in_path, findmnt, \
+    nspawn
 
 
 log = logging.getLogger(__package__)
@@ -78,7 +78,11 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
     new_layer = imgbase.naming.image_from_name(new_lv.lv_name)
     previous_layer = imgbase.naming.layer_before(new_layer)
 
-    migrate_etc(imgbase, new_layer, previous_layer)
+    try:
+        migrate_etc(imgbase, new_layer, previous_layer)
+    except:
+        log.error("Failed to migrate etc", exc_info=True)
+
     adjust_mounts_and_boot(imgbase, new_layer, previous_layer)
 
 

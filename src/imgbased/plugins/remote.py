@@ -2,14 +2,14 @@
 from ..utils import sorted_versions, request_url, mounted, \
     size_of_fstree
 from ..imgbase import LocalConfiguration
-from six.moves.configparser import ConfigParser
+from six.moves import configparser
 from io import StringIO
+from urllib.request import unquote
 import shlex
 import argparse
 import sys
 import re
 import os
-import urllib
 import hashlib
 import tempfile
 import subprocess
@@ -253,7 +253,11 @@ mode=None />}
                                      name)
 
     def pool_upstream(self, pool, remote=None, stream=None):
-        s = self.localcfg.pool(pool)
+        try:
+            s = self.localcfg.pool(pool)
+        except:
+            s = self.localcfg.PoolSection()
+            s.name = pool
         if remote and stream:
             s.pull = "%s/%s" % (remote, stream)
             self.localcfg.save(s)
@@ -305,7 +309,7 @@ class Remote(object):
     def config(self):
         cfg = request_url(self._remote_configfile)
         log.debug("Got remote config: %s", cfg)
-        p = ConfigParser()
+        p = configparser.ConfigParser()
         p.readfp(StringIO(cfg))
         return p
 
@@ -492,7 +496,7 @@ path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es> />
 
         # We need to unquote the filename, because it can be an ULR with
         # escaped chars (like the :)
-        parts = urllib.parse.unquote(filename).split(":")
+        parts = unquote(filename).split(":")
 
         assert parts.pop(0) == "rootfs", "Only supporting rootfs images"
 
@@ -579,7 +583,7 @@ class LiveimgExtractor():
                 liveimg = glob.glob(squashfs.target + "/*/*.img").pop()
                 log.debug("Found fsimage at '%s'" % liveimg)
                 with mounted(liveimg) as rootfs:
-                    size = self._recommend_size_for_tree(rootfs.target)
+                    size = self._recommend_size_for_tree(rootfs.target, 3.0)
                     log.debug("Recommeneded base size: %s" % size)
                     log.info("Starting base creation")
                     new_base = \

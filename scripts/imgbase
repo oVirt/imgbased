@@ -1,11 +1,12 @@
 #!/bin/bash
 
-[[ -d "src/imgbased" ]] && { echo "Enabling in-tree mode" ; export PYTHONPATH="$PWD/src" ;}
 
 PYTHON=python
 
-if [[ -n "$(which python3)" ]]; then
+if [[ -n "$(which python3 2>&-)" ]]; then
   PYTHON=python3
 fi
+
+[[ -d "src/imgbased" ]] && { echo "Enabling in-tree mode ($PYTHON)" ; export PYTHONPATH="$PWD/src" ;}
 
 $PYTHON -m imgbased.__main__ $@

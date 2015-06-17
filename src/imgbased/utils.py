@@ -6,14 +6,14 @@ import logging
 import re
 import glob
 import shlex
-from six.moves.urllib import request
+from urllib.request import urlopen
 
 
 log = logging.getLogger(__package__)
 
 
 def augtool(*args):
-    return ExternalBinary().augtool(*args)
+    return ExternalBinary().augtool(list(args))
 
 
 def copy_files(dst, srcs, *args):
@@ -23,7 +23,7 @@ def copy_files(dst, srcs, *args):
     """
     args = list(args) + srcs + [dst]
     cp = ExternalBinary().cp
-    return cp(*args)
+    return cp(args)
 
 
 def size_of_fstree(path):
@@ -32,17 +32,17 @@ def size_of_fstree(path):
     The size of sparse files is used, not the allocated amount.
     """
     du = ExternalBinary().du
-    return int(du("-sxb", path).split()[0])
+    return int(du(["-sxb", path]).split()[0])
 
 
 def request_url(url):
-    return request.urlopen(url).read().decode()
+    return urlopen(url).read().decode()
 
 
 def findmnt(options, path):
     findmnt = ExternalBinary().findmnt
     try:
-        return str(findmnt("-n", "-o", options, path)).strip()
+        return str(findmnt(["-n", "-o", options, path])).strip()
     except:
         return None
 
@@ -147,7 +147,7 @@ def kernel_versions_in_path(path):
 
 
 def nspawn(*args):
-    return ExternalBinary().nspawn(*args)
+    return ExternalBinary().nspawn(list(args))
 
 
 class ExternalBinary(object):
@@ -437,7 +437,7 @@ class PackageDb():
 
 
 class RpmPackageDb(PackageDb):
-    _rpm_cmd = ExternalBinary().rpm
+    _rpm_cmd = lambda *a: ExternalBinary().rpm(a)
 
     def rpm(self, *args, **kwargs):
         return self._rpm_cmd(*args, **kwargs).splitlines(False)
@@ -466,7 +466,7 @@ class Rsync():
         cmd = list(self._rsync_cmd)
         cmd += ["-pogAXtlHrDx"]
         cmd += ["-Sc", "--no-i-r"]
-        cmd += ["--info=progress2"]
+        #cmd += ["--progress"]
         if self.existing:
             cmd += ["--existing"]
         if self.exclude:

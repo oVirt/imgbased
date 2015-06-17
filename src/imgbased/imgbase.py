@@ -25,7 +25,7 @@ import os
 import re
 import io
 import shlex
-from configparser import ConfigParser
+from six.moves import configparser
 from io import StringIO
 from .hooks import Hooks
 from . import naming
@@ -74,6 +74,8 @@ class ImageLayers(object):
         #
         # Add availabel hooks
         #
+        self.hooks.create("new-snapshot-added",
+                          ("previous-lv_fullname", "new-lv_fullname"))
         self.hooks.create("new-layer-added",
                           ("previous-lv_fullname", "new-lv_fullname"))
         self.hooks.create("new-base-added",
@@ -134,7 +136,7 @@ class ImageLayers(object):
     def add_layer(self, previous_layer):
         """Add a new thin LV
         """
-        log.info("Adding a new layer")
+        log.info("Adding a new layer after %s" % previous_layer)
 
         if type(previous_layer) in [str]:
             previous_layer = self.naming.image_from_name(previous_layer)
@@ -143,9 +145,17 @@ class ImageLayers(object):
         new_layer = self.naming.suggest_next_layer(previous_layer)
         log.info("New layer will be: %s" % new_layer)
 
+        self._add_snapshot(previous_layer.lvm, new_layer.lvm)
+
+        self.hooks.emit("new-layer-added",
+                        previous_layer.lvm.lvm_name,
+                        new_layer.lvm.lvm_name)
+
+
+    def _add_snapshot(self, prev_lv, new_lv):
         try:
-            previous_layer.lvm.create_snapshot(new_layer.lvm.lvm_name)
-            new_layer.lvm.addtag(self.lv_layer_tag)
+            prev_lv.create_snapshot(new_lv.lvm_name)
+            new_lv.addtag(self.lv_layer_tag)
         except:
             log.error("Failed to create a new layer")
             log.debug("Snapshot creation failed", exc_info=True)
@@ -155,29 +165,29 @@ class ImageLayers(object):
             # If an error is raised here, then:
             # https://bugzilla.redhat.com/show_bug.cgi?id=1227046
             # is not fixed yet.
-            new_layer.lvm.activate(True, True)
+            new_lv.activate(True, True)
         except:
-            origin = new_layer.lvm.origin()
+            origin = new_lv.origin()
             log.debug("Found origin: %s" % origin)
             origin.activate(True, True)
-            new_layer.lvm.activate(True, True)
+            new_lv.activate(True, True)
             origin.activate(False)
 
         # Assign a new filesystem UUID and label
         self.run.tune2fs(["-U", "random",
-                          new_layer.lvm.path])
+                          new_lv.path])
 
         # Handle the previous layer
         # FIXME do a correct check if it's a base
-        skip_if_is_base = previous_layer.lvm.lv_name.endswith(".0")
-        previous_layer.lvm.setactivationskip(skip_if_is_base)
+        skip_if_is_base = new_lv.lv_name.endswith(".0")
+        new_lv.setactivationskip(skip_if_is_base)
 
-        skip_if_is_base = new_layer.lvm.lv_name.endswith(".0")
-        new_layer.lvm.setactivationskip(skip_if_is_base)
+        skip_if_is_base = prev_lv.lv_name.endswith(".0")
+        prev_lv.setactivationskip(skip_if_is_base)
 
-        self.hooks.emit("new-layer-added",
-                        previous_layer.lvm.lvm_name,
-                        new_layer.lvm.lvm_name)
+        self.hooks.emit("new-snapshot-added",
+                        prev_lv.lvm_name,
+                        new_lv.lvm_name)
 
     def init_layout_from(self, lvm_name_or_mount_target):
         """Create a snapshot from an existing thin LV to make it suitable
@@ -202,9 +212,11 @@ class ImageLayers(object):
                 "80")
         version = 0  # int(datetime.date.today().strftime("%Y%m%d"))
         initial_base = self.naming.suggest_next_base(version=version)
+        new_layer = self.naming.suggest_next_layer(initial_base)
         log.info("Creating an initial base '%s' for '%s'" %
                  (initial_base, existing))
-        self.add_layer(existing, initial_base.lvm)
+        self._add_snapshot(existing, initial_base.lvm)
+        self._add_snapshot(initial_base.lvm, new_layer.lvm)
 
     def init_layout(self, pvs, poolsize):
         """Create the LVM layout needed by this tool
@@ -386,7 +398,7 @@ class LocalConfiguration():
         LocalConfiguration._known_section_types.append(klass)
 
     def _parser(self, only_file=False):
-        p = ConfigParser()
+        p = configparser.ConfigParser()
 
         def read_dir():
             """Also read the dir"""
@@ -532,5 +544,4 @@ class LocalConfiguration():
             p.write(configfile)
             log.debug("Wrote config file %s" % configfile)
 
-
-# vim: sw=4 et sts=4
+# vim: sw=4 et sts=4:
