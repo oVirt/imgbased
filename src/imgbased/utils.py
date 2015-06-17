@@ -3,7 +3,6 @@ import functools
 import subprocess
 import os
 import logging
-import sh
 import re
 import glob
 import shlex
@@ -13,13 +12,18 @@ from six.moves.urllib import request
 log = logging.getLogger(__package__)
 
 
+def augtool(*args):
+    return ExternalBinary().augtool(*args)
+
+
 def copy_files(dst, srcs, *args):
     """Copy files
 
     Use the native copy command to also copy xattrs (for SELinux)
     """
     args = list(args) + srcs + [dst]
-    return sh.cp(*args)
+    cp = ExternalBinary().cp
+    return cp(*args)
 
 
 def size_of_fstree(path):
@@ -27,18 +31,24 @@ def size_of_fstree(path):
 
     The size of sparse files is used, not the allocated amount.
     """
-    return int(sh.du("-sxb", path).split()[0])
+    du = ExternalBinary().du
+    return int(du("-sxb", path).split()[0])
 
 
 def request_url(url):
     return request.urlopen(url).read().decode()
 
 
-def find_mount_source(path):
+def findmnt(options, path):
+    findmnt = ExternalBinary().findmnt
     try:
-        return str(sh.findmnt("-n", "-oSOURCE", path)).strip()
+        return str(findmnt("-n", "-o", options, path)).strip()
     except:
         return None
+
+
+def find_mount_source(path):
+    return findmnt("SOURCE", path)
 
 
 def memoize(obj):
@@ -136,6 +146,10 @@ def kernel_versions_in_path(path):
     return versions
 
 
+def nspawn(*args):
+    return ExternalBinary().nspawn(*args)
+
+
 class ExternalBinary(object):
     dry = False
 
@@ -174,6 +188,21 @@ class ExternalBinary(object):
     def tune2fs(self, args, **kwargs):
         return self.call(["tune2fs"] + args, **kwargs)
 
+    def nspawn(self, args, **kwargs):
+        return self.call(["systemd-nspawn"] + args, **kwargs)
+
+    def du(self, args, **kwargs):
+        return self.call(["du"] + args, **kwargs)
+
+    def cp(self, args, **kwargs):
+        return self.call(["cp"] + args, **kwargs)
+
+    def augtool(self, args, **kwargs):
+        return self.call(["augtool"] + args, **kwargs)
+
+    def rpm(self, args, **kwargs):
+        return self.call(["rpm"] + args, **kwargs)
+
 
 class File():
     filename = None
@@ -207,6 +236,16 @@ class File():
 
     def writen(self, data, mode="w"):
         self.write(data + "\n")
+
+    def lines(self, keepends=False):
+        for line in self.contents.splitlines(keepends):
+            yield line
+
+    def findall(self, pat):
+        r = []
+        for line in self.lines():
+            r += re.findall(pat, line)
+        return r
 
 
 class Fstab(File):
@@ -398,7 +437,7 @@ class PackageDb():
 
 
 class RpmPackageDb(PackageDb):
-    _rpm_cmd = sh.rpm
+    _rpm_cmd = ExternalBinary().rpm
 
     def rpm(self, *args, **kwargs):
         return self._rpm_cmd(*args, **kwargs).splitlines(False)

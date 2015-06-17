@@ -24,14 +24,13 @@ import subprocess
 import os
 import re
 import io
-import sh
 import shlex
 from configparser import ConfigParser
 from io import StringIO
 from .hooks import Hooks
 from . import naming
 from .utils import ExternalBinary, mounted, find_mount_source, \
-    Rsync
+    Rsync, augtool
 from .lvm import LVM
 
 import logging
@@ -197,10 +196,10 @@ class ImageLayers(object):
         LVM.VG(existing.vg_name).addtag(self.vg_tag)
         existing.thinpool().addtag(self.thinpool_tag)
         log.debug("Setting autoextend for thin pool, to prevent starvation")
-        sh.augtool("set", "-s",
-                   "/files/etc/lvm/lvm.conf/activation/dict/" +
-                   "thin_pool_autoextend_threshold/int",
-                   "80")
+        augtool("set", "-s",
+                "/files/etc/lvm/lvm.conf/activation/dict/" +
+                "thin_pool_autoextend_threshold/int",
+                "80")
         version = 0  # int(datetime.date.today().strftime("%Y%m%d"))
         initial_base = self.naming.suggest_next_base(version=version)
         log.info("Creating an initial base '%s' for '%s'" %

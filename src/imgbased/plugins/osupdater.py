@@ -28,7 +28,7 @@ import os
 from .. import bootloader
 from ..lvm import LVM
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File, SystemRelease, Rsync, kernel_versions_in_path
+    File, SystemRelease, Rsync, kernel_versions_in_path, findmnt
 
 
 log = logging.getLogger(__package__)
@@ -49,11 +49,9 @@ def on_register_checks(app, register):
     def bls_check():
         log.info("Checking bootloader configuration")
         fail = True
-        try:
-            sh.grep("-e" "syslinux_source|bls_import",
-                    glob.glob("/etc/grub.d/*"))
+        if File("/etc/grub.d/50_imgbased").exists():
             fail = False
-        except:
+        else:
             log.warning("Bootloader is not configured propperly")
             print("cat <<EOF > /etc/grub.d/50_imgbased")
             print("echo -e syslinux_source /syslinux.cfg")
@@ -66,10 +64,10 @@ def on_register_checks(app, register):
     def mount_check():
         log.info("Checking if 'discard' is used")
         # FIXME we need to check mopts of correct path
-        fail = "discard" not in sh.findmnt("-no", "options").split(",")
+        fail = "discard" not in findmnt("options", "/").split(",")
         if fail:
             log.warning("/ is not mounted with discard")
-            print(sh.findmnt("/"))
+            #print(findmnt("/"))
         return fail
 
 
@@ -195,15 +193,16 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
 
         bootdir = "/boot/%s" % new_lv.lv_name
         try:
-            chroot = \
-                sh.systemd_nspawn.bake("-q",
-                                       "--bind", "/boot",
-                                       "--bind", "%s:/image" % newroot,
-                                       "-D", newroot)
+            def chroot(*args):
+                args = ("-q",
+                        "--bind", "/boot",
+                        "--bind", "%s:/image" % newroot,
+                        "-D", newroot) + args
+                return nspawn(*args)
 
             # FIXME we could work with globbing as well
             pkgs = RpmPackageDb()
-            pkgs._rpm_cmd = chroot.bake("rpm")
+            pkgs._rpm_cmd = lambda *a: chroot(*(("rpm",) + a))
 
             pkgfiles = pkgs.get_files("kernel")
             if not pkgfiles:
@@ -226,9 +225,11 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
 
         def chroot(*args):
             log.debug("Running: %s" % str(args))
-            sh.systemd_nspawn.bake("-q",
-                                   "--bind", "%s:/boot" % bootdir,
-                                   "-D", newroot)
+            args = ("-q",
+                    "--bind", "%s:/boot" % bootdir,
+                    "-D", newroot) + args
+            return nspawn(*args)
+
         kver = kernel_versions_in_path(bootdir).pop()
         initrd = "%s/initramfs-%s" % (bootdir, kver)
         chroot("dracut", "-f", initrd, "--kver", kver)
