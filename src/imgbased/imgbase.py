@@ -154,24 +154,21 @@ class ImageLayers(object):
 
     def _add_snapshot(self, prev_lv, new_lv):
         try:
+            # If an error is raised here, then:
+            # https://bugzilla.redhat.com/show_bug.cgi?id=1227046
+            # is not fixed yet.
+            prev_lv.activate(True, True)
+
             prev_lv.create_snapshot(new_lv.lvm_name)
+            new_lv.activate(True, True)
             new_lv.addtag(self.lv_layer_tag)
+
+            prev_lv.activate(False)
         except:
             log.error("Failed to create a new layer")
             log.debug("Snapshot creation failed", exc_info=True)
             raise RuntimeError("Failed to create a new layer")
 
-        try:
-            # If an error is raised here, then:
-            # https://bugzilla.redhat.com/show_bug.cgi?id=1227046
-            # is not fixed yet.
-            new_lv.activate(True, True)
-        except:
-            origin = new_lv.origin()
-            log.debug("Found origin: %s" % origin)
-            origin.activate(True, True)
-            new_lv.activate(True, True)
-            origin.activate(False)
 
         # Assign a new filesystem UUID and label
         self.run.tune2fs(["-U", "random",
