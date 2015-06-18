@@ -235,7 +235,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
             return nspawn(*args)
 
         kver = kernel_versions_in_path(bootdir).pop()
-        initrd = "%s/initramfs-%s" % (bootdir, kver)
+        initrd = "/boot/initramfs-%s" % kver
         chroot("dracut", "-f", initrd, "--kver", kver)
 
     def add_bootentry(newroot):
