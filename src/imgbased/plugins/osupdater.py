@@ -189,6 +189,9 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
         else:
             log.info("No LVM part found in grub default")
             log.debug("Contents: %s" % defgrub.contents)
+            oldcmd = defgrub.get("GRUB_CMDLINE_LINUX", "")
+            defgrub.set("GRUB_CMDLINE_LINUX",
+                        oldcmd.replace('"', "") + " rd.lvm.lv=" + new_lvm_name)
 
     def copy_kernel(newroot):
         if not File("%s/boot" % newroot).exists():
