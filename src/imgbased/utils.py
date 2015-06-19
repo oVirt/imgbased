@@ -6,7 +6,10 @@ import logging
 import re
 import glob
 import shlex
-from urllib.request import urlopen
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib import urlopen
 
 
 log = logging.getLogger(__package__)

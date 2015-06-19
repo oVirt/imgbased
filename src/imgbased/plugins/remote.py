@@ -4,7 +4,6 @@ from ..utils import sorted_versions, request_url, mounted, \
 from ..imgbase import LocalConfiguration
 from six.moves import configparser
 from io import StringIO
-from urllib.request import unquote
 import shlex
 import argparse
 import sys
@@ -15,6 +14,10 @@ import tempfile
 import subprocess
 import glob
 import logging
+try:
+    from urllib.request import unquote
+except ImportError:
+    from urllib import unquote
 
 
 log = logging.getLogger(__package__)
