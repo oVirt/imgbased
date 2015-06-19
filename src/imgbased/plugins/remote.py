@@ -104,7 +104,7 @@ def check_argparse_pull(app, args, remotecfg):
     remotes = remotecfg.remotes()
     pool = app.imgbase._thinpool().lvm_name
     if args.set_upstream:
-        remote, stream = args.set_upstream.split("/")
+        remote, sep, stream = args.set_upstream.partition("/")
         remotecfg.pool_upstream(pool, remote, stream)
     else:
         log.debug("Fetching new image")
@@ -264,7 +264,7 @@ mode=None />}
         if remote and stream:
             s.pull = "%s/%s" % (remote, stream)
             self.localcfg.save(s)
-        return s.pull.split("/", 1)
+        return s.pull.partition("/", 1)
 
     def add(self, name, url):
         s = self.RemoteSection()
@@ -514,7 +514,7 @@ path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es> />
         info.vendorid = parts.pop(0)
         info.arch = parts.pop(0)
         # Strip an eventual suffix
-        info.version, info.suffix = parts.pop(0).split(".", 1)
+        info.version, sep, info.suffix = parts.pop(0).partition(".")
 
         return info
 

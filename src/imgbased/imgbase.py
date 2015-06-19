@@ -24,7 +24,6 @@ import subprocess
 import os
 import re
 import io
-import shlex
 from six.moves import configparser
 from io import StringIO
 from .hooks import Hooks
@@ -369,7 +368,7 @@ class LocalConfiguration():
 
         def section_name(self):
             if hasattr(self, "name"):
-                n = "%s %s" % (self._type, shlex.quote(self.name))
+                n = "%s %s" % (self._type, self.name)
             else:
                 n = self._type
             return n
@@ -402,11 +401,13 @@ class LocalConfiguration():
         def read_dir():
             """Also read the dir"""
             if not os.path.exists(self.SYSTEM_CFG_DIR):
+                log.debug("No config dir found")
                 return
             for fn in os.listdir(self.SYSTEM_CFG_DIR):
-                if not os.path.isfile(fn):
-                    continue
                 fullfn = self.SYSTEM_CFG_DIR + "/" + fn
+                log.debug("Also reading: %s" % fullfn)
+                if not os.path.isfile(fullfn):
+                    continue
                 p.read(fullfn)
 
         if self.cfgstr is None:
@@ -496,9 +497,7 @@ class LocalConfiguration():
             # [<type>]
             # or
             # [<type>, <name>]
-            tokens = sectionname.split(" ", 1)
-
-            _type = tokens.pop(0)
+            _type, sep, name = sectionname.partition(" ")
 
             if filter_type:
                 # A bit magic to allow filtering by type and class
@@ -509,9 +508,8 @@ class LocalConfiguration():
 
             section = createSection[_type]()
 
-            if len(tokens) > 0:
-                section.name = tokens.pop()
-            assert len(tokens) == 0
+            if name:
+                section.name = name
 
             sectiondict = dict(p.items(sectionname))
             section.__dict__.update(sectiondict)
