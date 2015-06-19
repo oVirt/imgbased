@@ -388,6 +388,7 @@ class RemoteImage():
     remote = None
 
     vendorid = None
+    name = None
     architecture = None
     version = None
     path = None
@@ -396,6 +397,10 @@ class RemoteImage():
     @property
     def mode(self):
         return self.remote.mode
+
+    @property
+    def nvr(self):
+        return "%s.%s-%s.0" % (self.vendorid, self.name, self.version)
 
     def __init__(self, remote):
         self.remote = remote
@@ -586,12 +591,14 @@ class LiveimgExtractor():
                     size = self._recommend_size_for_tree(rootfs.target, 3.0)
                     log.debug("Recommeneded base size: %s" % size)
                     log.info("Starting base creation")
-                    new_base = \
-                        self.imgbase.add_base_with_tree(rootfs.target,
-                                                        "%sB" % size,
-                                                        version=image.version)
+                    add_tree = self.imgbase.add_base_with_tree
+                    new_base = add_tree(rootfs.target,
+                                        "%sB" % size,
+                                        name=image.vendorid + "." + image.name,
+                                        version=image.version,
+                                        release="0")
                     log.info("Files extracted")
         log.debug("Extraction done")
         return new_base
 
-# vim: sw=4 et sts=4
+# vim: sw=4 et sts=4:

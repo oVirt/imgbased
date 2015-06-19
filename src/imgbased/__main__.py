@@ -25,7 +25,6 @@ import logging
 import argparse
 from . import config
 from .imgbase import ImageLayers, ExternalBinary
-from .layers import Image
 from .hooks import Hooks
 from . import plugins
 
@@ -72,8 +71,6 @@ if __name__ == '__main__':
     parser.add_argument("--dry", action="store_true")
     parser.add_argument("--experimental", action="store_true",
                         help="Enable experimental functionality")
-    parser.add_argument("--layerformat", help="Format to discover layers",
-                        default=Image.layerformat)
 
     app.hooks.emit("pre-arg-parse", parser, subparsers)
 
@@ -86,7 +83,6 @@ if __name__ == '__main__':
         add_log_handler(logging.DEBUG, "%(asctime)s - %(levelname)s - "
                         "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
 
-    app.imgbase.layerformat = args.layerformat
     app.imgbase.debug = args.debug
     app.imgbase.dry = args.dry
 

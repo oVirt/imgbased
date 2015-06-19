@@ -67,7 +67,7 @@ def on_register_checks(app, register):
         fail = "discard" not in findmnt("options", "/").split(",")
         if fail:
             log.warning("/ is not mounted with discard")
-            #print(findmnt("/"))
+            # print(findmnt("/"))
         return fail
 
 

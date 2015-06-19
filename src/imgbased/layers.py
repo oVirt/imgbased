@@ -32,14 +32,15 @@ from .utils import memoize
 class Image(object):
     vg = None
 
-    layerformat = "Image-%s.%s"
+    nvr_fmt = "%s-%s.%s"
+    name = None
     version = None
     release = None
     layers = None
 
     @property
-    def name(self):
-        return str(self)
+    def nvr(self):
+        return self.nvr_fmt % (self.name, self.version, self.release)
 
     @property
     @memoize
@@ -48,20 +49,21 @@ class Image(object):
 
     @property
     def lvm(self):
-        return LVM.LV(self.vg(), self.name)
+        return LVM.LV(self.vg(), self.nvr)
 
     @property
     def version_release(self):
         return (int(self.version), int(self.release))
 
-    def __init__(self, vg=None, v=None, r=None):
+    def __init__(self, vg=None, name=None, version=None, release=None):
         self.vg = vg
-        self.version = v
-        self.release = r
+        self.name = name or self.name
+        self.version = version
+        self.release = release
         self.layers = []
 
     def __str__(self):
-        return self.layerformat % (self.version, self.release)
+        return self.nvr
 
     def __repr__(self):
         return "<%s %s/>" % (self, self.layers or "")
@@ -74,8 +76,8 @@ class Image(object):
 
     def __lt__(self, other):
         """
-        >>> a = Image(None, 1, 0)
-        >>> b = Image(None, 2, 0)
+        >>> a = Image(None, "Image", 1, 0)
+        >>> b = Image(None, "Image", 2, 0)
         >>> a < b
         True
         >>> a == b
@@ -87,19 +89,19 @@ class Image(object):
 
     def __eq__(self, other):
         """
-        >>> a = Image(None, 1, 0)
-        >>> b = Image(None, 2, 0)
+        >>> a = Image(None, "Image", 1, 0)
+        >>> b = Image(None, "Image", 2, 0)
         >>> a == b
         False
 
-        >>> c = Image(None, 1, 1)
-        >>> d = Image(None, 21, 0)
-        >>> e = Image(None, 11, 0)
+        >>> c = Image(None, "Image", 1, 1)
+        >>> d = Image(None, "Image", 21, 0)
+        >>> e = Image(None, "Image", 11, 0)
         >>> sorted([a, b, c, d, e])
         [<Image-1.0 />, <Image-1.1 />, <Image-2.0 />, <Image-11.0 />, \
 <Image-21.0 />]
 
-        >>> a = Image(None, 2, 0)
+        >>> a = Image(None, "Image", 2, 0)
         >>> a == b
         True
         """
@@ -131,4 +133,4 @@ class Base(Image):
                 self.base.protect()
         return UnprotectedBase()
 
-# vim: sw=4 et sts=4
+# vim: sw=4 et sts=4:

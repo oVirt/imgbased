@@ -39,11 +39,12 @@ def nspawn(imgbase, layer, cmd=""):
     img = imgbase.naming.image_from_name(layer)
 
     cmds = [cmd] if cmd else []
+    mname = layer.replace(".", "-")
     with mounted(img.lvm.path) as mnt:
         cmd = ["systemd-nspawn",
                "-n",
                "-D", mnt.target,
-               "--machine", layer,
+               "--machine", mname,
                "--read-only"] + cmds
         subprocess.call(cmd)
 

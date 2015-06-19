@@ -151,7 +151,6 @@ class ImageLayers(object):
                         previous_layer.lvm.lvm_name,
                         new_layer.lvm.lvm_name)
 
-
     def _add_snapshot(self, prev_lv, new_lv):
         try:
             # If an error is raised here, then:
@@ -168,7 +167,6 @@ class ImageLayers(object):
             log.error("Failed to create a new layer")
             log.debug("Snapshot creation failed", exc_info=True)
             raise RuntimeError("Failed to create a new layer")
-
 
         # Assign a new filesystem UUID and label
         self.run.tune2fs(["-U", "random",
@@ -224,15 +222,17 @@ class ImageLayers(object):
             LVM.VG.create(self.vg, pvs)
         LVM.VG(self._vg()).create_thinpool(self._thinpool(), poolsize)
 
-    def add_base(self, size, version=None, lvs=None):
+    def add_base(self, size, name, version=None, release=None, lvs=None):
         """Add a new base LV
         """
         assert size
 
-        new_base_lv = self.naming.suggest_next_base(version=version)
+        new_base_lv = self.naming.suggest_next_base(name=name,
+                                                    version=version,
+                                                    release=release)
         log.info("New base will be: %s" % new_base_lv)
         pool = LVM.Thinpool(self._vg(), self._thinpool().lv_name)
-        pool.create_thinvol(new_base_lv.name, size)
+        pool.create_thinvol(new_base_lv.nvr, size)
         new_base_lv.lvm.addtag(self.lv_base_tag)
 
         self.hooks.emit("new-base-added", new_base_lv.path)
@@ -241,9 +241,10 @@ class ImageLayers(object):
 
         return new_base_lv
 
-    def add_base_from_image(self, imagefile, size, version=None, lvs=None):
+    def add_base_from_image(self, imagefile, size, name,
+                            version=None, release=None, lvs=None):
         raise NotImplementedError
-        new_base_lv = self.add_base(size, version, lvs)
+        new_base_lv = self.add_base(size, name, version, release, lvs)
 
         cmd = ["dd", "conv=sparse"]
         kwargs = {}
@@ -264,8 +265,9 @@ class ImageLayers(object):
 
         return new_base_lv
 
-    def add_base_with_tree(self, sourcetree, size, version=None, lvs=None):
-        new_base_lv = self.add_base(size, version, lvs)
+    def add_base_with_tree(self, sourcetree, size, name, version=None,
+                           release=None, lvs=None):
+        new_base_lv = self.add_base(size, name, version, release, lvs)
 
         if not os.path.exists(sourcetree):
             raise RuntimeError("Sourcetree does not exist: %s" % sourcetree)
