@@ -278,17 +278,17 @@ class Fstab(File):
         >>> fstab = Fstab(None)
         >>> fstab._read = lambda: Fstab._testdata
         >>> fstab.parse()
-        [<Entry 7 <root> / />, <Entry 8 <boot> /boot />, \
-<Entry 9 <swap> swap />]
+        [<Entry / <root> / />, <Entry /boot <boot> /boot />, \
+<Entry swap <swap> swap />]
         """
         entries = []
         data = self._read()
-        for idx, line in enumerate(data.splitlines()):
+        for line in data.splitlines():
             if line.startswith("#") or line.strip() == "":
                 continue
             source, target, fs, options, _, _ = shlex.split(line)
             entry = Fstab.Entry()
-            entry._index = idx
+            entry._index = target  # target is unique
             entry.source = source
             entry.target = target
             entries.append(entry)
@@ -348,14 +348,17 @@ class Fstab(File):
         log.debug("Got new fstab entry: %s" % entry)
         data = self._read()
         newdata = []
-        for idx, line in enumerate(data.strip().splitlines()):
-            if idx != entry._index:
+        for line in data.strip().splitlines():
+            if line.strip() == "" or line.startswith("#"):
                 newdata.append(line)
                 continue
             tokens = shlex.split(line)
-            tokens[0] = entry.source
-            tokens[1] = entry.target
-            newdata.append(" ".join(tokens))
+            if tokens[1] == entry._index:
+                tokens[0] = entry.source
+                tokens[1] = entry.target
+                newdata.append(" ".join(tokens))
+            else:
+                newdata.append(line)
         self.writen("\n".join(newdata))
 
     def by_source(self, source=None):
@@ -363,11 +366,11 @@ class Fstab(File):
         >>> Fstab._read = lambda x: Fstab._testdata
         >>> fstab = Fstab(None)
         >>> sorted(fstab.by_source().items())
-        [('<boot>', <Entry 8 <boot> /boot />), \
-('<root>', <Entry 7 <root> / />), \
-('<swap>', <Entry 9 <swap> swap />)]
+        [('<boot>', <Entry /boot <boot> /boot />), \
+('<root>', <Entry / <root> / />), \
+('<swap>', <Entry swap <swap> swap />)]
         >>> Fstab(None).by_source('<root>')
-        <Entry 7 <root> / />
+        <Entry / <root> / />
         """
         sources = dict((e.source, e) for e in self.parse())
         if source:
@@ -380,11 +383,11 @@ class Fstab(File):
         >>> Fstab._read = lambda x: Fstab._testdata
         >>> fstab = Fstab(None)
         >>> sorted(fstab.by_target().items())
-        [('/', <Entry 7 <root> / />), \
-('/boot', <Entry 8 <boot> /boot />), \
-('swap', <Entry 9 <swap> swap />)]
+        [('/', <Entry / <root> / />), \
+('/boot', <Entry /boot <boot> /boot />), \
+('swap', <Entry swap <swap> swap />)]
         >>> Fstab(None).by_target('/')
-        <Entry 7 <root> / />
+        <Entry / <root> / />
         """
         targets = dict((e.target, e) for e in self.parse())
         if target:
@@ -466,7 +469,7 @@ class Rsync():
         cmd = list(self._rsync_cmd)
         cmd += ["-pogAXtlHrDx"]
         cmd += ["-Sc", "--no-i-r"]
-        #cmd += ["--progress"]
+        # cmd += ["--progress"]
         if self.existing:
             cmd += ["--existing"]
         if self.exclude:
