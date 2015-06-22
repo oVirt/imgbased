@@ -57,6 +57,9 @@ rpm:DEF_RELEASE=--define "_release 0.$$(date +%Y%m%d%H%M)git$$(git log -n1 --for
 rpm: dist
 	rpmbuild $(DEF_RELEASE) -ta $(DIST_ARCHIVES)
 
+rpm-build-deps:
+	grep "Require" packaging/rpm/imgbased.spec | cut -d: -f2-
+
 %: %.xml
 	xsltproc -o $@ -nonet \
 	http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<

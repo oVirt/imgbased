@@ -12,6 +12,7 @@ BuildArch:      noarch
 
 BuildRequires:       make
 BuildRequires:       automake autoconf
+BuildRequires:       rpm-build
 BuildRequires:       git
 BuildRequires:       asciidoc
 
