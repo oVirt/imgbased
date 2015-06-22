@@ -237,7 +237,10 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
                     "-D", newroot) + args
             return nspawn(*args)
 
-        kver = kernel_versions_in_path(bootdir).pop()
+        kvers = kernel_versions_in_path(bootdir)
+        kver = kvers.pop()
+        log.debug("Found kvers: %s" % kvers)
+        log.debug("Using kver: %s" % kver)
         initrd = "/boot/initramfs-%s" % kver
         chroot("dracut", "-f", initrd, "--kver", kver)
 
@@ -270,7 +273,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
         bfile = lambda n: [f for f in kfiles if n in f].pop()\
             .replace("/boot", "").lstrip("/")
         vmlinuz = bfile("vmlinuz")
-        initrd = bfile("init")
+        initrd = bfile("initramfs")
         # FIXME default/grub cmdine and /etc/kernel… /var/kernel…
         grub_append = ShellVarFile("%s/etc/default/grub" % newroot)\
             .get("GRUB_CMDLINE_LINUX", "").strip('"').split()
