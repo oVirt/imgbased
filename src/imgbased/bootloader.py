@@ -77,10 +77,10 @@ class SyslinuxBootloader(Bootloader):
         >>> b.set_default("<name>")
 
         >>> print("\\n".join(b._config()))
-        DEFAULT '<name>'
+        DEFAULT <name>
         TIMEOUT 300
         <BLANKLINE>
-        LABEL '<name>'
+        LABEL <name>
           SAY Booting '<name>' ...
           KERNEL <kernel>
           INITRD <initramfs>
@@ -106,7 +106,7 @@ class SyslinuxBootloader(Bootloader):
         >>> print("\\n".join(b._config()))
         TIMEOUT 300
         <BLANKLINE>
-        LABEL '<name>'
+        LABEL <name>
           SAY Booting '<name>' ...
           KERNEL <kernel>
           INITRD <initramfs>
@@ -117,13 +117,13 @@ class SyslinuxBootloader(Bootloader):
         >>> print("\\n".join(b._config()))
         TIMEOUT 300
         <BLANKLINE>
-        LABEL '<name>'
+        LABEL <name>
           SAY Booting '<name>' ...
           KERNEL <kernel>
           INITRD <initramfs>
           APPEND <append>
         <BLANKLINE>
-        LABEL '<name1>'
+        LABEL <name1>
           SAY Booting '<name1>' ...
           KERNEL <kernel>
           INITRD <initramfs>
@@ -133,7 +133,7 @@ class SyslinuxBootloader(Bootloader):
         """
 
         entry = ["",
-                 "LABEL '%s'" % title,
+                 "LABEL %s" % title,
                  "  SAY Booting '%s' ..." % title,
                  "  KERNEL %s" % linux,
                  "  INITRD %s" % initramfs,
