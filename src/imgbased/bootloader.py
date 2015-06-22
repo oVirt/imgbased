@@ -91,7 +91,7 @@ class SyslinuxBootloader(Bootloader):
         # Drop old default
         entries = [e for e in entries if not e.startswith("DEFAULT ")]
         # Set new default
-        entries.insert(0, "DEFAULT '%s'" % title)
+        entries.insert(0, "DEFAULT %s" % title)
 
         self._save(entries)
 
