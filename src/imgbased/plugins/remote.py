@@ -159,7 +159,7 @@ def check_argparse_remote(app, args, remotecfg):
             else:
                 raise RuntimeError("Please pass -O or --output")
             log.info("Pulling image '%s' into '%s'" % (image.path, dst))
-            image.pull(dst)
+            image.download(dst)
         else:
             for image in images.values():
                 print(image.shorthash(),
@@ -456,7 +456,7 @@ class RemoteImage():
             url = self.remote.url + "/" + self.path
         return url
 
-    def pull(self, dstpath):
+    def download(self, dstpath):
         """Fetch and store a remote image
 
         dstpath: device or filename
@@ -473,7 +473,7 @@ class RemoteImage():
         >>> img.url()
         'file:///tmp/src'
 
-        >>> img.pull(dst)
+        >>> img.download(dst)
 
         >>> with open(dst) as f:
         ...     f.read()
@@ -585,7 +585,7 @@ class LiveimgExtractor():
         new_base = None
         log.info("Extracting image '%s'" % image)
         with tempfile.NamedTemporaryFile() as tmpfile:
-            image.pull(tmpfile.name)
+            image.download(tmpfile.name)
             with mounted(tmpfile.name) as squashfs:
                 log.debug("Mounted squashfs")
                 liveimg = glob.glob(squashfs.target + "/*/*.img").pop()

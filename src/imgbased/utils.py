@@ -149,8 +149,8 @@ def kernel_versions_in_path(path):
     return versions
 
 
-def nspawn(*args):
-    return ExternalBinary().nspawn(list(args))
+def nspawn(*args, **kwargs):
+    return ExternalBinary().nspawn(list(args), **kwargs)
 
 
 class ExternalBinary(object):
