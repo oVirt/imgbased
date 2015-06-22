@@ -1,4 +1,4 @@
-AC_INIT([imgbased], [0.2], [fabiand@fedoraproject.org])
+AC_INIT([imgbased], [0.3], [fabiand@fedoraproject.org])
 
 AC_PREFIX_DEFAULT([/usr])
 AC_CONFIG_AUX_DIR([build-aux])
