@@ -52,7 +52,9 @@ class NamingScheme():
         return sorted(images)
 
     def bases(self):
-        return sorted(self.tree())
+        bases = sorted(self.tree())
+        assert all(type(b) is Base for b in bases)
+        return bases
 
     def layers(self):
         layers = []
@@ -239,7 +241,7 @@ class NvrLikeNaming(NamingScheme):
         lst = []
         imgs = []
         for v in sorted_lvs:
-            if v[1] == 0:
+            if v[2] == 0:
                 img = Base(self.vg, *v)
             else:
                 img = Image(self.vg, *v)

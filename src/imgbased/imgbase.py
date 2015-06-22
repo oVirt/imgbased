@@ -229,6 +229,7 @@ class ImageLayers(object):
         new_base_lv = self.naming.suggest_next_base(name=name,
                                                     version=version,
                                                     release=release)
+
         log.info("New base will be: %s" % new_base_lv)
         pool = LVM.Thinpool(self._vg(), self._thinpool().lv_name)
         pool.create_thinvol(new_base_lv.nvr, size)
