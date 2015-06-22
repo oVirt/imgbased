@@ -264,7 +264,7 @@ mode=None />}
         if remote and stream:
             s.pull = "%s/%s" % (remote, stream)
             self.localcfg.save(s)
-        return s.pull.partition("/", 1)
+        return s.pull.split("/", 1)
 
     def add(self, name, url):
         s = self.RemoteSection()
