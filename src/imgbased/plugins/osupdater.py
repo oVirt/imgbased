@@ -201,7 +201,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
         bootdir = "/boot/%s" % new_lv.lv_name
         try:
             def chroot(*args):
-                args = ("-q",
+                args = (  # "-q", is not supported in el7
                         "--bind", "/boot",
                         "--bind", "%s:/image" % newroot,
                         "-D", newroot) + args
@@ -232,7 +232,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
 
         def chroot(*args):
             log.debug("Running: %s" % str(args))
-            args = ("-q",
+            args = (  # "-q", is not supported in el7
                     "--bind", "%s:/boot" % bootdir,
                     "-D", newroot) + args
             return nspawn(*args)
