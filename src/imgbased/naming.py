@@ -128,9 +128,9 @@ class NamingScheme():
         for base in tree:
             idx.append("%s" % base)
             for layer in base.layers:
-                c = "└" if layer is base.layers[-1] else "├"
-                idx.append(" %s╼ %s" % (c, layer))
-        return "\n".join(idx)
+                c = u"└" if layer is base.layers[-1] else u"├"
+                idx.append(u" %s╼ %s" % (c, layer))
+        return u"\n".join(idx)
 
 
 class NvrLikeNaming(NamingScheme):
