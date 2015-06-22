@@ -221,7 +221,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
                       if f.startswith("/boot/")]
             log.debug("Found kernel files: %s" % kfiles)
 
-            chroot("mkdir", bootdir)
+            os.mkdir(bootdir)
             copy_files(bootdir, kfiles)
         except:
             log.warn("No kernel found in %s" % new_lv, exc_info=True)
