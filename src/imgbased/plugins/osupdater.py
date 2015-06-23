@@ -202,9 +202,9 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
         try:
             def chroot(*args):
                 args = (  # "-q", is not supported in el7
-                        "--bind", "/boot",
-                        "--bind", "%s:/image" % newroot,
-                        "-D", newroot) + args
+                    "--bind", "/boot",
+                    "--bind", "%s:/image" % newroot,
+                    "-D", newroot) + args
                 return nspawn(*args)
 
             # FIXME we could work with globbing as well
@@ -230,11 +230,11 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
 
         log.info("Regenerating initramfs ...")
 
-        def chroot(*args):
+        def chroot_b(*args):
             log.debug("Running: %s" % str(args))
             args = (  # "-q", is not supported in el7
-                    "--bind", "%s:/boot" % bootdir,
-                    "-D", newroot) + args
+                "--bind", "%s:/boot" % bootdir,
+                "-D", newroot) + args
             return nspawn(*args)
 
         kvers = kernel_versions_in_path(bootdir)
@@ -242,7 +242,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
         log.debug("Found kvers: %s" % kvers)
         log.debug("Using kver: %s" % kver)
         initrd = "/boot/initramfs-%s.img" % kver
-        chroot("dracut", "-f", initrd, "--kver", kver)
+        chroot_b("dracut", "-f", initrd, "--kver", kver)
 
     def add_bootentry(newroot):
         if not File("%s/boot" % newroot).exists():

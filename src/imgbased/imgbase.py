@@ -482,7 +482,7 @@ class LocalConfiguration():
         >>> pool.name = "<pool>"
         >>> pool.url = "<url>"
         >>> rs.save(pool)
-        [pool '<pool>']
+        [pool <pool>]
         url = <url>
         <BLANKLINE>
         <BLANKLINE>

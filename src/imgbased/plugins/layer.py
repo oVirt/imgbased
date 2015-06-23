@@ -43,8 +43,8 @@ def add_argparse(app, parser, subparsers):
     layer_parser.add_argument("IMAGE", nargs="?",
                               help="Optional to be used with --add")
 
-    w_parser = subparsers.add_parser("w",
-                                     help="Check on what layer you are")
+    subparsers.add_parser("w",
+                          help="Check on what layer you are")
 
 
 def check_argparse(app, args):
