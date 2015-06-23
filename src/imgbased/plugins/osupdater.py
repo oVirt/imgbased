@@ -241,7 +241,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
         kver = kvers.pop()
         log.debug("Found kvers: %s" % kvers)
         log.debug("Using kver: %s" % kver)
-        initrd = "/boot/initramfs-%s" % kver
+        initrd = "/boot/initramfs-%s.img" % kver
         chroot("dracut", "-f", initrd, "--kver", kver)
 
     def add_bootentry(newroot):
