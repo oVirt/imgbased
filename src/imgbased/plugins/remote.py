@@ -78,11 +78,14 @@ def add_argparse(app, parser, subparsers):
                           default=sys.stdin,
                           help="File or stdin to use")
 
-    p = subparsers.add_parser("pull",
-                              help="Pull remote images into local bases")
-    p.add_argument("--set-upstream", help="Upstream: <remote>/<stream>")
-    p.add_argument("--version", help="Pull a specific version")
-    p.add_argument("--fetch", help="Fetch the image and add a base, " +
+    u = subparsers.add_parser("update",
+                              help="Pull updates into the local pool")
+    u.add_argument("--set-upstream", help="Set the upstream for updates "
+                   "<remote>/<stream>")
+    u.add_argument("--check", action="store_true",
+                   help="Check for available updates")
+    u.add_argument("--version", help="Pull a specific version")
+    u.add_argument("--fetch", help="Fetch the image and add a base, " +
                                    "but don't add a boot layer.")
 
 
@@ -96,11 +99,11 @@ def check_argparse(app, args):
 
     if args.command == "remote":
         check_argparse_remote(app, args, remotecfg)
-    if args.command == "pull":
-        check_argparse_pull(app, args, remotecfg)
+    if args.command == "update":
+        check_argparse_update(app, args, remotecfg)
 
 
-def check_argparse_pull(app, args, remotecfg):
+def check_argparse_update(app, args, remotecfg):
     remotes = remotecfg.remotes()
     pool = app.imgbase._thinpool().lvm_name
     if args.set_upstream:
@@ -115,7 +118,22 @@ def check_argparse_pull(app, args, remotecfg):
                   remote.list_streams())
         log.debug("Available versions for stream '%s': %s" %
                   (stream, remote.list_versions(stream)))
-        image = remote.get_image(stream)
+        version = remote.latest_version(stream)
+        image = remote.get_image(stream, version)
+        log.debug("Latest image available is: %s" % repr(image))
+        local_bases = app.imgbase.naming.bases()
+        log.debug("Local bases: %s" % local_bases)
+        needs_update = image.nvr not in (b.nvr for b in local_bases)
+
+        if needs_update:
+            log.info("New update available: %s" % image)
+        else:
+            log.info("No update available (latest is %s)." % image)
+            return
+
+        if args.check:
+            return
+
         new_base = None
         if remote.mode == "liveimg":
             new_base = LiveimgExtractor(app.imgbase).extract(image)
@@ -127,7 +145,7 @@ def check_argparse_pull(app, args, remotecfg):
         else:
             assert new_base
             app.imgbase.add_layer(new_base)
-            log.info("Image was pulled successfully")
+            log.info("Update was pulled successfully")
 
 
 def check_argparse_remote(app, args, remotecfg):
@@ -372,9 +390,8 @@ class Remote(object):
         log.debug("All versions: %s" % versions)
         return versions[-1]
 
-    def get_image(self, stream, version=None):
+    def get_image(self, stream, version):
         assert stream in self.list_streams()
-        version = version or self.latest_version(stream)
         return [i for i in self.list_images().values()
                 if i.version == version].pop()
 
