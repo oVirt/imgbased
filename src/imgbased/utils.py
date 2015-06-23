@@ -66,6 +66,11 @@ def memoize(obj):
     return memoizer
 
 
+def uuid():
+    raw = File("/proc/sys/kernel/random/uuid").contents
+    return raw.replace("-", "").strip()
+
+
 def call(*args, **kwargs):
     kwargs["close_fds"] = True
     log.debug("Calling: %s %s" % (args, kwargs))
@@ -206,6 +211,9 @@ class ExternalBinary(object):
     def rpm(self, args, **kwargs):
         return self.call(["rpm"] + args, **kwargs)
 
+    def grub2_set_default(self, args, **kwargs):
+        return self.call(["grub2-set-default"] + args, **kwargs)
+
 
 class File():
     filename = None
@@ -239,6 +247,9 @@ class File():
 
     def writen(self, data, mode="w"):
         self.write(data + "\n")
+
+    def remove(self):
+        os.unlink(self.filename)
 
     def lines(self, keepends=False):
         for line in self.contents.splitlines(keepends):

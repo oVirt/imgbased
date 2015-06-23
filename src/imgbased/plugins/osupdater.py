@@ -24,6 +24,7 @@
 import logging
 import glob
 import os
+import shutil
 from .. import bootloader
 from ..lvm import LVM
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
