@@ -3,7 +3,7 @@ import difflib
 import sys
 import logging
 
-from ..utils import mounted
+from ..utils import mounted, RpmPackageDb
 
 
 log = logging.getLogger(__package__)
