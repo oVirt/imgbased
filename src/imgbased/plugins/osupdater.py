@@ -43,6 +43,7 @@ def pre_init(app):
 def init(app):
     app.hooks.connect("register-checks", on_register_checks)
     app.imgbase.hooks.connect("new-layer-added", on_new_layer)
+    app.imgbase.hooks.connect("pre-layer-removed", on_remove_layer)
 
 
 def on_register_checks(app, register):
@@ -282,9 +283,9 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
             .split()
         # Make sure we don't have duplicate args
         append = " ".join(list(set(grub_append).union(set(append))))
-        loader = bootloader.SyslinuxBootloader()
-        loader.add_entry(title, vmlinuz, initrd, append)
-        loader.set_default(title)
+        loader = bootloader.BlsBootloader()
+        loader.add_entry(new_lv.lv_name, title, vmlinuz, initrd, append)
+        loader.set_default(new_lv.lv_name)
 
     with mounted(new_lv.path) as newroot:
         update_fstab(newroot.target)
@@ -295,5 +296,23 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
     imgbase.hooks.emit("os-upgraded",
                        previous_layer.lvm.lv_name,
                        new_lvm_name)
+
+
+def on_remove_layer(imgbase, lv_fullname):
+    remove_boot(imgbase, lv_fullname)
+
+
+def remove_boot(imgbase, lv_fullname):
+    lv_name = LVM.LV.from_lvm_name(lv_fullname).lv_name
+    assert lv_name
+
+    bootdir = "/boot/%s" % lv_name
+
+    loader = bootloader.BlsBootloader()
+    loader.remove_entry(lv_name)
+
+    assert bootdir.strip("/") != "boot"
+    log.debug("Removing kernel dir: %s" % bootdir)
+    shutil.rmtree(bootdir)
 
 # vim: sw=4 et sts=4:

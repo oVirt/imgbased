@@ -49,6 +49,11 @@ def add_argparse(app, parser, subparsers):
                              help="Add a base layer from an fs image",
                              nargs="?", type=argparse.FileType('r'),
                              default=None)
+
+    base_parser.add_argument("--remove",
+                             metavar="BASE",
+                             help="Remove a base layer and it's children")
+
     base_parser.add_argument("--size",
                              help="(Virtual) Size of the thin volume")
     base_parser.add_argument("--latest", action="store_true",
@@ -75,6 +80,9 @@ def check_argparse(app, args):
             if not args.size:
                 raise RuntimeError("--size")
             app.imgbase.add_base_with_tree(args.add_with_tree, args.size)
+        if args.remove:
+            print(args)
+            app.imgbase.remove_base(args.remove)
         elif args.latest:
             print(app.imgbase.latest_base())
         elif args.of_layer:

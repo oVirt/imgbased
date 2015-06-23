@@ -183,7 +183,7 @@ class LocalRemotesConfiguration():
     local VG.
     Just like git.
 
-    >>> example = '''
+    >>> example = u'''
     ... [core]
     ...
     ... [remote jenkins]
@@ -227,15 +227,15 @@ mode=None />}
 mode=None />}
 
         >>> rs = LocalRemotesConfiguration()
-        >>> rs.localcfg.cfgstr = ""
+        >>> rs.localcfg.cfgstr = u""
         >>> rs.remotes()
         {}
 
-        >>> rs.localcfg.cfgstr = "[remote thing]\\nurl = bar"
+        >>> rs.localcfg.cfgstr = u"[remote thing]\\nurl = bar"
         >>> rs.remotes()
         {'thing': <Remote name=thing url=bar mode=None />}
 
-        >>> rs.localcfg.cfgstr = "[remote a thing]\\nurl = bar"
+        >>> rs.localcfg.cfgstr = u"[remote a thing]\\nurl = bar"
         >>> rs.remotes()
         {'a thing': <Remote name=a thing url=bar mode=None />}
 
@@ -465,8 +465,7 @@ class RemoteImage():
         >>> dst = "/tmp/dst"
 
         >>> with open(src, "w") as f:
-        ...     f.write("Hey!")
-        4
+        ...     _ = f.write("Hey!")
 
         >>> img = RemoteImage(None)
         >>> img.path = "file://%s" % src

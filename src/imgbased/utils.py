@@ -87,18 +87,26 @@ def format_to_pattern(fmt):
     """Take a format string and make a pattern from it
     https://docs.python.org/2/library/re.html#simulating-scanf
 
+    >>> import re
+
     >>> fmt = "Bar-%d"
     >>> pat = format_to_pattern(fmt)
     >>> pat
     'Bar-([-+]?\\\\d+)'
 
-    >>> import re
     >>> re.search(pat, "Bar-01").groups()
     ('01',)
+
+    >>> fmt = "%s-%d"
+    >>> pat = format_to_pattern(fmt)
+    >>> pat
+    '([\\\\S.]+)-([-+]?\\\\d+)'
+    >>> re.search(pat, "org.Node-01").groups()
+    ('org.Node', '01')
     """
     pat = fmt
     pat = pat.replace("%d", r"([-+]?\d+)")
-    pat = pat.replace("%s", r"(\S+)")
+    pat = pat.replace("%s", r"([\S.]+)")
     return pat
 
 
@@ -167,7 +175,7 @@ class ExternalBinary(object):
         if not self.dry:
             stdout = call(*args, **kwargs)
             log.debug("Returned: %s" % stdout[0:1024])
-        return stdout.decode("string_escape", errors="replace").strip()
+        return stdout.decode(errors="replace").strip()
 
     def lvs(self, args, **kwargs):
         return self.call(["lvs"] + args, **kwargs)
@@ -177,6 +185,9 @@ class ExternalBinary(object):
 
     def lvcreate(self, args, **kwargs):
         return self.call(["lvcreate"] + args, **kwargs)
+
+    def lvremove(self, args, **kwargs):
+        return self.call(["lvremove"] + args, **kwargs)
 
     def vgcreate(self, args, **kwargs):
         return self.call(["vgcreate"] + args, **kwargs)

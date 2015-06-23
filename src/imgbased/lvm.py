@@ -33,6 +33,7 @@ class LVM(object):
     _vgs = ExternalBinary().vgs
     _lvcreate = ExternalBinary().lvcreate
     _lvchange = ExternalBinary().lvchange
+    _lvremove = ExternalBinary().lvremove
     _vgcreate = ExternalBinary().vgcreate
     _vgchange = ExternalBinary().vgchange
 
@@ -148,6 +149,11 @@ class LVM(object):
             LVM._lvcreate(["--snapshot",
                            "--name", new_name,
                            self.lvm_name])
+
+        def remove(self, force=False):
+            cmd = ["-f"] if force else []
+            cmd.append(self.lvm_name)
+            LVM._lvremove(cmd)
 
         def activate(self, val, ignoreactivationskip=False):
             assert val in [True, False]

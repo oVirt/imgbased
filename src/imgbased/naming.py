@@ -56,10 +56,11 @@ class NamingScheme():
         assert all(type(b) is Base for b in bases)
         return bases
 
-    def layers(self):
+    def layers(self, for_base=None):
         layers = []
         for b in self.tree():
-            layers.extend(b.layers)
+            if for_base == None or (for_base and b == for_base):
+                layers.extend(b.layers)
         return sorted(layers)
 
     def last_base(self):
@@ -144,9 +145,10 @@ class NvrLikeNaming(NamingScheme):
     Traceback (most recent call last):
     ...
     RuntimeError: No bases found: []
-    >>> layers.names = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
+    >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1", \
+"Image-2.1", "Image-2.0"]
     >>> layers.last_base()
-    <Image-13.0 />
+    <Base Image-13.0 [<Image Image-13.1 />]/>
 
 
     >>> layers = NvrLikeNaming()
@@ -156,36 +158,43 @@ class NvrLikeNaming(NamingScheme):
     RuntimeError: No bases found: []
     >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
     >>> layers.last_layer()
-    <Image-13.1 />
+    <Image Image-13.1 />
 
 
 
     >>> layers = NvrLikeNaming()
     >>> layers.suggest_next_base(name="Image")
-    <Image-0.0 />
+    <Base Image-0.0 />
     >>> layers.names = ["Image-0.0"]
     >>> layers.suggest_next_base()
-    <Image-1.0 />
+    <Base Image-1.0 />
     >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
+    >>> layers.names += ["Image-0.1", "Image-2.1"]
     >>> layers.suggest_next_base()
-    <Image-14.0 />
+    <Base Image-14.0 />
     >>> layers.suggest_next_base(version=20140401)
-    <Image-20140401.0 />
+    <Base Image-20140401.0 />
+
+    >>> layers.layers()
+    [<Image Image-0.1 />, <Image Image-2.1 />, <Image Image-13.1 />]
+
+    >>> layers.layers(for_base=Base(None, "Image", 2, 0))
+    [<Image Image-2.1 />]
 
     >>> layers = NvrLikeNaming()
     >>> layers.names = ["Image-0.0"]
     >>> layers.suggest_next_layer(Image(None, "Image", "0", "0"))
-    <Image-0.1 />
+    <Image Image-0.1 />
     >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1",
     ... "Image-2.0", "Image-2.1"]
     >>> layers.suggest_next_layer(Image(None, "Image", "13", "1"))
-    <Image-13.2 />
+    <Image Image-13.2 />
 
     # FIXME This case must be fixed!
     # It should be Image-2.2 suggested, but currently 2.1, becaue
     # the new image has no layers
     >>> layers.suggest_next_layer(Image(None, "Image", 2, 0))
-    <Image-2.1 />
+    <Image Image-2.1 />
 
 
 
@@ -196,12 +205,10 @@ class NvrLikeNaming(NamingScheme):
     RuntimeError: No valid layout found. Initialize if needed.
     >>> layers.names = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
     >>> layers.names += ["Image-2.2"]
-    >>> print(layers.layout())
-    Image-0.0
-    Image-2.0
-     ├╼ Image-2.1
-     └╼ Image-2.2
-    Image-13.0
+    >>> layers.layout()
+    u'Image-0.0\\nImage-2.0\\n \\u251c\\u257c Image-2.1\\n \\u2514\\u257c \
+Image-2.2\\nImage-13.0'
+
     """
 
     nvr_fmt = "%s-%d.%d"
@@ -217,7 +224,8 @@ class NvrLikeNaming(NamingScheme):
         >>> layers.names = ["Image-0.0", "Image-13.0", "Image-2.1"]
         >>> layers.names += ["Image-2.0"]
         >>> layers.tree()
-        [<Image-0.0 />, <Image-2.0 [<Image-2.1 />]/>, <Image-13.0 />]
+        [<Base Image-0.0 />, <Base Image-2.0 [<Image Image-2.1 />]/>, \
+<Base Image-13.0 />]
         """
         if callable(self.names):
             lvs = self.names()
@@ -261,7 +269,9 @@ class NvrLikeNaming(NamingScheme):
         """
         >>> naming = NvrLikeNaming()
         >>> naming.image_from_name("Image-0.1")
-        <Image-0.1 />
+        <Image Image-0.1 />
+        >>> naming.image_from_name("Image-24.0")
+        <Base Image-24.0 />
         """
         laypat = format_to_pattern(self.nvr_fmt)
         log.debug("Prasing %s from %s" % (laypat, name))
@@ -269,7 +279,14 @@ class NvrLikeNaming(NamingScheme):
         if not match:
             raise RuntimeError("Failed to parse image name: %s" % name)
         name, version, release = match.groups()
-        return Image(self.vg, name=str(name), version=int(version),
-                     release=int(release))
+        if int(release) == 0:
+            klass = Base
+        else:
+            klass = Image
+        img = klass(self.vg, name=str(name), version=int(version),
+                    release=int(release))
+        if klass == Base:
+            img.layers = self.layers(for_base=img)
+        return img
 
 # vim: sw=4 et sts=4:
