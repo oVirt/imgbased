@@ -44,8 +44,10 @@ def add_argparse(app, parser, subparsers):
     base_parser.add_argument("--add", action="store_true",
                              help="Add a base layer")
     base_parser.add_argument("--add-with-tree",
+                             metavar="PATH_TO_TREE",
                              help="Add a base layer from an fs tree")
     base_parser.add_argument("--add-with-image",
+                             metavar="PATH_TO_IMAGE",
                              help="Add a base layer from an fs image",
                              nargs="?", type=argparse.FileType('r'),
                              default=None)
