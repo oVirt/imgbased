@@ -209,7 +209,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
 
             # FIXME we could work with globbing as well
             pkgs = RpmPackageDb()
-            pkgs._rpm_cmd = lambda *a: chroot(*(("rpm",) + a))
+            pkgs.root = newroot
 
             pkgfiles = pkgs.get_files("kernel")
             if not pkgfiles:

@@ -438,6 +438,11 @@ class ShellVarFile(File):
 
 
 class PackageDb():
+    root = None
+
+    def get_packages(self):
+        raise NotImplementedError
+
     def get_files(self, pkgname):
         raise NotImplementedError
 
@@ -445,11 +450,16 @@ class PackageDb():
 class RpmPackageDb(PackageDb):
     _rpm_cmd = lambda *a: ExternalBinary().rpm(a)
 
-    def rpm(self, *args, **kwargs):
+    def _rpm(self, *args, **kwargs):
+        if root:
+            args += ["--root", self.root]
         return self._rpm_cmd(*args, **kwargs).splitlines(False)
 
+    def get_packages(self):
+        return self._rpm("-qa")
+
     def get_files(self, pkgname):
-        return self.rpm("-ql", pkgname)
+        return self._rpm("-ql", pkgname)
 
 
 class Rsync():
