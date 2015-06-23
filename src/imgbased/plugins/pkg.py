@@ -22,17 +22,18 @@ def add_argparse(app, parser, subparsers):
                               help="Package related tooling")
 
     s.add_argument("--diff",
+                   metavar="OTHER-IMAGE",
                    help="Run a package diff")
 
-    s.add_argument("image", nargs=2,
+    s.add_argument("IMAGE",
                    help="Base/Layer to compare")
 
 
 def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
-    if args.command == "pkg" and args.diff:
-        if len(args.image) == 2:
-            sys.stdout.writelines(diff(app.imgbase, *args.image))
+    if args.command == "pkg":
+        if args.IMAGE and args.diff:
+            sys.stdout.writelines(diff(app.imgbase, args.IMAGE, args.diff))
         else:
             log.warn("Two images are required for a diff")
 
@@ -45,7 +46,7 @@ def diff(imgbase, left, right, mode="default"):
         right: Base or layer
         mode: tree, content, unified
     """
-    log.info("Diff '%s' between '%s' and '%s'" % (left, right, mode))
+    log.info("Diff '%s' between '%s' and '%s'" % (mode, left, right))
 
     imgl = imgbase.image_from_name(left)
     imgr = imgbase.image_from_name(right)
