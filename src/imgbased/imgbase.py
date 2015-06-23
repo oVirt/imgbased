@@ -113,7 +113,7 @@ class ImageLayers(object):
 
     def image_from_path(self, path):
         name = LVM.LV.from_path(path).lv_name
-        log.info("Found LV '%s' for path '%s'" % (name, path))
+        log.debug("Found LV '%s' for path '%s'" % (name, path))
         return self.image_from_name(name)
 
     def image_from_lvm_name(self, lvm_name):
@@ -317,9 +317,9 @@ class ImageLayers(object):
 
     def current_layer(self):
         path = "/"
-        log.info("Fetching image for '%s'" % path)
+        log.debug("Fetching image for '%s'" % path)
         lv = self.run.findmnt(["--noheadings", "-o", "SOURCE", path])
-        log.info("Found '%s'" % lv)
+        log.debug("Found '%s'" % lv)
         try:
             return self.image_from_path(lv)
         except:

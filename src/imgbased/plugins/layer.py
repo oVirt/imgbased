@@ -43,13 +43,16 @@ def add_argparse(app, parser, subparsers):
     layer_parser.add_argument("IMAGE", nargs="?",
                               help="Optional to be used with --add")
 
+    w_parser = subparsers.add_parser("w",
+                                     help="Check on what layer you are")
+
 
 def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
-    if args.command == "layer":
-        if args.IMAGE == "w":
-           msg = "You are on %s" % app.imgbase.current_layer()
-           log.info(msg)
+    if args.command == "w":
+        msg = "You are on %s" % app.imgbase.current_layer()
+        log.info(msg)
+    elif args.command == "layer":
         if args.add:
             # FIXME we could optionally allopw latest/current/specific
             if args.latest:
