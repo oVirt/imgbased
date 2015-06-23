@@ -31,6 +31,7 @@ from . import naming
 from .utils import ExternalBinary, mounted, find_mount_source, \
     Rsync, augtool
 from .lvm import LVM
+from .layers import Image, Base
 
 import logging
 
@@ -81,6 +82,14 @@ class ImageLayers(object):
                           ("new-lv_fullname",))
         self.hooks.create("new-base-with-tree-added",
                           ("new-fs",))
+        self.hooks.create("pre-base-removed",
+                          ("lv_fullname",))
+        self.hooks.create("base-removed",
+                          ("lv_fullname",))
+        self.hooks.create("pre-layer-removed",
+                          ("lv_fullname",))
+        self.hooks.create("layer-removed",
+                          ("lv_fullname",))
 
         self.run = ExternalBinary()
         self.naming = naming.NvrLikeNaming()
@@ -240,6 +249,39 @@ class ImageLayers(object):
         new_base_lv.protect()
 
         return new_base_lv
+
+    def remove_base(self, name, with_children=True):
+        base = self.image_from_name(name)
+        log.debug("Removal candidate: %s" % repr(base))
+
+        self.hooks.emit("pre-base-removed", base.lvm.lvm_name)
+
+        assert base.is_base()
+        assert base.layers
+
+        if with_children:
+            for layer in base.layers:
+                self.remove_layer(layer.nvr)
+
+        base.lvm.activate(False)
+        base.lvm.remove()
+
+        self.hooks.emit("base-removed", base.lvm.lvm_name)
+
+    def remove_layer(self, name):
+        layer = self.image_from_name(name)
+        log.debug("Removal candidate: %s" % layer)
+
+        self.hooks.emit("pre-layer-removed", layer.lvm.lvm_name)
+
+        assert layer.is_layer()
+        assert layer != self.current_layer()
+
+        log.debug("Removing %s" % layer)
+        layer.lvm.activate(False)
+        layer.lvm.remove()
+
+        self.hooks.emit("layer-removed", layer.lvm.lvm_name)
 
     def add_base_from_image(self, imagefile, size, name,
                             version=None, release=None, lvs=None):
@@ -419,7 +461,7 @@ class LocalConfiguration():
         else:
             log.debug("Using cfgstr")
             # Used for doctests
-            p.readfp(StringIO(self.cfgstr))
+            p.readfp(StringIO(self.cfgstr.decode("ascii")))
         return p
 
     def core(self):

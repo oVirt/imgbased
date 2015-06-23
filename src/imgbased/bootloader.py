@@ -22,22 +22,31 @@
 #
 import logging
 import os
-from .utils import File
+from .utils import File, ExternalBinary
 
 
 log = logging.getLogger(__package__)
 
 
+def grub2_set_default(key):
+    ExternalBinary().grub2_set_default([key])
+
+
 class Bootloader(object):
     dry = False
 
-    def set_default(self, title):
+    def set_default(self, key):
         """
         """
         raise NotImplementedError()
 
-    def add_entry(self, title, linux, initramfs, append):
+    def add_entry(self, key, title, linux, initramfs, append):
         """Add a boot entry to the bootloader, and make it the default
+        """
+        raise NotImplementedError()
+
+    def remove_entry(self, key):
+        """Remove a boot entry to the bootloader
         """
         raise NotImplementedError()
 
@@ -156,24 +165,19 @@ class SyslinuxBootloader(Bootloader):
             File(self.config_file).writen("\n".join(entries), "w+")
 
 
-def uuid():
-    with open("/proc/sys/kernel/random/uuid") as src:
-        return src.read().replace("-", "").strip()
-
-
 class BlsBootloader(Bootloader):
     """Fixme can probably use new-kernel-pkg
     """
     bls_dir = "/boot/loader/entries"
 
-    def add_entry(self, title, linux, initramfs, append):
-        eid = uuid()
+    def _efile(self, key):
+        return File(os.path.join(self.bls_dir, "%s.conf" % key))
+
+    def add_entry(self, key, title, linux, initramfs, append):
         edir = self.bls_dir
 
         if not os.path.isdir(edir):
             os.makedirs(edir)
-
-        efile = os.path.join(edir, "%s.conf" % eid)
 
         entry = ["title %s" % title,
                  "linux /%s" % linux,
@@ -181,7 +185,28 @@ class BlsBootloader(Bootloader):
                  "options %s" % append]
 
         log.debug("Entry: %s" % entry)
+
         if not self.dry:
-            File(efile).writen("\n".join(entry))
+            efile = self._efile(key)
+            efile.writen("\n".join(entry))
+
+        return key
+
+    def remove_entry(self, key):
+        f = self._efile(key)
+        log.debug("Removing boot entry: %s" % f.contents)
+        f.remove()
+
+    def _key_val(self, key):
+        kvs = dict()
+        for line in self._efile(key).lines():
+            k, sep, v = line.partition(" ")
+            kvs[k] = v
+        return kvs
+
+    def set_default(self, key):
+        title = self._key_val(key)["title"]
+        log.debug("Making default: %s" % title)
+        grub2_set_default(title)
 
 # vim: sw=4 et sts=4:

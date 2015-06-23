@@ -66,7 +66,8 @@ class Image(object):
         return self.nvr
 
     def __repr__(self):
-        return "<%s %s/>" % (self, self.layers or "")
+        return "<%s %s %s/>" % (self.__class__.__name__,
+                                self, self.layers or "")
 
     def is_base(self):
         return int(self.release) == 0
@@ -98,15 +99,15 @@ class Image(object):
         >>> d = Image(None, "Image", 21, 0)
         >>> e = Image(None, "Image", 11, 0)
         >>> sorted([a, b, c, d, e])
-        [<Image-1.0 />, <Image-1.1 />, <Image-2.0 />, <Image-11.0 />, \
-<Image-21.0 />]
+        [<Image Image-1.0 />, <Image Image-1.1 />, <Image Image-2.0 />, \
+<Image Image-11.0 />, <Image Image-21.0 />]
 
         >>> a = Image(None, "Image", 2, 0)
         >>> a == b
         True
         """
         # FIXME check type
-        return repr(self) == repr(other)
+        return type(self) == type(other) and self.nvr == other.nvr
 
 
 class Base(Image):
