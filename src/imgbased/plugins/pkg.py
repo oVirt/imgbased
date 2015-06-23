@@ -58,7 +58,7 @@ def diff(imgbase, left, right, mode="default"):
             l = sorted(pkgdb.get_packages())
             pkgdb.root = mountr.target
             r = sorted(pkgdb.get_packages())
-            udiff = difflib.unified_diff(r, l, fromfile=left, tofile=right,
+            udiff = difflib.unified_diff(l, r, fromfile=left, tofile=right,
                                          n=0)
             return (l + "\n" for l in udiff if not l.startswith("@"))
         else:
