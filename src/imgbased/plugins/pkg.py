@@ -33,7 +33,7 @@ def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "pkg":
         if args.IMAGE and args.diff:
-            sys.stdout.writelines(diff(app.imgbase, args.IMAGE, args.diff))
+            sys.stdout.writelines(diff(app.imgbase, args.diff, args.IMAGE))
         else:
             log.warn("Two images are required for a diff")
 
@@ -60,7 +60,7 @@ def diff(imgbase, left, right, mode="default"):
             pkgdb.root = mountr.target
             r = sorted(pkgdb.get_packages())
             udiff = difflib.unified_diff(l, r, fromfile=left, tofile=right,
-                                         n=0)
+                                         n=0, lineterm="")
             return (l + "\n" for l in udiff if not l.startswith("@"))
         else:
             raise RuntimeError("Unknown diff mode: %s" % mode)

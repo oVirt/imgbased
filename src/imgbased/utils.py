@@ -448,12 +448,12 @@ class PackageDb():
 
 
 class RpmPackageDb(PackageDb):
-    _rpm_cmd = lambda *a: ExternalBinary().rpm(a)
+    _rpm_cmd = lambda s, a: ExternalBinary().rpm(a)
 
     def _rpm(self, *args, **kwargs):
-        if root:
-            args += ["--root", self.root]
-        return self._rpm_cmd(*args, **kwargs).splitlines(False)
+        if self.root:
+            args += ("--root", self.root)
+        return self._rpm_cmd(list(args)).splitlines(False)
 
     def get_packages(self):
         return self._rpm("-qa")
