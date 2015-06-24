@@ -56,7 +56,7 @@ def diff(imgbase, left, right, mode="tree"):
                                          n=0)
             lines = (l for l in udiff if not l.startswith("@"))
             sys.stdout.writelines(lines)
-        if mode == "content":
+        elif mode == "content":
             import subprocess
             subprocess.call(["diff", "-urN",
                              mountl.target, mountr.target],
