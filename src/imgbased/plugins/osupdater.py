@@ -262,7 +262,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
         osrel = ShellVarFile("%s/etc/os-release" % newroot)
         if osrel.exists():
             name = osrel.parse()["PRETTY_NAME"]
-            title = "%s (on %s)" % (name, new_lvm_name)
+            title = "%s (%s)" % (new_lvm_name, name)
         else:
             log.info("No os-release file exists, can not create "
                      "pretty name")
