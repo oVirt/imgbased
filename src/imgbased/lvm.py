@@ -113,8 +113,8 @@ class LVM(object):
 
         @staticmethod
         def find_by_tag(tag):
-            lvs = LVM._vgs(["--noheadings", "--select",
-                            "lv_tags = %s" % tag, "-o", "lv_full_name"])
+            lvs = LVM._vgs(["--noheadings", "@%s" % tag,
+                            "-o", "lv_full_name"])
             return [LVM.LV.from_lvm_name(lv.strip())
                     for lv in lvs.splitlines()]
 

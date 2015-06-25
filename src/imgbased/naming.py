@@ -59,7 +59,7 @@ class NamingScheme():
     def layers(self, for_base=None):
         layers = []
         for b in self.tree():
-            if for_base == None or (for_base and b == for_base):
+            if for_base is None or (for_base and b == for_base):
                 layers.extend(b.layers)
         return sorted(layers)
 
@@ -205,7 +205,7 @@ class NvrLikeNaming(NamingScheme):
     RuntimeError: No valid layout found. Initialize if needed.
     >>> layers.names = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
     >>> layers.names += ["Image-2.2"]
-    >>> layers.layout()
+    >>> str(layers.layout())
     u'Image-0.0\\nImage-2.0\\n \\u251c\\u257c Image-2.1\\n \\u2514\\u257c \
 Image-2.2\\nImage-13.0'
 

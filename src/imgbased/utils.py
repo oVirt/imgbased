@@ -15,6 +15,10 @@ except ImportError:
 log = logging.getLogger(__package__)
 
 
+def mkfs(device, fs="ext4"):
+    return ExternalBinary().call(["mkfs.%s" % fs, device])
+
+
 def augtool(*args):
     return ExternalBinary().augtool(list(args))
 
@@ -224,6 +228,9 @@ class ExternalBinary(object):
 
     def grub2_set_default(self, args, **kwargs):
         return self.call(["grub2-set-default"] + args, **kwargs)
+
+    def systemctl(self, args, **kwargs):
+        return self.call(["systemctl"] + args, **kwargs)
 
 
 class File():
@@ -482,6 +489,30 @@ class RpmPackageDb(PackageDb):
 
     def get_files(self, pkgname):
         return self._rpm("-ql", pkgname)
+
+
+class systemctl():
+    _systemctl = lambda *a: ExternalBinary().systemctl(list(a))
+
+    @staticmethod
+    def start(*units):
+        systemctl._systemctl("start", *units)
+
+    @staticmethod
+    def stop(*units):
+        systemctl._systemctl("stop", *units)
+
+    @staticmethod
+    def enable(*units):
+        systemctl._systemctl("enable", *units)
+
+    @staticmethod
+    def disable(*units):
+        systemctl._systemctl("disable", *units)
+
+    @staticmethod
+    def daemon_reload():
+        systemctl._systemctl("daemon-reload")
 
 
 class Rsync():
