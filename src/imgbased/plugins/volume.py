@@ -110,14 +110,20 @@ WantedBy=local-fs.target
             Rsync().sync(where + "/", target.tmpdir.rstrip("/"))
             pass
 
+        log.info("Volume for '%s' was created successful" % where)
         self.attach(where)
+
 
     def remove(self, where):
         assert self.is_volume(where), "Path is no volume: %s" % where
 
+        log.warn("Removing the volume will also remove the data on that volume.")
+
         volname = self._volname(where)
         self.detach(where)
         LVM.LV(self.imgbase._vg(), volname).remove()
+
+        log.info("Volume for '%s' was removed successful" % where)
 
     def attach(self, where):
         assert self.is_volume(where), "Path is no volume: %s" % where
@@ -142,6 +148,8 @@ WantedBy=local-fs.target
         # Access it to start it
         os.listdir(where)
 
+        log.info("Volume for '%s' was attached successful" % where)
+
     def detach(self, where):
         assert self.is_volume(where), "Path is no volume: %s" % where
 
@@ -156,5 +164,7 @@ WantedBy=local-fs.target
 
         systemctl.daemon_reload()
 
+        log.info("Volume for '%s' was detached successful" % where)
+        log.info("Use --attach %s to attach it again.")
 
 # vim: sw=4 et sts=4
