@@ -165,6 +165,5 @@ WantedBy=local-fs.target
         systemctl.daemon_reload()
 
         log.info("Volume for '%s' was detached successful" % where)
-        log.info("Use --attach %s to attach it again.")
 
 # vim: sw=4 et sts=4
