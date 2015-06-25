@@ -31,7 +31,6 @@ from . import naming
 from .utils import ExternalBinary, mounted, find_mount_source, \
     Rsync, augtool
 from .lvm import LVM
-from .layers import Image, Base
 
 import logging
 
@@ -103,8 +102,9 @@ class ImageLayers(object):
 
     def _thinpool(self):
         lv = LVM.LV.from_tag(self.thinpool_tag)
-        log.debug("Thinpool candidate: %s" % lv)
-        return lv
+        pool = LVM.Thinpool(self._vg(), lv.lv_name)
+        log.debug("Thinpool candidate: %s" % pool)
+        return pool
 
     def _lvs(self):
         log.debug("Querying for LVs")
@@ -240,7 +240,7 @@ class ImageLayers(object):
                                                     release=release)
 
         log.info("New base will be: %s" % new_base_lv)
-        pool = LVM.Thinpool(self._vg(), self._thinpool().lv_name)
+        pool = self._thinpool()
         pool.create_thinvol(new_base_lv.nvr, size)
         new_base_lv.lvm.addtag(self.lv_base_tag)
 
@@ -461,7 +461,10 @@ class LocalConfiguration():
         else:
             log.debug("Using cfgstr")
             # Used for doctests
-            p.readfp(StringIO(self.cfgstr.decode("ascii")))
+            try:
+                p.readfp(StringIO(self.cfgstr.decode("ascii")))
+            except:
+                p.readfp(StringIO(self.cfgstr))
         return p
 
     def core(self):
