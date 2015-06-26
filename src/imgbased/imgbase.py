@@ -169,8 +169,6 @@ class ImageLayers(object):
             prev_lv.create_snapshot(new_lv.lvm_name)
             new_lv.activate(True, True)
             new_lv.addtag(self.lv_layer_tag)
-
-            prev_lv.activate(False)
         except:
             log.error("Failed to create a new layer")
             log.debug("Snapshot creation failed", exc_info=True)
