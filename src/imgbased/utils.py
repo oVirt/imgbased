@@ -532,8 +532,8 @@ class Rsync():
         assert os.path.isdir(sourcetree)
         assert os.path.isdir(dst)
 
-        cmd = list(self._rsync_cmd)
-        cmd += ["-pogAXtlHrDx"]
+        cmd = self._rsync_cmd
+        cmd += ["-pogAXtlHrx"]
         cmd += ["-Sc", "--no-i-r"]
         # cmd += ["--progress"]
         if self.existing:
@@ -544,6 +544,85 @@ class Rsync():
         cmd += [sourcetree + "/", dst]
 
         self._run(cmd)
+
+    def _parse_ids(self, fstab_data):
+        """foo
+
+        >>> data = '''
+        ... root:x:0:0:root:/root:/bin/bash
+        ... bin:x:1:1:bin:/bin:/sbin/nologin
+        ... daemon:x:2:2:daemon:/sbin:/sbin/nologin
+        ... sync:x:5:0:sync:/sbin:/bin/sync
+        ... shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown"
+        ... '''
+
+        >>> ids = Rsync()._parse_ids(data)
+        >>> sorted(ids.items())
+        [('bin', '1'), ('daemon', '2'), ('root', '0'), ('shutdown', '6'), \
+('sync', '5')]
+        """
+        idmap = {}
+        for line in fstab_data.splitlines():
+            if not line:
+                continue
+            name, _, uid, gid = line.split(":")[:4]
+            idmap[name] = uid
+        return idmap
+
+    def _create_idmap(self, from_idmap, to_idmap):
+        """
+
+        >>> from_map = {"root": "0", "bin": "1", "adm": "2"}
+        >>> to_map = {"root": "0", "bin": "2", "adm": "3"}
+        >>> Rsync()._create_idmap(from_map, to_map)
+        [('1', '2'), ('2', '3')]
+        """
+        unknown_names = []
+        xmap = []
+        for fname, fid in from_idmap.items():
+            if fname not in to_idmap:
+                unknown_names.append(fname)
+                continue
+            tid = to_idmap[fname]
+            if fid != tid:
+                xmap.append((fid, tid))
+        return sorted(xmap)
+
+    def _create_idmaps(self, from_uids, from_gids, to_uids, to_gids):
+        """
+
+        >>> from_uids = {"root": "0", "bin": "1", "adm": "0"}
+        >>> to_uids   = {"root": "0", "bin": "2", "adm": "0"}
+
+        >>> from_gids = {"root": "0", "bin": "1", "adm": "2"}
+        >>> to_gids   = {"root": "0", "bin": "2", "adm": "3"}
+
+        >>> Rsync()._create_idmaps(from_uids, from_gids, to_uids, to_gids)
+        ['--usermap', '1:2', '--groupmap', '1:2,2:3']
+        """
+        def stringify(xmap):
+            return ",".join("%s:%s" % x for x in sorted(xmap))
+
+        uidmap = self._create_idmap(from_uids, to_uids)
+        gidmap = self._create_idmap(from_gids, to_gids)
+
+        args = ["--usermap", stringify(uidmap),
+                "--groupmap", stringify(gidmap)]
+        return args
+
+    def translate_ids(self, from_etc, to_etc):
+        """Map uids from an old etc to a new etc
+        This works by mapping the id's from the new etc to the id's of the same
+        name in the old etc
+        """
+        from_uids = self._parse_ids(File(from_etc + "/passwd").contents)
+        from_gids = self._parse_ids(File(from_etc + "/group").contents)
+
+        to_uids = self._parse_ids(File(to_etc + "/passwd").contents)
+        to_gids = self._parse_ids(File(to_etc + "/group").contents)
+
+        args = self._create_idmaps(from_uids, from_gids, to_uids, to_gids)
+        self._rsync_cmd = Rsync._rsync_cmd + args
 
 
 class SystemRelease(File):

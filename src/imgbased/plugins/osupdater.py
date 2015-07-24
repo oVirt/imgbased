@@ -115,7 +115,8 @@ def migrate_etc(imgbase, new_layer, previous_layer):
             log.info("Migrating /etc")
             rsync = Rsync()
             # Don't copy release files to have up to date release infos
-            rsync.exclude = ["etc/*-release*"]
+            rsync.exclude = ["etc/fedora-release*", "/etc/redhat-release*"]
+            rsync.translate_ids(old_etc, new_etc)
             rsync.sync(old_etc + "/", new_etc)
         else:
             log.info("Just copying important files")
