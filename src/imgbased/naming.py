@@ -205,9 +205,8 @@ class NvrLikeNaming(NamingScheme):
     RuntimeError: No valid layout found. Initialize if needed.
     >>> layers.names = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
     >>> layers.names += ["Image-2.2"]
-    >>> str(layers.layout())
-    u'Image-0.0\\nImage-2.0\\n \\u251c\\u257c Image-2.1\\n \\u2514\\u257c \
-Image-2.2\\nImage-13.0'
+    >>> layers.layout()
+    'Image-0.0\\nImage-2.0\\n ├╼ Image-2.1\\n └╼ Image-2.2\\nImage-13.0'
 
     """
 
@@ -246,6 +245,7 @@ Image-2.2\\nImage-13.0'
 
         sorted_lvs = sorted(sorted_lvs)
 
+        log.debug(str(lvs))
         lst = []
         imgs = []
         for v in sorted_lvs:
@@ -258,7 +258,8 @@ Image-2.2\\nImage-13.0'
             if img.release == 0:
                 lst.append(img)
             else:
-                lst[-1].layers.append(img)
+                parent = lst[-1]
+                parent.layers.append(img)
 
         if len(lst) == 0:
             raise RuntimeError("No bases found: %s" % lvs)
@@ -267,9 +268,9 @@ Image-2.2\\nImage-13.0'
 
     def image_from_name(self, name):
         """
-        >>> naming = NvrLikeNaming()
-        >>> naming.image_from_name("Image-0.1")
-        <Image Image-0.1 />
+        >>> naming = NvrLikeNaming(["Image-1.0", "Image-24.0"])
+        >>> naming.image_from_name("Image-1.0")
+        <Base Image-1.0 />
         >>> naming.image_from_name("Image-24.0")
         <Base Image-24.0 />
         """

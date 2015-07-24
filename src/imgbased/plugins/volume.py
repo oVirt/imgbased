@@ -93,7 +93,8 @@ WantedBy=local-fs.target
         return "/etc/systemd/system/%s.%s" % (safewhere, unittype)
 
     def create(self, where, size):
-        assert not self.is_volume(where), "Path is already a volume: %s" % where
+        assert not self.is_volume(where), \
+            "Path is already a volume: %s" % where
         assert where.startswith("/"), "An absolute path is required"
         assert os.path.isdir(where), "Is no dir: %s" % where
 
@@ -113,11 +114,11 @@ WantedBy=local-fs.target
         log.info("Volume for '%s' was created successful" % where)
         self.attach(where)
 
-
     def remove(self, where):
         assert self.is_volume(where), "Path is no volume: %s" % where
 
-        log.warn("Removing the volume will also remove the data on that volume.")
+        log.warn("Removing the volume will also remove the data "
+                 "on that volume.")
 
         volname = self._volname(where)
         self.detach(where)
