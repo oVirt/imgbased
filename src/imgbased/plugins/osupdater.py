@@ -29,7 +29,7 @@ from .. import bootloader
 from ..lvm import LVM
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, findmnt, \
-    nspawn
+    nspawn, IDMap
 
 
 log = logging.getLogger(__package__)
@@ -116,8 +116,10 @@ def migrate_etc(imgbase, new_layer, previous_layer):
             rsync = Rsync()
             # Don't copy release files to have up to date release infos
             rsync.exclude = ["etc/fedora-release*", "/etc/redhat-release*"]
-            rsync.translate_ids(old_etc, new_etc)
             rsync.sync(old_etc + "/", new_etc)
+            idmaps = IDMap(old_etc, new_etc)
+            if idmaps.has_drift():
+                log.warn("UID/GID drift was detcted: %r" % idmaps.get_drift())
         else:
             log.info("Just copying important files")
             copy_files(new_etc,

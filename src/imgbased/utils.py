@@ -545,6 +545,15 @@ class Rsync():
 
         self._run(cmd)
 
+
+class IDMap():
+    from_etc = None
+    to_etc = None
+
+    def __init__(self, from_etc, to_etc):
+        self.from_etc = from_etc
+        self.to_etc = to_etc
+
     def _parse_ids(self, fstab_data):
         """foo
 
@@ -556,7 +565,7 @@ class Rsync():
         ... shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown"
         ... '''
 
-        >>> ids = Rsync()._parse_ids(data)
+        >>> ids = IDMap(None, None)._parse_ids(data)
         >>> sorted(ids.items())
         [('bin', '1'), ('daemon', '2'), ('root', '0'), ('shutdown', '6'), \
 ('sync', '5')]
@@ -574,7 +583,7 @@ class Rsync():
 
         >>> from_map = {"root": "0", "bin": "1", "adm": "2"}
         >>> to_map = {"root": "0", "bin": "2", "adm": "3"}
-        >>> Rsync()._create_idmap(from_map, to_map)
+        >>> IDMap(None, None)._create_idmap(from_map, to_map)
         [('1', '2'), ('2', '3')]
         """
         unknown_names = []
@@ -597,32 +606,34 @@ class Rsync():
         >>> from_gids = {"root": "0", "bin": "1", "adm": "2"}
         >>> to_gids   = {"root": "0", "bin": "2", "adm": "3"}
 
-        >>> Rsync()._create_idmaps(from_uids, from_gids, to_uids, to_gids)
-        ['--usermap', '1:2', '--groupmap', '1:2,2:3']
+        >>> IDMap(None, None)._create_idmaps(from_uids, from_gids,
+        ... to_uids, to_gids)
+        ([('1', '2')], [('1', '2'), ('2', '3')])
         """
-        def stringify(xmap):
-            return ",".join("%s:%s" % x for x in sorted(xmap))
 
         uidmap = self._create_idmap(from_uids, to_uids)
         gidmap = self._create_idmap(from_gids, to_gids)
 
-        args = ["--usermap", stringify(uidmap),
-                "--groupmap", stringify(gidmap)]
-        return args
+        return (uidmap, gidmap)
 
-    def translate_ids(self, from_etc, to_etc):
-        """Map uids from an old etc to a new etc
-        This works by mapping the id's from the new etc to the id's of the same
-        name in the old etc
+    def get_drift(self):
+        """Returns the uid and gid dirft from the old to the net etc
         """
-        from_uids = self._parse_ids(File(from_etc + "/passwd").contents)
-        from_gids = self._parse_ids(File(from_etc + "/group").contents)
+        from_uids = self._parse_ids(File(self.from_etc + "/passwd").contents)
+        from_gids = self._parse_ids(File(self.from_etc + "/group").contents)
 
-        to_uids = self._parse_ids(File(to_etc + "/passwd").contents)
-        to_gids = self._parse_ids(File(to_etc + "/group").contents)
+        to_uids = self._parse_ids(File(self.to_etc + "/passwd").contents)
+        to_gids = self._parse_ids(File(self.to_etc + "/group").contents)
 
-        args = self._create_idmaps(from_uids, from_gids, to_uids, to_gids)
-        self._rsync_cmd = Rsync._rsync_cmd + args
+        uidmap, gidmap = self._create_idmaps(from_uids, from_gids,
+                                             to_uids, to_gids)
+
+        return (uidmap, gidmap)
+
+    def has_drift(self):
+        """Returns True if the id mapping of a group or user has changed
+        """
+        return sum(len(m) for m in self.get_drift()) > 0
 
 
 class SystemRelease(File):
