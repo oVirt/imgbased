@@ -516,8 +516,6 @@ class systemctl():
 
 
 class Rsync():
-    _rsync_cmd = ["ionice", "rsync"]
-
     existing = False
     exclude = None
 
@@ -532,7 +530,7 @@ class Rsync():
         assert os.path.isdir(sourcetree)
         assert os.path.isdir(dst)
 
-        cmd = self._rsync_cmd
+        cmd = ["ionice", "rsync"]
         cmd += ["-pogAXtlHrx"]
         cmd += ["-Sc", "--no-i-r"]
         # cmd += ["--progress"]
