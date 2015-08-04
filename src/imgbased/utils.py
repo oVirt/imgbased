@@ -463,7 +463,7 @@ class ShellVarFile(File):
         return self.parse().get(key, default)
 
     def set(self, key, val):
-        self.sub(r"%s=.*" % key, "%s=%s" % (key, str(val)))
+        self.sub(r"%s=.*" % key, "%s=%r" % (key, str(val)))
 
 
 class PackageDb():
