@@ -85,7 +85,11 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
     except:
         log.error("Failed to migrate etc", exc_info=True)
 
-    adjust_mounts_and_boot(imgbase, new_layer, previous_layer)
+    try:
+        adjust_mounts_and_boot(imgbase, new_layer, previous_layer)
+    except:
+        # FIXME Handle and rollback
+        raise
 
 
 def migrate_etc(imgbase, new_layer, previous_layer):
