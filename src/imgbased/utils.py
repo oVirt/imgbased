@@ -136,6 +136,7 @@ class mounted(object):
         options = "-o%s" % self.options if self.options else None
         self.tmpdir = self._target or \
             self.run.call(["mktemp", "-d", "--tmpdir", "mnt.XXXXX"])
+        self.target = self.tmpdir
 
         if not os.path.exists(self.tmpdir):
             self.run.call(["mkdir", "-p", self.tmpdir])
@@ -153,6 +154,11 @@ class mounted(object):
         if not self._target:
             self.run.call(["rmdir", self.tmpdir])
         return exc_type is None
+
+    def path(self, subpath):
+        """Return the abs path to a path inside this mounted fs
+        """
+        return self.tmpdir + "/" + subpath
 
 
 def sorted_versions(versions, delim="."):

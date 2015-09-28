@@ -95,8 +95,8 @@ def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
 def migrate_etc(imgbase, new_layer, previous_layer):
     with mounted(new_layer.lvm.path) as new_fs,\
             mounted(previous_layer.lvm.path) as old_fs:
-        old_etc = old_fs.target + "/etc"
-        new_etc = new_fs.target + "/etc"
+        old_etc = old_fs.path("/etc")
+        new_etc = new_fs.path("/etc")
 
         old_rel = SystemRelease(old_etc + "/system-release-cpe")
         new_rel = SystemRelease(new_etc + "/system-release-cpe")
@@ -131,6 +131,10 @@ def migrate_etc(imgbase, new_layer, previous_layer):
                         old_etc + "/passwd",
                         old_etc + "/shadow",
                         old_etc + "/group"])
+
+        log.info("Migrating /root")
+        rsync = Rsync()
+        rsync.sync(old_etc + "/root/", new_etc)
 
 
 def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
