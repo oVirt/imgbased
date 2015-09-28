@@ -449,7 +449,7 @@ class ShellVarFile(File):
         >>> varfile.contents
         'A=a\\nB=b\\nAh=ah'
         >>> varfile.set("A", "1")
-        ('A=1\\nB=b\\nAh=ah',)
+        ("A='1'\\nB=b\\nAh=ah",)
         """
         data = data or self.contents
 
