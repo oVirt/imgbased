@@ -134,7 +134,7 @@ def migrate_etc(imgbase, new_layer, previous_layer):
 
         log.info("Migrating /root")
         rsync = Rsync()
-        rsync.sync(old_etc + "/root/", new_etc)
+        rsync.sync(old_fs.path("/root/"), new_fs.path("/root"))
 
 
 def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):

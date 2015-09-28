@@ -20,7 +20,7 @@ image-install: data/ks/auto-installation-testing.ks.in
 	$(MAKE) -f image-tools/build.mk DISTRO=$(DISTRO) RELEASEVER=$(RELEASEVER) DISK_SIZE=$$(( 10 * 1024 )) SPARSE= auto-installation-testing.qcow2
 
 verrel:
-	@bash image-tools/image-verrel rootfs ImgbaseAppliance com.github.imgbased
+	@bash image-tools/image-verrel rootfs com.github.imgbased.Appliance
 
 check: QCOW_CHECK=auto-installation-testing.qcow2
 check:

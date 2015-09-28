@@ -107,7 +107,7 @@ def check_argparse_update(app, args, remotecfg):
     remotes = remotecfg.remotes()
     pool = app.imgbase._thinpool().lvm_name
     if args.set_upstream:
-        remote, sep, stream = args.set_upstream.partition("/")
+        remote, sep, stream = args.set_upstream.partition(":")
         remotecfg.pool_upstream(pool, remote, stream)
     else:
         log.debug("Fetching new image")
@@ -182,7 +182,6 @@ def check_argparse_remote(app, args, remotecfg):
             for image in images.values():
                 print(image.shorthash(),
                       image.vendorid,
-                      image.name,
                       image.version)
 
     elif args.subcmd == "versions":
@@ -280,9 +279,9 @@ mode=None />}
             s = self.localcfg.PoolSection()
             s.name = pool
         if remote and stream:
-            s.pull = "%s/%s" % (remote, stream)
+            s.pull = "%s:%s" % (remote, stream)
             self.localcfg.save(s)
-        return s.pull.split("/", 1)
+        return s.pull.split(":", 1)
 
     def add(self, name, url):
         s = self.RemoteSection()
@@ -354,15 +353,15 @@ class Remote(object):
 
         >>> def fake_images():
         ...     images = {}
-        ...     for t in [("org.example", "Client", "1"),
-        ...               ("org.example", "Client", "2"),
-        ...               ("org.example", "Server", "1"),
-        ...               ("org.example", "Server", "1-1"),
-        ...               ("org.example", "Server", "1-2"),
-        ...               ("org.example", "Server", "1-12"),
-        ...               ("org.example", "Server", "2-0")]:
+        ...     for t in [("org.example.Client", "1"),
+        ...               ("org.example.Client", "2"),
+        ...               ("org.example.Server", "1"),
+        ...               ("org.example.Server", "1-1"),
+        ...               ("org.example.Server", "1-2"),
+        ...               ("org.example.Server", "1-12"),
+        ...               ("org.example.Server", "2-0")]:
         ...         i = RemoteImage(None)
-        ...         i.vendorid, i.name, i.version = t
+        ...         i.vendorid, i.version = t
         ...         images[str(t)] = i
         ...     return images
 
@@ -408,7 +407,6 @@ class RemoteImage():
     remote = None
 
     vendorid = None
-    name = None
     architecture = None
     version = None
     path = None
@@ -420,18 +418,18 @@ class RemoteImage():
 
     @property
     def nvr(self):
-        return "%s.%s-%s.0" % (self.vendorid, self.name, self.version)
+        return "%s.%s-%s.0" % (self.vendorid, self.vendorid, self.version)
 
     def __init__(self, remote):
         self.remote = remote
 
     def __repr__(self):
-        return "<Image name=%s vendorid=%s version=%s path=%s />" % \
-            (self.name, self.vendorid, self.version, self.path)
+        return "<Image vendorid=%s version=%s path=%s />" % \
+            (self.vendorid, self.version, self.path)
 
     def __str__(self):
-        return "%s.%s = %s" % \
-            (self.vendorid, self.name, self.version)
+        return "%s-%s" % \
+            (self.vendorid, self.version)
 
     def __hash__(self):
         return int(hashlib.sha1(self.path.encode("utf-8")).hexdigest(), 16)
@@ -441,14 +439,13 @@ class RemoteImage():
 
     def stream(self):
         """Retrieve the stream of an image
+
         >>> img = RemoteImage(None)
-        >>> img.vendorid = "org.example"
-        >>> img.name = "Host"
+        >>> img.vendorid = "org.example.Host"
         >>> img.stream()
         'org.example.Host'
         """
-
-        return "%s.%s" % (self.vendorid, self.name)
+        return self.vendorid
 
     def url(self):
         """Retrieve the url to retrieve an image
@@ -508,13 +505,13 @@ class ImageDiscoverer():
     def __init__(self, remote):
         self.remote = remote
 
-    def _imageinfo_from_name(self, path):
+    def _imageinfo_from_filename(self, path):
         """Parse some format:
 
-        >>> fmt = "rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es>"
-        >>> ImageDiscoverer(None)._imageinfo_from_name(fmt)
-        <Image name=<name> vendorid=<vendor> version=<version> \
-path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es> />
+        >>> fmt = "rootfs:<vendor>:<arch>:<version>.<suffix.es>"
+        >>> ImageDiscoverer(None)._imageinfo_from_filename(fmt)
+        <Image vendorid=<vendor> version=<version> \
+path=rootfs:<vendor>:<arch>:<version>.<suffix.es> />
         """
         filename = os.path.basename(path)
 
@@ -526,7 +523,6 @@ path=rootfs:<name>:<vendor>:<arch>:<version>.<suffix.es> />
 
         info = RemoteImage(self.remote)
         info.path = path
-        info.name = parts.pop(0)
         info.vendorid = parts.pop(0)
         info.arch = parts.pop(0)
         # Strip an eventual suffix
@@ -543,16 +539,16 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
 
     >>> example = '''
     ... # A comment
-    ... rootfs:<name>:<vendor>:<arch>:<version>.<suffix>
-    ... rootfs:NodeAppliance:org.ovirt.node:x86_64:2.20420102.0.squashfs
-    ... http://example.com/rootfs:Some:org.example:x86_64:2.0.squashfs
+    ... rootfs:<vendor>:<arch>:<version>.<suffix>
+    ... rootfs:org.ovirt.node.Node:x86_64:2.20420102.0.squashfs
+    ... http://example.com/rootfs:org.example.Some:x86_64:2.0.squashfs
     ... '''
 
     >>> r = SimpleIndexImageDiscoverer(None)
 
     >>> images = r._list_images(example.splitlines())
-    >>> sorted([i.name for i in images.values()])
-    ['<name>', 'NodeAppliance', 'Some']
+    >>> sorted([i.vendorid for i in images.values()])
+    ['<vendor>', 'org.example.Some', 'org.ovirt.node.Node']
     """
 
     @property
@@ -567,7 +563,7 @@ class SimpleIndexImageDiscoverer(ImageDiscoverer):
                 filenames.append(line)
         for filename in filenames:
             try:
-                img = self._imageinfo_from_name(filename)
+                img = self._imageinfo_from_filename(filename)
                 images[img.shorthash()] = img
             except AssertionError as e:
                 log.info("Failed to parse imagename '%s': %s" %
@@ -613,7 +609,7 @@ class LiveimgExtractor():
                     add_tree = self.imgbase.add_base_with_tree
                     new_base = add_tree(rootfs.target,
                                         "%sB" % size,
-                                        name=image.vendorid + "." + image.name,
+                                        name=image.vendorid,
                                         version=image.version,
                                         release="0")
                     log.info("Files extracted")
