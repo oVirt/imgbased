@@ -514,6 +514,7 @@ class ImageDiscoverer():
 path=rootfs:<vendor>:<arch>:<version>.<suffix.es> />
         """
         filename = os.path.basename(path)
+        log.debug("Parsing filename: %s" % filename)
 
         # We need to unquote the filename, because it can be an ULR with
         # escaped chars (like the :)
