@@ -269,9 +269,13 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
                      "was *not* created")
             return
 
-        log.debug("Checking os-release")
+        log.debug("Checking OS release")
+        with openi("%s/etc/system-release" % newroot) as src:
+            sysrel = src.read()
         osrel = ShellVarFile("%s/etc/os-release" % newroot)
-        if osrel.exists():
+        if sysrel:
+            title = "%s (%s)" % (new_lvm_name, sysrel)
+        elif osrel.exists():
             name = osrel.parse()["PRETTY_NAME"]
             title = "%s (%s)" % (new_lvm_name, name)
         else:
