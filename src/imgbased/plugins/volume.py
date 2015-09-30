@@ -107,8 +107,8 @@ WantedBy=local-fs.target
         mkfs(vol.path)
 
         # Populate
-        with mounted(vol.path) as target:
-            Rsync().sync(where + "/", target.tmpdir.rstrip("/"))
+        with mounted(vol.path) as mount:
+            Rsync().sync(where + "/", mount.target.rstrip("/"))
             pass
 
         log.info("Volume for '%s' was created successful" % where)

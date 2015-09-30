@@ -117,48 +117,44 @@ def format_to_pattern(fmt):
 class mounted(object):
     source = None
     options = None
-    _target = None
+    target = None
 
     run = None
     tmpdir = None
-
-    @property
-    def target(self):
-        return self._target or self.tmpdir
 
     def __init__(self, source, options=None, target=None):
         self.run = ExternalBinary()
         self.source = source
         self.options = options
-        self._target = target
+        self.target = target
 
     def __enter__(self):
         options = "-o%s" % self.options if self.options else None
-        self.tmpdir = self._target or \
-            self.run.call(["mktemp", "-d", "--tmpdir", "mnt.XXXXX"])
-        self.target = self.tmpdir
 
-        if not os.path.exists(self.tmpdir):
-            self.run.call(["mkdir", "-p", self.tmpdir])
+        self.tmpdir = self.run.call(["mktemp", "-d", "--tmpdir", "mnt.XXXXX"]) \
+            if not self.target
+
+        if not os.path.exists(self.target):
+            self.run.call(["mkdir", "-p", self.target])
 
         cmd = ["mount"]
         if options:
             cmd.append(options)
-        cmd += [self.source, self.tmpdir]
+        cmd += [self.source, self.target]
         self.run.call(cmd)
 
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
         self.run.call(["umount", self.target])
-        if not self._target:
+        if self.tmpdir:
             self.run.call(["rmdir", self.tmpdir])
         return exc_type is None
 
     def path(self, subpath):
         """Return the abs path to a path inside this mounted fs
         """
-        return self.tmpdir + "/" + subpath
+        return self.target + "/" + subpath
 
 
 def sorted_versions(versions, delim="."):
