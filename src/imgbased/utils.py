@@ -131,8 +131,10 @@ class mounted(object):
     def __enter__(self):
         options = "-o%s" % self.options if self.options else None
 
-        self.tmpdir = self.run.call(["mktemp", "-d", "--tmpdir", "mnt.XXXXX"]) \
-            if not self.target else None
+        if not self.target:
+            self.tmpdir = \
+                self.run.call(["mktemp", "-d", "--tmpdir", "mnt.XXXXX"])
+            self.target = self.tmpdir
 
         if not os.path.exists(self.target):
             self.run.call(["mkdir", "-p", self.target])
