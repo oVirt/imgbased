@@ -400,7 +400,7 @@ class RemoteImage():
 
     @property
     def nvr(self):
-        return "%s.%s-%s.0" % (self.vendorid, self.vendorid, self.version)
+        return "%s-%s.0" % (self.vendorid, self.version)
 
     def __init__(self, remote):
         self.remote = remote
@@ -414,10 +414,10 @@ class RemoteImage():
             (self.vendorid, self.version)
 
     def __hash__(self):
-        return int(hashlib.sha1(self.path.encode("utf-8")).hexdigest(), 16)
+        return hash(self.nvr)
 
     def shorthash(self):
-        return ("{0:x}".format(hash(self)))[0:7]
+        return hashlib.sha1(self.path.encode("utf-8")).hexdigest()[0:7]
 
     def stream(self):
         """Retrieve the stream of an image
