@@ -374,8 +374,9 @@ class ImageLayers(object):
 
         while base is None and layer is not None:
             layer = get_origin(layer)
-            if self.image_from_name(layer).is_base():
-                base = layer
+            base_candidate = self.image_from_name(layer)
+            if base_candidate.is_base():
+                base = base_candidate
 
         if not base:
             raise RuntimeError("No base found for: %s" % layer)

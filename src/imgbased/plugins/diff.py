@@ -24,7 +24,7 @@ def add_argparse(app, parser, subparsers):
     d.add_argument("-m", "--mode",
                    help="Mode: tree, content",
                    default="tree")
-    d.add_argument("image", nargs=2,
+    d.add_argument("image", nargs="*",
                    help="Base/Layer to compare")
 
     c = subparsers.add_parser("factory-diff",
@@ -35,8 +35,17 @@ def add_argparse(app, parser, subparsers):
 def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "diff":
-        if len(args.image) == 2:
-            diff(app.imgbase, *args.image, mode=args.mode)
+        imgs = None
+        if len(args.image) == 0:
+            curlay = app.imgbase.current_layer().nvr
+            curbase = app.imgbase.base_of_layer(curlay).nvr
+            imgs = [curbase, curlay]
+        elif len(args.image) == 2:
+            imgs = args.image
+        else:
+            raise RuntimeError("Please specify 0 or 2 images")
+        diff(app.imgbase, *imgs, mode=args.mode)
+
     elif args.command == "factory-diff":
         if args.config:
             path_diff("/usr/etc", "/etc", "content")
@@ -50,17 +59,21 @@ def diff(imgbase, left, right, mode="tree"):
         right: Base or layer
         mode: tree, content, unified
     """
-    log.info("Diff '%s' between '%s' and '%s'" % (left, right, mode))
+    log.info("Diff '%s' between '%s' and '%s'" % (mode, left, right))
 
     imgl = imgbase.image_from_name(left)
     imgr = imgbase.image_from_name(right)
 
-    with mounted(imgl.path) as mountl, \
-            mounted(imgr.path) as mountr:
-        return path_diff(mountl.target, mountr.target, mode)
+    with mounted(imgl.path, target="/mnt/%s" % left) as mountl, \
+            mounted(imgr.path, target="/mnt/%s" % right) as mountr:
+        return path_diff(mountl.target, mountr.target, mode,
+                         left, right)
 
 
-def path_diff(left, right, mode):
+def path_diff(left, right, mode, left_alias=None, right_alias=None):
+    left_alias = left_alias or left
+    right_alias = right_alias or right
+
     for p in [left, right]:
         if not os.path.exists(p):
             raise RuntimeError("Path does not exist: %r" % p)
@@ -68,15 +81,14 @@ def path_diff(left, right, mode):
     if mode == "tree":
         l = ExternalBinary().find(["-ls"], cwd=left).splitlines(True)
         r = ExternalBinary().find(["-ls"], cwd=right).splitlines(True)
-        udiff = difflib.unified_diff(r, l, fromfile=left, tofile=right,
-                                     n=0)
+        udiff = difflib.unified_diff(r, l, fromfile=left_alias,
+                                     tofile=right_alias, n=0)
         lines = (l for l in udiff if not l.startswith("@"))
         sys.stdout.writelines(lines)
     elif mode == "content":
         import subprocess
         subprocess.call(["diff", "-urN",
-                         left, right],
-                        stderr=subprocess.DEVNULL)
+                         left, right])
     else:
         raise RuntimeError("Unknown diff mode: %s" % mode)
 

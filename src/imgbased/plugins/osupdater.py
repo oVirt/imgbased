@@ -124,6 +124,7 @@ def migrate_etc(imgbase, new_layer, previous_layer):
             idmaps = IDMap(old_etc, new_etc)
             if idmaps.has_drift():
                 log.warn("UID/GID drift was detcted: %r" % idmaps.get_drift())
+                # idmpas.translate_tree_owners(new_fs)
         else:
             log.info("Just copying important files")
             copy_files(new_etc,
@@ -270,7 +271,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
             return
 
         log.debug("Checking OS release")
-        with openi("%s/etc/system-release" % newroot) as src:
+        with open("%s/etc/system-release" % newroot) as src:
             sysrel = src.read()
         osrel = ShellVarFile("%s/etc/os-release" % newroot)
         if sysrel:
