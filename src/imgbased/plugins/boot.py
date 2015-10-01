@@ -17,7 +17,7 @@ def add_argparse(app, parser, subparsers):
     s = subparsers.add_parser("boot",
                               help="Manage the bootloader")
     s.add_argument("--default",
-                   help="Mkae this image the default boot entry")
+                   help="Make this image the default boot entry")
     s.add_argument("IMAGE", help="Image to boot")
 
 

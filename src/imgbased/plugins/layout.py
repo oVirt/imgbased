@@ -45,6 +45,10 @@ def add_argparse(app, parser, subparsers):
     layout_group.add_argument("--init-from", type=str, default="",
                               metavar="VG/LV",
                               help="Make an existing thin LV consumable")
+    layout_group.add_argument("--bases", action="store_true",
+                              help="List all bases")
+    layout_group.add_argument("--layers", action="store_true",
+                              help="List all layers")
 
     space_group = layout_parser.add_argument_group("Free space arguments")
     space_group.add_argument("--units", default="m",
@@ -70,6 +74,10 @@ def check_argparse(app, args):
             app.imgbase.init_layout_from(args.init_from)
         elif args.free_space:
             print(app.imgbase.free_space(args.units))
+        elif args.bases:
+            print("\n".join(str(b) for b in app.imgbase.naming.bases()))
+        elif args.layers:
+            print("\n".join(str(l) for l in app.imgbase.naming.layers()))
         else:
             print(app.imgbase.layout())
 
