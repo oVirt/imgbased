@@ -81,7 +81,7 @@ def add_argparse(app, parser, subparsers):
     u = subparsers.add_parser("update",
                               help="Pull updates into the local pool")
     u.add_argument("--set-upstream", help="Set the upstream for updates "
-                   "<remote>/<stream>")
+                   "<remote>:<stream>", metavar="REMOTE:STREAM")
     u.add_argument("--check", action="store_true",
                    help="Check for available updates")
     u.add_argument("--version", help="Pull a specific version")
