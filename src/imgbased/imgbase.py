@@ -398,8 +398,10 @@ class LocalConfiguration():
     >>> rs = LocalConfiguration()
     >>> rs.cfgstr = example
     """
-    SYSTEM_CFG_DIR = "/etc/imgbased.conf.d/"
-    SYSTEM_CFG_FILE = "/etc/imgbased.conf"
+    CFG_FILE = "imgbased.conf"
+    CFG_DIR = "imgbased.conf.d/"
+    USER_CFG_PREFIX = "/etc/"
+    VENDOR_CFG_PREFIX = "/usr/lib/imgbased/"
     cfgstr = None
 
     class Section(object):
@@ -440,30 +442,40 @@ class LocalConfiguration():
     def _parser(self, only_file=False):
         p = configparser.ConfigParser()
 
-        def read_dir():
-            """Also read the dir"""
-            if not os.path.exists(self.SYSTEM_CFG_DIR):
-                log.debug("No config dir found")
-                return
-            for fn in os.listdir(self.SYSTEM_CFG_DIR):
-                fullfn = self.SYSTEM_CFG_DIR + "/" + fn
-                log.debug("Also reading: %s" % fullfn)
-                if not os.path.isfile(fullfn):
-                    continue
-                p.read(fullfn)
+        def read_loc(loc_prefix):
+            cfgfile = loc_prefix + self.CFG_FILE
+            cfgdir = loc_prefix + self.CFG_DIR
 
-        if self.cfgstr is None:
-            log.debug("Reading config file: %s" % self.SYSTEM_CFG_FILE)
-            p.read(self.SYSTEM_CFG_FILE)
+            log.debug("Reading config file: %s" % cfgfile)
+            log.debug("Reading config dir: %s" % cfgdir)
+
+            if os.path.exists(cfgfile):
+                p.read(cfgfile)
+                log.debug("Read file")
+
             if not only_file:
-                read_dir()
-        else:
+                """Also read the dir"""
+                if os.path.exists(cfgdir):
+                    for fn in os.listdir(cfgdir):
+                        fullfn = cfgdir + "/" + fn
+                        log.debug("Also reading: %s" % fullfn)
+                        if os.path.isfile(fullfn):
+                            p.read(fullfn)
+                else:
+                    log.debug("No config dir found")
+
+        if self.cfgstr:
             log.debug("Using cfgstr")
             # Used for doctests
             try:
                 p.readfp(StringIO(self.cfgstr.decode("ascii")))
             except:
                 p.readfp(StringIO(self.cfgstr))
+        else:
+            for loc in [self.VENDOR_CFG_PREFIX, self.USER_CFG_PREFIX]:
+                log.debug("Passing prefix: %s" % loc)
+                read_loc(loc)
+
         return p
 
     def core(self):
