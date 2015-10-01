@@ -4,7 +4,6 @@ from ..utils import sorted_versions, request_url, mounted, \
 from ..imgbase import LocalConfiguration
 from six.moves import configparser
 from io import StringIO
-import shlex
 import argparse
 import sys
 import re
@@ -289,25 +288,8 @@ mode=None />}
         s.url = url
         self.localcfg.save(s)
 
-    def get(self, name, key):
-        p = self._parser()
-        section = "remote %s" % shlex.quote(name)
-        return p.get(section, key)
-
     def remove(self, name):
-        p = self._parser()
-        section = "remote %s" % shlex.quote(name)
-        p.remove_section(section)
-        self._save(p)
-
-    def _save(self, p):
-        try:
-            os.mkdir(os.path.dirname(self.self.SYSTEM_CFG_FILE,))
-        except:
-            log.debug("Could not create imgbased cfg dir")
-        with open(self.SYSTEM_CFG_FILE, 'wt') as configfile:
-            p.write(configfile)
-            log.debug("Wrote config file %s" % configfile)
+        self.localcfg.remove(self.remote(name))
 
 
 class Remote(object):

@@ -439,7 +439,7 @@ class LocalConfiguration():
     def register_section(klass):
         LocalConfiguration._known_section_types.append(klass)
 
-    def _parser(self, only_file=False):
+    def _parser(self, only_user_file=False):
         p = configparser.ConfigParser()
 
         def read_loc(loc_prefix):
@@ -453,7 +453,7 @@ class LocalConfiguration():
                 p.read(cfgfile)
                 log.debug("Read file")
 
-            if not only_file:
+            if not only_user_file:
                 """Also read the dir"""
                 if os.path.exists(cfgdir):
                     for fn in os.listdir(cfgdir):
@@ -472,7 +472,13 @@ class LocalConfiguration():
             except:
                 p.readfp(StringIO(self.cfgstr))
         else:
-            for loc in [self.VENDOR_CFG_PREFIX, self.USER_CFG_PREFIX]:
+            locs = [self.VENDOR_CFG_PREFIX]
+            if only_user_file:
+                locs = [self.USER_CFG_PREFIX]
+            else:
+                locs += [self.USER_CFG_PREFIX]
+
+            for loc in locs:
                 log.debug("Passing prefix: %s" % loc)
                 read_loc(loc)
 
@@ -594,7 +600,8 @@ class LocalConfiguration():
         self._write(p)
 
     def _write(self, p):
-        with open(self.SYSTEM_CFG_FILE, 'wt') as configfile:
+        cfgfile = self.USER_CFG_PREFIX + self.USER_CFG_FILE
+        with open(cfgfile, 'wt') as configfile:
             p.write(configfile)
             log.debug("Wrote config file %s" % configfile)
 
