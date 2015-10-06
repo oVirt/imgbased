@@ -124,7 +124,8 @@ def migrate_etc(imgbase, new_layer, previous_layer):
             idmaps = IDMap(old_etc, new_etc)
             if idmaps.has_drift():
                 log.warn("UID/GID drift was detcted: %r" % idmaps.get_drift())
-                # idmpas.translate_tree_owners(new_fs)
+                changes = idmaps.fix_drift(new_fs)
+                log.debug("Changed files: %s" % list(changes))
         else:
             log.info("Just copying important files")
             copy_files(new_etc,

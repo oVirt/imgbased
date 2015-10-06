@@ -637,6 +637,60 @@ class IDMap():
         """
         return sum(len(m) for m in self.get_drift()) > 0
 
+    def _map_id_change(self, paths, _fake_drift=None):
+        """Translate all uids/gids in path
+
+        Imagine tehse paths with the owners:
+
+        >>> paths = [("/foo", 11, 2),
+        ...          ("/bar", 1, 22)]
+
+        And a drift, weher uid 1 changed to 11, and gid 2 changed to 22:
+
+        >>> drift = ([(1, 11)], [(2, 22)])
+
+        Then IDMap will change the ids in the given path to the old ids.
+        This ensures, that the owner does logically not change.
+
+        >>> m = IDMap(None, None)
+        >>> changes = m._map_id_change(paths, drift)
+        >>> list(changes)
+        [('/foo', (-1, 22)), ('/bar', (11, -1))]
+        """
+
+        drift = _fake_drift or self.get_drift()
+        assert drift
+
+        uidmap, gidmap = map(dict, drift)
+        rev_uidmap = dict(map(reversed, uidmap.items()))
+        rev_gidmap = dict(map(reversed, gidmap.items()))
+
+        assert len(uidmap) == len(rev_uidmap)
+        assert len(gidmap) == len(rev_gidmap)
+
+        for (fn, uid, gid) in paths:
+            new_ids = (uidmap.get(uid, -1),
+                       gidmap.get(gid, -1))
+            yield (fn, new_ids)
+
+    def fix_drift(self, path):
+        """This function will walk a tree and adjust all UID/GIDs which drifted
+        """
+        def paths_w_ids():
+            for (dirpath, dirnames, filenames) in os.walk(path):
+                for fn in dirnames + filenames:
+                    fullfn = dirpath + "/" + fn
+                    st = os.stat(fullfn)
+                    uid = st.st_uid
+                    gid = st.st_gid
+                    yield (fullfn, uid, gid)
+
+        for (fn, new_ids) in self._map_id_change(paths_w_ids()):
+            if any(v != -1 for v in new_ids):
+                log.debug("Chowning %r to %s" % (fn, new_ids))
+                os.chown(fn, *new_ids)
+                yield fn
+
 
 class SystemRelease(File):
     """Informations about the OS based on /etc/system-release-cpe
