@@ -118,11 +118,18 @@ def migrate_etc(imgbase, new_layer, previous_layer):
         if is_same_product:
             idmaps = IDMap(old_etc, new_etc)
             if idmaps.has_drift():
-                log.warn("UID/GID drift was detcted: %r" % idmaps.get_drift())
+                log.info("UID/GID drift was detected")
+                log.debug("Drifted uids: %s gids: %s" %
+                          idmaps.get_drift())
                 changes = idmaps.fix_drift(new_fs)
-                log.debug("Changed files: %s" % list(changes))
+                if changes:
+                    log.info("UID/GID adjustments were applied")
+                    log.debug("Changed files: %s" % list(changes))
+                else:
+                    log.debug("No changes necessary")
             else:
-                log.debug("Drift check passed")
+                log.debug("No drift detected")
+
             log.info("Migrating /etc")
             rsync = Rsync()
             # Don't copy release files to have up to date release infos

@@ -680,6 +680,8 @@ class IDMap():
             for (dirpath, dirnames, filenames) in os.walk(path):
                 for fn in dirnames + filenames:
                     fullfn = dirpath + "/" + fn
+                    if not os.path.exists(fullfn):
+                        continue
                     st = os.stat(fullfn)
                     uid = st.st_uid
                     gid = st.st_gid
@@ -687,9 +689,12 @@ class IDMap():
 
         for (fn, new_ids) in self._map_id_change(paths_w_ids()):
             if any(v != -1 for v in new_ids):
-                log.debug("Chowning %r to %s" % (fn, new_ids))
-                os.chown(fn, *new_ids)
-                yield fn
+                if os.path.exists(fn):
+                    log.debug("Chowning %r to %s" % (fn, new_ids))
+                    os.chown(fn, *new_ids)
+                    yield fn
+                else:
+                    log.debug("File does not exist: %s" % fn)
 
 
 class SystemRelease(File):
