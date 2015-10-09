@@ -681,6 +681,7 @@ class IDMap():
                 for fn in dirnames + filenames:
                     fullfn = dirpath + "/" + fn
                     if not os.path.exists(fullfn):
+                        log.debug("File does not exist: %s" % fn)
                         continue
                     st = os.stat(fullfn)
                     uid = st.st_uid
@@ -694,7 +695,7 @@ class IDMap():
                     os.chown(fn, *new_ids)
                     yield fn
                 else:
-                    log.debug("File does not exist: %s" % fn)
+                    log.debug("Can't chown, file does not exist: %s" % fn)
 
 
 class SystemRelease(File):
