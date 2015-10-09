@@ -1,7 +1,7 @@
 
 from ..utils import sorted_versions, request_url, mounted, \
     size_of_fstree
-from ..imgbase import LocalConfiguration
+from ..local import Configuration
 from six.moves import configparser
 from io import StringIO
 import argparse
@@ -94,7 +94,7 @@ def check_argparse(app, args):
     """
     log.debug("Operating on: %s" % app.imgbase)
 
-    remotecfg = LocalRemotesConfiguration()
+    remotecfg = RemotesConfiguration()
 
     if args.command == "remote":
         check_argparse_remote(app, args, remotecfg)
@@ -191,7 +191,7 @@ def check_argparse_remote(app, args, remotecfg):
             print("%s: %s" % (name, url))
 
 
-class LocalRemotesConfiguration():
+class RemotesConfiguration():
     """Datastructure to access localy configured remotes
 
     We configure remote repositories/locations locally,
@@ -206,7 +206,7 @@ class LocalRemotesConfiguration():
     ... url = http://jenkins.ovirt.org/
     ... '''
 
-    >>> rs = LocalRemotesConfiguration()
+    >>> rs = RemotesConfiguration()
     >>> rs.localcfg.cfgstr = example
 
     >>> rs.remotes()
@@ -216,15 +216,15 @@ mode=None />}
 
     localcfg = None
 
-    class RemoteSection(LocalConfiguration.Section):
+    class RemoteSection(Configuration.Section):
         # FIXME move to plugin
         _type = "remote"
         name = None
         url = None
 
     def __init__(self):
-        RS = LocalRemotesConfiguration.RemoteSection
-        self.localcfg = LocalConfiguration()
+        RS = RemotesConfiguration.RemoteSection
+        self.localcfg = Configuration()
         self.localcfg.register_section(RS)
 
     def remotes(self):
@@ -235,14 +235,14 @@ mode=None />}
         ... url = http://jenkins.ovirt.org/
         ... '''
 
-        >>> rs = LocalRemotesConfiguration()
+        >>> rs = RemotesConfiguration()
         >>> rs.localcfg.cfgstr = example
 
         >>> rs.remotes()
         {'jenkins': <Remote name=jenkins url=http://jenkins.ovirt.org/ \
 mode=None />}
 
-        >>> rs = LocalRemotesConfiguration()
+        >>> rs = RemotesConfiguration()
         >>> rs.localcfg.cfgstr = u""
         >>> rs.remotes()
         {}
@@ -258,7 +258,7 @@ mode=None />}
         >>> rs.remote("a thing")
         <RemoteSection (remote) [('name', 'a thing'), ('url', 'bar')] />
         """
-        RS = LocalRemotesConfiguration.RemoteSection
+        RS = RemotesConfiguration.RemoteSection
         remotes = {}
         for section in self.localcfg.sections(RS):
             r = Remote()
@@ -268,7 +268,7 @@ mode=None />}
         return remotes
 
     def remote(self, name):
-        return self.localcfg.section(LocalRemotesConfiguration.RemoteSection,
+        return self.localcfg.section(RemotesConfiguration.RemoteSection,
                                      name)
 
     def pool_upstream(self, pool, remote=None, stream=None):
