@@ -1,0 +1,2 @@
+- Kernels and initrds should be placed in /boot so that they work with the default tools
+- Align with post-build processing of ostree (/etc -> /usr/etc, …)
