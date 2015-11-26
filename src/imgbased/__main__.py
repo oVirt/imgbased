@@ -28,8 +28,7 @@ from .imgbase import ImageLayers, ExternalBinary
 from .hooks import Hooks
 from . import plugins
 
-
-log = logging.getLogger(__package__)
+log = logging.getLogger()
 
 
 class Application(object):
@@ -48,7 +47,11 @@ class Application(object):
 
 
 def add_log_handler(lvl, fmt):
-    h = logging.StreamHandler()
+    try:
+        from systemd import journal
+        h = journal.JournalHandler(SYSLOG_IDENTIFIER=config.PACKAGE_NAME)
+    except:
+        h = logging.StreamHandler()
     h.setLevel(lvl)
     h.setFormatter(logging.Formatter(fmt))
     log.addHandler(h)

@@ -21,6 +21,7 @@ BuildRequires:       pylint python-pep8 pyflakes python-nose
 
 BuildRequires:       python3-devel python3-six
 BuildRequires:       python3-pylint python3-pep8 python3-pyflakes python3-nose
+BuildRequires:       systemd-python3
 
 Requires:       python-sh python-requests python-urllib3 python-six
 Requires:       python3-sh python3-requests python3-urllib3
