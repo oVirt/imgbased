@@ -1,5 +1,6 @@
 
 import logging
+import os
 from ..utils import Rsync
 
 
@@ -28,11 +29,29 @@ def check_argparse(app, args):
             postprocess(app)
 
 
+def factorize(path):
+    """Prepare a path for systemd's factory model
+
+    Basically, keep the original build state in /usr/share/factory
+    """
+    fac = "/usr/share/factory/"
+
+    if not os.path.isdir(fac):
+        os.makedirs(fac)
+
+    fpath = fac + path
+    log.info("Factory: Copying {p} to {fp}".format(p=path, fp=fpath))
+    rsync = Rsync()
+    rsync.sync(path, fpath)
+
+
 def postprocess(app):
     log.info("Launching image post-processing")
 
-    log.info("Copying /etc to /usr/etc")
-    rsync = Rsync()
-    rsync.sync("/etc", "/usr/etc")
+    factorize("/etc")
+    # ostree is using /usr/etc
+    os.symlink("/usr/share/factory/etc", "/usr/etc")
+
+    factorize("/var")
 
 # vim: sw=4 et sts=4
