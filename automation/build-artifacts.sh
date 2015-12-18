@@ -5,7 +5,6 @@ set -xe
 export ARTIFACTSDIR=$PWD/exported-artifacts
 export PATH=$PATH:/sbin:/usr/sbin
 
-
 build() {
   ./autogen.sh
   make rpm

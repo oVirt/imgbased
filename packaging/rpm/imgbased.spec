@@ -1,3 +1,5 @@
+# FIXME Follow https://fedoraproject.org/wiki/Packaging:Python
+%define is_el7 %(test 0%{?centos} -eq 07 || test 0%{?rhel} -eq 07 && echo 1 || echo 0)
 
 Name:           imgbased
 Version:        0.3
@@ -19,15 +21,16 @@ BuildRequires:       asciidoc
 BuildRequires:       python-devel python-six
 BuildRequires:       pylint python-pep8 pyflakes python-nose
 
-BuildRequires:       python3-devel python3-six
-BuildRequires:       python3-pylint python3-pep8 python3-pyflakes python3-nose
+%if 0%{?is_el7}
+BuildRequires:       systemd-python
+BuildRequires:       python-six
+%else
 BuildRequires:       systemd-python3
+BuildRequires:       python3-six
+%endif
 
-Requires:       python-sh python-requests python-urllib3 python-six
-Requires:       python3-sh python3-requests python3-urllib3
 Requires:       lvm2
 Requires:       util-linux
-Requires:       curl
 Requires:       augeas
 Requires:       rsync
 

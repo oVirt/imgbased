@@ -6,10 +6,6 @@ import logging
 import re
 import glob
 import shlex
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib import urlopen
 
 
 log = logging.getLogger(__package__)
@@ -40,10 +36,6 @@ def size_of_fstree(path):
     """
     du = ExternalBinary().du
     return int(du(["-sxb", path]).split()[0])
-
-
-def request_url(url):
-    return urlopen(url).read().decode()
 
 
 def grub2_set_default(key):

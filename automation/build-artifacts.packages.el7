@@ -1,0 +1,14 @@
+make
+automake autoconf
+rpm-build
+git
+asciidoc
+python-devel
+python-six
+pylint
+python-pep8
+pyflakes
+python-nose
+python-sh
+systemd-python
+pykickstart
