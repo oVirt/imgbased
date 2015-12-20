@@ -33,38 +33,3 @@ class TestImgbased(unittest.TestCase):
 
         # Check that a current layer exists
         imgbase.layer("--current")
-
-
-class TestEnvironment(unittest.TestCase):
-    def test_selinux_denials(self):
-        """Looking for SELinux AVC denials
-        """
-        from sh import getenforce
-        assert getenforce().strip() in ["Enforcing", "Permissive"]
-        # assert not grep("denied", "/var/log/audit.log")
-
-    def test_relevant_packages(self):
-        """Looking for mandatory packages
-        """
-        from sh import which
-        for app in ["df", "du", "diff", "lvm"]:
-            assert which(app)
-
-    def test_mounts(self):
-        """Check presence of relevant mount points
-        """
-        from sh import findmnt
-
-        mnt_opt = lambda o, p: findmnt("-no", o, p, _ok_code=[1]).strip()
-
-        assert mnt_opt("SOURCE", "/tmp") == "tmpfs", \
-            "/tmp is not a tmpfs"
-
-        assert mnt_opt("SOURCE", "/etc") == "", \
-            "/etc is not on /"
-
-        assert mnt_opt("SOURCE", "/var") != "", \
-            "/var is not a separate device"
-
-        assert "discard" in mnt_opt("OPTIONS", "/"), \
-            "/ is not mounted with the discard option"
