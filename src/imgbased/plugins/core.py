@@ -41,7 +41,7 @@ def init(app):
 def add_argparse(app, parser, subparsers):
     base_parser = subparsers.add_parser("base",
                                         help="Runtime base handling")
-    base_parser.add_argument("--add", action="store_true",
+    base_parser.add_argument("--add",
                              help="Add a base layer")
     base_parser.add_argument("--add-with-tree",
                              metavar="PATH_TO_TREE",
@@ -73,7 +73,7 @@ def check_argparse(app, args):
         if args.add:
             if not args.size:
                 raise RuntimeError("--size is required")
-            app.imgbase.add_base(args.size)
+            app.imgbase.add_base(args.size, args.add)
         elif args.add_with_image:
             if not args.size:
                 raise RuntimeError("--size is required")
