@@ -1,8 +1,6 @@
 
 CLEANFILES=
 
-include images.mk
-
 SHELL := /bin/bash
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
