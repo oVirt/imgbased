@@ -37,6 +37,13 @@ class LVM(object):
     _vgcreate = ExternalBinary().vgcreate
     _vgchange = ExternalBinary().vgchange
 
+    @staticmethod
+    def lvs():
+        cmd = ["--noheadings", "-o", "lv_name"]
+        raw = LVM._lvs(cmd)
+        lvs = [n.strip() for n in raw.splitlines()]
+        return lvs
+
     class VG(object):
         vg_name = None
 
@@ -143,6 +150,7 @@ class LVM(object):
             data = LVM._lvs(["--noheadings", "-ovg_name,lv_name", path])
             assert data, "Failed to find LV for path: %s" % path
             log.debug("Found LV for path %s: %s" % (path, data))
+            assert len(data.splitlines().strip()) == 1
             return LVM.LV(*shlex.split(data))
 
         def create_snapshot(self, new_name):
