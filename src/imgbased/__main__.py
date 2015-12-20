@@ -57,7 +57,7 @@ def add_log_handler(lvl, fmt):
     log.addHandler(h)
 
 
-if __name__ == '__main__':
+def CliApplication(args=None):
     log.setLevel(logging.INFO)
     add_log_handler(logging.INFO, "[%(levelname)s] %(message)s")
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
     app.hooks.emit("pre-arg-parse", parser, subparsers)
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     log.debug("Arguments: %s" % args)
 
@@ -95,5 +95,9 @@ if __name__ == '__main__':
     # Now let the plugins check if they need to run something
     #
     app.hooks.emit("post-arg-parse", args)
+
+
+if __name__ == '__main__':
+    CliApplication()
 
 # vim: et sts=4 sw=4:
