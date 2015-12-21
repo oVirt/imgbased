@@ -122,7 +122,7 @@ WantedBy=local-fs.target
 
         volname = self._volname(where)
         self.detach(where)
-        LVM.LV(self.imgbase._vg(), volname).remove()
+        LVM.LV.from_lv_name(self.imgbase._vg(), volname).remove()
 
         log.info("Volume for '%s' was removed successful" % where)
 

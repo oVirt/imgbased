@@ -200,7 +200,7 @@ class ImageLayers(object):
         log.debug("Found existing LV '%s'" % existing)
         log.debug("Tagging existing pool")
         existing.addtag(self.lv_init_tag)
-        LVM.VG(existing.vg_name).addtag(self.vg_tag)
+        LVM.VG.from_vg_name(existing.vg_name).addtag(self.vg_tag)
         existing.thinpool().addtag(self.thinpool_tag)
         log.debug("Setting autoextend for thin pool, to prevent starvation")
         augtool("set", "-s",
@@ -334,7 +334,7 @@ class ImageLayers(object):
         """Free space in the thinpool for bases and layers
         """
         log.debug("Calculating free space in thinpool %s" % self._thinpool())
-        lvm_name = LVM.LV(self._vg(), self._thinpool()).lvm_name
+        lvm_name = LVM.LV.from_lv_name(self._vg(), self._thinpool()).lvm_name
         args = ["--noheadings", "--nosuffix", "--units", units,
                 "--options", "data_percent,lv_size",
                 lvm_name]

@@ -38,20 +38,23 @@ class LVM(object):
     _vgchange = ExternalBinary().vgchange
 
     @staticmethod
-    def lvs():
+    def list_lv_names():
         cmd = ["--noheadings", "-o", "lv_name"]
         raw = LVM._lvs(cmd)
         lvs = [n.strip() for n in raw.splitlines()]
-        return lvs
+        return sorted(lvs)
 
     class VG(object):
         vg_name = None
 
-        def __init__(self, vg_name):
-            self.vg_name = vg_name
-
         def __repr__(self):
-            return "<VG '%s' />" % self.name
+            return "<VG '%s' />" % self.vg_name
+
+        @staticmethod
+        def from_vg_name(vg_name):
+            vg = VG()
+            vg.vg_name = vg_name
+            return vg
 
         @staticmethod
         def find_by_tag(tag):
@@ -98,9 +101,12 @@ class LVM(object):
         def path(self):
             return LVM._lvs(["--noheadings", "-olv_path", self.lvm_name])
 
-        def __init__(self, vg_name, lv_name):
-            self.vg_name = vg_name
-            self.lv_name = lv_name
+        @staticmethod
+        def from_lv_name(vg_name, lv_name):
+            lv = LVM.LV()
+            lv.vg_name = vg_name
+            lv.lv_name = lv_name
+            return lv
 
         def __repr__(self):
             return "<LV '%s' />" % self.lvm_name
@@ -141,7 +147,7 @@ class LVM(object):
             >>> lv.lv_name
             'Foo'
             """
-            return LVM.LV(*lvm_name.split("/"))
+            return LVM.LV.from_lv_name(*lvm_name.split("/"))
 
         @staticmethod
         def from_path(path):
@@ -151,7 +157,7 @@ class LVM(object):
             assert data, "Failed to find LV for path: %s" % path
             log.debug("Found LV for path %s: %s" % (path, data))
             assert len(data.splitlines().strip()) == 1
-            return LVM.LV(*shlex.split(data))
+            return LVM.LV.from_lv_name(*shlex.split(data))
 
         def create_snapshot(self, new_name):
             LVM._lvcreate(["--snapshot",
@@ -185,7 +191,10 @@ class LVM(object):
         def thinpool(self):
             pool_lv = LVM._lvs(["--noheadings", "-opool_lv",
                                self.lvm_name])
-            return LVM.LV(self.vg_name, pool_lv) if pool_lv else None
+            lv = None
+            if pool_lv:
+                lv = LVM.LV.from_lv_name(self.vg_name, pool_lv)
+            return lv
 
         def addtag(self, tag):
             LVM._lvchange(["--addtag", tag, self.lvm_name])
@@ -196,7 +205,7 @@ class LVM(object):
 
         def origin(self):
             lv_name = self.options(["origin"]).pop()
-            return LVM.LV(self.vg_name, lv_name)
+            return LVM.LV.from_lv_name(self.vg_name, lv_name)
 
         def options(self, options):
             sep = "$"
@@ -208,7 +217,7 @@ class LVM(object):
 
     class Thinpool(LV):
         def create_thinvol(self, vol_name, volsize):
-            vol = LVM.LV(self.vg_name, vol_name)
+            vol = LVM.LV.from_lv_name(self.vg_name, vol_name)
             LVM._lvcreate(["--thin",
                            "--virtualsize", volsize,
                            "--name", vol.lv_name,
