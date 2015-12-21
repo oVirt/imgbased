@@ -73,12 +73,11 @@ def on_register_checks(app, register):
         return fail
 
 
-def on_new_layer(imgbase, previous_lv_lvm_name, new_lv_lvm_name):
-    # previous_lv = LVM.LV.from_lvm_name(previous_lv_lvm_name)
-    new_lv = LVM.LV.from_lvm_name(new_lv_lvm_name)
+def on_new_layer(imgbase, previous_lv, new_lv):
 
     new_layer = imgbase.naming.image_from_name(new_lv.lv_name)
     previous_layer = imgbase.naming.layer_before(new_layer)
+    log.debug("Got: %s and %s" % (new_layer, previous_layer))
 
     try:
         migrate_etc(imgbase, new_layer, previous_layer)

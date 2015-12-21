@@ -24,17 +24,16 @@
 import logging
 import re
 from .utils import format_to_pattern
-from .layers import Base, Image
+from .layers import Base, Layer
 
 log = logging.getLogger(__package__)
 
 
 class NamingScheme():
-    vg = None
-    names = None
+    datasource = None
 
-    def __init__(self, names=None):
-        self.names = names or []
+    def __init__(self, datasource):
+        self.datasource = datasource
 
     def image_from_name(self, name):
         raise NotImplementedError
@@ -75,7 +74,7 @@ class NamingScheme():
         oidx = layers.index(other_layer)
         return layers[oidx-1]
 
-    def suggest_next_base(self, name=None, version=None, release=None):
+    def suggest_next_base(self, name, version, release):
         """Dertermine the name for the next base LV name (based on the scheme)
         """
         log.debug("Finding next base")
@@ -86,7 +85,7 @@ class NamingScheme():
             base.layers = []
         except RuntimeError:
             log.debug("No previous base found, creating an initial one")
-            base = Base(self.vg, name, version or 0, release or 0)
+            base = Base(name, version or 0, release or 0)
         if name:
             base.name = name
         log.debug("Initial base is now: %s" % base)
@@ -97,14 +96,14 @@ class NamingScheme():
 
         image: Layer or Base
         """
-        suggestion = Image(self.vg)
+        suggestion = Layer()
 
         suggestion.name = prev.name
         suggestion.version = prev.version
 
         if prev.is_base():
             log.debug("Suggesting for layer for base %s" % prev)
-            # FIXME If prev is a freshly generated Image(), then it
+            # FIXME If prev is a freshly generated Layer(), then it
             # has no layers, only images form tree() have layers.
             if prev.layers:
                 log.debug("... with layers")
@@ -148,7 +147,7 @@ class NvrLikeNaming(NamingScheme):
     >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1", \
 "Image-2.1", "Image-2.0"]
     >>> layers.last_base()
-    <Base Image-13.0 [<Image Image-13.1 />]/>
+    <Base Image-13.0 [<Layer Image-13.1 />]/>
 
 
     >>> layers = NvrLikeNaming()
@@ -158,7 +157,7 @@ class NvrLikeNaming(NamingScheme):
     RuntimeError: No bases found: []
     >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
     >>> layers.last_layer()
-    <Image Image-13.1 />
+    <Layer Image-13.1 />
 
 
 
@@ -176,25 +175,25 @@ class NvrLikeNaming(NamingScheme):
     <Base Image-20140401.0 />
 
     >>> layers.layers()
-    [<Image Image-0.1 />, <Image Image-2.1 />, <Image Image-13.1 />]
+    [<Layer Image-0.1 />, <Layer Image-2.1 />, <Layer Image-13.1 />]
 
     >>> layers.layers(for_base=Base(None, "Image", 2, 0))
-    [<Image Image-2.1 />]
+    [<Layer Image-2.1 />]
 
     >>> layers = NvrLikeNaming()
     >>> layers.names = ["Image-0.0"]
     >>> layers.suggest_next_layer(Image(None, "Image", "0", "0"))
-    <Image Image-0.1 />
+    <Layer Image-0.1 />
     >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1",
     ... "Image-2.0", "Image-2.1"]
     >>> layers.suggest_next_layer(Image(None, "Image", "13", "1"))
-    <Image Image-13.2 />
+    <Layer Image-13.2 />
 
     # FIXME This case must be fixed!
     # It should be Image-2.2 suggested, but currently 2.1, becaue
     # the new image has no layers
     >>> layers.suggest_next_layer(Image(None, "Image", 2, 0))
-    <Image Image-2.1 />
+    <Layer Image-2.1 />
 
 
 
@@ -212,7 +211,7 @@ class NvrLikeNaming(NamingScheme):
 
     nvr_fmt = "%s-%d.%d"
 
-    def tree(self, lvs=None):
+    def tree(self, datasource=None):
         """Returns a list of bases and children
         >>> layers = NvrLikeNaming()
         >>> layers.tree()
@@ -223,36 +222,34 @@ class NvrLikeNaming(NamingScheme):
         >>> layers.names = ["Image-0.0", "Image-13.0", "Image-2.1"]
         >>> layers.names += ["Image-2.0"]
         >>> layers.tree()
-        [<Base Image-0.0 />, <Base Image-2.0 [<Image Image-2.1 />]/>, \
+        [<Base Image-0.0 />, <Base Image-2.0 [<Layer Image-2.1 />]/>, \
 <Base Image-13.0 />]
         """
-        if callable(self.names):
-            lvs = self.names()
+        datasource = datasource or self.datasource
+        if callable(datasource):
+            names = datasource()
         else:
-            lvs = lvs or self.names
+            names = datasource
+
         laypat = format_to_pattern(self.nvr_fmt)
-        sorted_lvs = []
+        sorted_names = []
 
-        if lvs is None:
-            lvs = self.lvs()
-
-        for lv in lvs:
-            if not re.match(laypat, lv):
+        for name in names:
+            if not re.match(laypat, name):
                 continue
-            name, version, release = re.search(laypat, lv).groups()
+            name, version, release = re.search(laypat, name).groups()
             baseidx, layidx = map(int, [version, release])
-            sorted_lvs.append((name, baseidx, layidx))
+            sorted_names.append((name, baseidx, layidx))
 
-        sorted_lvs = sorted(sorted_lvs)
+        sorted_names = sorted(sorted_names)
 
-        log.debug(str(lvs))
         lst = []
         imgs = []
-        for v in sorted_lvs:
+        for v in sorted_names:
             if v[2] == 0:
-                img = Base(self.vg, *v)
+                img = Base(*v)
             else:
-                img = Image(self.vg, *v)
+                img = Layer(*v)
             imgs.append(img)
         for img in imgs:
             if img.release == 0:
@@ -262,7 +259,7 @@ class NvrLikeNaming(NamingScheme):
                 parent.layers.append(img)
 
         if len(lst) == 0:
-            raise RuntimeError("No bases found: %s" % lvs)
+            raise RuntimeError("No bases found: %s" % names)
 
         return lst
 
@@ -283,8 +280,8 @@ class NvrLikeNaming(NamingScheme):
         if int(release) == 0:
             klass = Base
         else:
-            klass = Image
-        img = klass(self.vg, name=str(name), version=int(version),
+            klass = Layer
+        img = klass(name=str(name), version=int(version),
                     release=int(release))
         if klass == Base:
             img.layers = self.layers(for_base=img)

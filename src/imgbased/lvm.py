@@ -73,13 +73,6 @@ class LVM(object):
             LVM._vgcreate([vg_name] + pv_paths)
             return LVM.VG(vg_name)
 
-        def create_thinpool(self, name, size):
-            pool = LVM.ThinPool(self.vg_name, name).lvm_name
-            LVM._lvcreate(["--thin",
-                           "--size", str(size),
-                           pool.lvm_name])
-            return pool
-
         def addtag(self, tag):
             LVM._vgchange(["--addtag", tag, self.vg_name])
 
@@ -163,6 +156,7 @@ class LVM(object):
             LVM._lvcreate(["--snapshot",
                            "--name", new_name,
                            self.lvm_name])
+            return LVM.from_lv_name(self.vg_name, new_name)
 
         def remove(self, force=False):
             cmd = ["-f"] if force else []
@@ -214,6 +208,29 @@ class LVM(object):
                    "-o", ",".join(options),
                    self.lvm_name]
             return LVM._lvs(cmd).strip().split(sep)
+
+        def protect(self):
+            self.permission("r")
+            self.setactivationskip(True)
+            self.activate(False, True)
+
+        def unprotect(self):
+            self.permission("rw")
+            self.setactivationskip(False)
+            self.activate(True, True)
+
+        def unprotected(self):
+            this = self
+
+            class UnprotectedBase(object):
+                obj = this
+
+                def __enter__(self):
+                    self.obj.unprotect()
+
+                def __exit__(self, exc_type, exc_value, tb):
+                    self.obj.protect()
+            return UnprotectedBase()
 
     class Thinpool(LV):
         def create_thinvol(self, vol_name, volsize):

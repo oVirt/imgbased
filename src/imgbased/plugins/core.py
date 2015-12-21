@@ -42,6 +42,8 @@ def add_argparse(app, parser, subparsers):
     base_parser = subparsers.add_parser("base",
                                         help="Runtime base handling")
     base_parser.add_argument("--add",
+                             nargs=3,
+                             metavar=("NAME","VERSION","RELEASE"),
                              help="Add a base layer")
     base_parser.add_argument("--add-with-tree",
                              metavar="PATH_TO_TREE",
@@ -53,8 +55,10 @@ def add_argparse(app, parser, subparsers):
 
     base_parser.add_argument("--size",
                              help="(Virtual) Size of the thin volume")
+
     base_parser.add_argument("--latest", action="store_true",
                              help="Get the most recently added base")
+
     base_parser.add_argument("--of-layer", metavar="LAYER",
                              help="Get the base of layer LAYER")
 
@@ -68,7 +72,7 @@ def check_argparse(app, args):
         if args.add:
             if not args.size:
                 raise RuntimeError("--size is required")
-            app.imgbase.add_base(args.size, args.add)
+            app.imgbase.add_base(args.size, *args.add)
         elif args.add_with_tree:
             if not args.size:
                 raise RuntimeError("--size")

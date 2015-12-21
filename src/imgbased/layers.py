@@ -25,13 +25,10 @@ import logging
 
 log = logging.getLogger(__package__)
 
-from .lvm import LVM
 from .utils import memoize
 
 
-class Image(object):
-    vg = None
-
+class Layer(object):
     nvr_fmt = "%s-%s.%s"
     name = None
     version = None
@@ -48,15 +45,10 @@ class Image(object):
         return self.lvm.path
 
     @property
-    def lvm(self):
-        return LVM.LV.from_lv_name(self.vg(), self.nvr)
-
-    @property
     def version_release(self):
         return (int(self.version), int(self.release))
 
-    def __init__(self, vg=None, name=None, version=None, release=None):
-        self.vg = vg
+    def __init__(self, name=None, version=None, release=None):
         self.name = name or self.name
         self.version = version
         self.release = release
@@ -110,28 +102,8 @@ class Image(object):
         return type(self) == type(other) and self.nvr == other.nvr
 
 
-class Base(Image):
-    def protect(self):
-        self.lvm.permission("r")
-        self.lvm.setactivationskip(True)
-        self.lvm.activate(False, True)
+class Base(Layer):
+    pass
 
-    def unprotect(self):
-        self.lvm.permission("rw")
-        self.lvm.setactivationskip(False)
-        self.lvm.activate(True, True)
-
-    def unprotected(self):
-        this = self
-
-        class UnprotectedBase(object):
-            base = this
-
-            def __enter__(self):
-                self.base.unprotect()
-
-            def __exit__(self, exc_type, exc_value, tb):
-                self.base.protect()
-        return UnprotectedBase()
 
 # vim: sw=4 et sts=4:

@@ -40,8 +40,6 @@ def add_argparse(app, parser, subparsers):
     layout_group.add_argument("--free-space", action="store_true",
                               default=False,
                               help="How much space there is in the thinpool")
-    layout_group.add_argument("--init", action="store_true", default=False,
-                              help="Create the initial Volume Group")
     layout_group.add_argument("--init-from", type=str, default="",
                               metavar="VG/LV",
                               help="Make an existing thin LV consumable")
@@ -59,18 +57,12 @@ def add_argparse(app, parser, subparsers):
     init_group.add_argument("pv", nargs="*", metavar="PV",
                             type=argparse.FileType(),
                             help="LVM PVs to use")
-    init_group.add_argument("--without-vg", action="store_true", default=False,
-                            help="Do not create a Volume Group")
 
 
 def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "layout":
-        if args.init:
-            if not args.size:
-                raise RuntimeError("--size required")
-            app.imgbase.init_layout(args.pv, args.size)
-        elif args.init_from:
+        if args.init_from:
             app.imgbase.init_layout_from(args.init_from)
         elif args.free_space:
             print(app.imgbase.free_space(args.units))
