@@ -46,11 +46,6 @@ def add_argparse(app, parser, subparsers):
     base_parser.add_argument("--add-with-tree",
                              metavar="PATH_TO_TREE",
                              help="Add a base layer from an fs tree")
-    base_parser.add_argument("--add-with-image",
-                             metavar="PATH_TO_IMAGE",
-                             help="Add a base layer from an fs image",
-                             nargs="?", type=argparse.FileType('r'),
-                             default=None)
 
     base_parser.add_argument("--remove",
                              metavar="BASE",
@@ -74,10 +69,6 @@ def check_argparse(app, args):
             if not args.size:
                 raise RuntimeError("--size is required")
             app.imgbase.add_base(args.size, args.add)
-        elif args.add_with_image:
-            if not args.size:
-                raise RuntimeError("--size is required")
-            app.imgbase.add_base_from_image(args.add_with_image or sys.stdin)
         elif args.add_with_tree:
             if not args.size:
                 raise RuntimeError("--size")

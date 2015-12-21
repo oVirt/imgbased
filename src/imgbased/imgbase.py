@@ -215,15 +215,6 @@ class ImageLayers(object):
         self._add_snapshot(existing, initial_base.lvm)
         self._add_snapshot(initial_base.lvm, new_layer.lvm)
 
-    def init_layout(self, pvs, poolsize):
-        """Create the LVM layout needed by this tool
-        """
-        raise NotImplementedError
-        assert poolsize > 0
-        if pvs:
-            LVM.VG.create(self.vg, pvs)
-        LVM.VG(self._vg()).create_thinpool(self._thinpool(), poolsize)
-
     def add_base(self, size, name, version=None, release=None, lvs=None):
         """Add a new base LV
         """
@@ -276,30 +267,6 @@ class ImageLayers(object):
         layer.lvm.remove()
 
         self.hooks.emit("layer-removed", layer.lvm.lvm_name)
-
-    def add_base_from_image(self, imagefile, size, name,
-                            version=None, release=None, lvs=None):
-        raise NotImplementedError
-        new_base_lv = self.add_base(size, name, version, release, lvs)
-
-        cmd = ["dd", "conv=sparse"]
-        kwargs = {}
-
-        if type(imagefile) is io.IOBase:
-            log.debug("Reading base from stdin")
-            kwargs["stdin"] = imagefile
-        elif type(imagefile) in [str, bytes]:
-            log.debug("Reading base from file: %s" % imagefile)
-            cmd.append("if=%s" % imagefile)
-        else:
-            raise RuntimeError("Unknown infile: %s" % imagefile)
-
-        cmd.append("of=%s" % new_base_lv.path)
-        log.debug("Running: %s %s" % (cmd, kwargs))
-        if not self.dry:
-            subprocess.check_call(cmd, **kwargs)
-
-        return new_base_lv
 
     def add_base_with_tree(self, sourcetree, size, name, version=None,
                            release=None, lvs=None):
