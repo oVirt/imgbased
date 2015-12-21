@@ -20,30 +20,11 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import sys
+
 import logging
-import argparse
-from . import config
-from .imgbase import ImageLayers, ExternalBinary
-from .hooks import Hooks
-from . import plugins
+from . import CliApplication
 
 log = logging.getLogger()
-
-
-class Application(object):
-    experimental = False
-    imgbase = None
-    hooks = None
-
-    def __init__(self):
-        self.imgbase = ImageLayers()
-
-        self.hooks = Hooks(context=self)
-        self.hooks.create("pre-arg-parse", ("parser", "subparser"))
-        self.hooks.create("post-arg-parse", ("parser_args",))
-
-        plugins.init(self)
 
 
 def add_log_handler(lvl, fmt):
@@ -57,47 +38,10 @@ def add_log_handler(lvl, fmt):
     log.addHandler(h)
 
 
-def CliApplication(args=None):
+if __name__ == '__main__':
     log.setLevel(logging.INFO)
     add_log_handler(logging.INFO, "[%(levelname)s] %(message)s")
 
-    app = Application()
-    app.experimental = "--experimental" in sys.argv
-
-    parser = argparse.ArgumentParser(prog="imgbase")
-    parser.add_argument("--version", action="version",
-                        version=config.version())
-
-    subparsers = parser.add_subparsers(title="Sub-commands", dest="command")
-
-    parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--dry", action="store_true")
-    parser.add_argument("--experimental", action="store_true",
-                        help="Enable experimental functionality")
-
-    app.hooks.emit("pre-arg-parse", parser, subparsers)
-
-    args = parser.parse_args(args)
-
-    log.debug("Arguments: %s" % args)
-
-    if args.debug:
-        log.setLevel(logging.DEBUG)
-        add_log_handler(logging.DEBUG, "%(asctime)s - %(levelname)s - "
-                        "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
-
-    app.imgbase.debug = args.debug
-    app.imgbase.dry = args.dry
-
-    ExternalBinary.dry = args.dry
-
-    #
-    # Now let the plugins check if they need to run something
-    #
-    app.hooks.emit("post-arg-parse", args)
-
-
-if __name__ == '__main__':
     CliApplication()
 
 # vim: et sts=4 sw=4:
