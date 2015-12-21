@@ -2,13 +2,9 @@
 # vim: et ts=4 sw=4 sts=4
 
 import unittest
-import sh
 import logging
 import glob
 
-
-# Increase the capture length of python-sh to show complete errors
-sh.ErrorReturnCode.truncate_cap = 999999
 
 log = logging.info
 
@@ -44,6 +40,7 @@ def trial(num_bins=1, size_bin=500, after_rm=None, max_delta=0.05):
         "Delta %s is larger than %s" % (delta, max_delta)
 
 
+@unittest.skip("Needs refactoring")
 class TestFS(unittest.TestCase):
     def test_fstrim(self, count=1, size=100):
         # FIXME improve by splitting into several test cases

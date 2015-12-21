@@ -65,3 +65,6 @@ rpm-build-deps:
 %.xml: %.asc
 	mkdir -p $$(dirname $@)
 	asciidoc -d manpage -b docbook -o $@ $<
+
+check:
+	$(MAKE) -C tests check
