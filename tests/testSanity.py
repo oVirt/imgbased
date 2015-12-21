@@ -2,14 +2,15 @@
 # vim: et ts=4 sw=4 sts=4
 
 import unittest
+import sys
 import logging
 from logging import debug
 from mock import patch
 from StringIO import StringIO
-import sys
 from collections import namedtuple
 
 from imgbased import CliApplication
+import imgbased
 import imgbased.lvm
 
 def logcall(func):
@@ -286,11 +287,17 @@ class TestBaseVerb(ImgbasedCliTestCase):
         self.cli("--debug", "base", "--add", "Image", "42", "0", "--size", "4096")
         assert "Image-42.0" in self.cli("base", "--latest").stdout
 
-        self.cli("--debug", "layer", "--add")
+        with self.assertRaises(imgbased.imgbase.LayerOutOfOrderError):
+            # Exception, because we'd add a layer to a previous base, not the latest
+            self.cli("--debug", "layer", "--add")
+
+        self.cli("--debug", "layer", "--add", "Image-42.0")
         layers = self.cli("layout", "--layers").stdout
         assert "Image-42.1" in layers
+
+        self.cli("--debug", "layer", "--add")
+        layers = self.cli("layout", "--layers").stdout
         assert "Image-42.2" in layers
-        assert "Image-42.3" not in layers
 
 if __name__ == "__main__":
     unittest.main()

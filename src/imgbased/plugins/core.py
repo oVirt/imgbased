@@ -39,6 +39,9 @@ def init(app):
 
 
 def add_argparse(app, parser, subparsers):
+    #
+    # base
+    #
     base_parser = subparsers.add_parser("base",
                                         help="Runtime base handling")
     base_parser.add_argument("--add",
@@ -62,12 +65,59 @@ def add_argparse(app, parser, subparsers):
     base_parser.add_argument("--of-layer", metavar="LAYER",
                              help="Get the base of layer LAYER")
 
+    #
+    # layer
+    #
+    layer_parser = subparsers.add_parser("layer",
+                                         help="Runtime layer handling")
+    layer_parser.add_argument("--add", action="store_true",
+                              default=False, help="Add a new layer")
+    layer_parser.add_argument("--latest", action="store_true",
+                              help="Get the latest layer")
+    layer_parser.add_argument("--current", action="store_true",
+                              help="Get the current layer used to boot this")
+    layer_parser.add_argument("IMAGE", nargs="?",
+                              help="Optional to be used with --add")
+
+    subparsers.add_parser("w",
+                          help="Check on what layer you are")
+
+    #
+    # layout
+    layout_parser = subparsers.add_parser("layout",
+                                          help="List all bases and layers")
+    layout_group = layout_parser.add_mutually_exclusive_group()
+    layout_group.add_argument("--free-space", action="store_true",
+                              default=False,
+                              help="How much space there is in the thinpool")
+    layout_group.add_argument("--init-from", type=str, default="",
+                              metavar="VG/LV",
+                              help="Make an existing thin LV consumable")
+    layout_group.add_argument("--bases", action="store_true",
+                              help="List all bases")
+    layout_group.add_argument("--layers", action="store_true",
+                              help="List all layers")
+
+    space_group = layout_parser.add_argument_group("Free space arguments")
+    space_group.add_argument("--units", default="m",
+                             help="Units to be used for free space")
+    init_group = layout_parser.add_argument_group("Initialization arguments")
+    init_group.add_argument("--size",
+                            help="Size of the thinpool (in MB)")
+    init_group.add_argument("pv", nargs="*", metavar="PV",
+                            type=argparse.FileType(),
+                            help="LVM PVs to use")
+
+    #
+    # check
+    #
     subparsers.add_parser("check",
                           help="Perform some runtime checks")
 
 
 def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
+
     if args.command == "base":
         if args.add:
             if not args.size:
@@ -84,6 +134,35 @@ def check_argparse(app, args):
             print(app.imgbase.latest_base())
         elif args.of_layer:
             print(str(app.imgbase.base_of_layer(args.of_layer)))
+
+    elif args.command == "layer":
+        if args.add:
+            if args.IMAGE:
+                app.imgbase.add_layer(args.IMAGE)
+            else:
+                log.warn("Adding new layer onto latest")
+                app.imgbase.add_layer_on_latest()
+        elif args.current:
+            print(app.imgbase.current_layer())
+        elif args.latest:
+            print(app.imgbase.latest_layer())
+
+    elif args.command == "w":
+        msg = "You are on %s" % app.imgbase.current_layer()
+        log.info(msg)
+
+    if args.command == "layout":
+        if args.init_from:
+            app.imgbase.init_layout_from(args.init_from)
+        elif args.free_space:
+            print(app.imgbase.free_space(args.units))
+        elif args.bases:
+            print("\n".join(str(b) for b in app.imgbase.naming.bases()))
+        elif args.layers:
+            print("\n".join(str(l) for l in app.imgbase.naming.layers()))
+        else:
+            print(app.imgbase.layout())
+
     elif args.command == "check":
         run_check(app)
 

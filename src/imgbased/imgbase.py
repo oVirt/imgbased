@@ -36,6 +36,9 @@ import logging
 log = logging.getLogger(__package__)
 
 
+class LayerOutOfOrderError(Exception):
+    pass
+
 class ImageLayers(object):
     debug = False
     dry = False
@@ -121,6 +124,9 @@ class ImageLayers(object):
     def add_layer_on_latest(self):
         previous_layer = self.latest_layer()
         log.debug("Planning to add layer onto %s" % previous_layer)
+        if previous_layer < self.latest_base():
+            raise LayerOutOfOrderError("Last layer is smaller than latest base. "
+                                       "Are you missing a layer on the latest base?")
         return self.add_layer(previous_layer)
 
     def add_layer_on_current(self):
@@ -202,11 +208,12 @@ class ImageLayers(object):
         log.debug("Tagging existing pool: %s" % existing_pool)
         existing_pool.addtag(self.thinpool_tag)
 
-        #log.debug("Setting autoextend for thin pool, to prevent starvation")
-        #augtool("set", "-s",
-        #        "/files/etc/lvm/lvm.conf/activation/dict/" +
-        #        "thin_pool_autoextend_threshold/int",
-        #        "80")
+        # FIXME this should go into a plugin
+        log.debug("Setting autoextend for thin pool, to prevent starvation")
+        augtool("set", "-s",
+                "/files/etc/lvm/lvm.conf/activation/dict/" +
+                "thin_pool_autoextend_threshold/int",
+                "80")
 
         version = 0  # int(datetime.date.today().strftime("%Y%m%d"))
         initial_base = self.naming.suggest_next_base(self.stream_name, version, 0)
@@ -218,7 +225,8 @@ class ImageLayers(object):
         log.info("Creating initial layer for initial base")
         self._add_lvm_snapshot(initial_base_lv, new_layer.nvr)
 
-    def add_base(self, size, name, version, release=0, lvs=None):
+    def add_base(self, size, name, version, release=0, lvs=None,
+                 with_layer=False):
         """Add a new base LV
         """
         assert size
@@ -238,7 +246,8 @@ class ImageLayers(object):
 
         new_base_lv.protect()
 
-        self.add_layer(new_base)
+        if with_layer:
+            self.add_layer(new_base)
 
         return new_base_lv
 
