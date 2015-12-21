@@ -1,23 +1,7 @@
 
-from ..utils import sorted_versions, request_url, mounted, \
-    size_of_fstree
-from ..local import Configuration
-from six.moves import configparser
-from io import StringIO
-import argparse
-import sys
-import re
-import os
-import hashlib
-import tempfile
-import subprocess
 import glob
 import logging
-try:
-    from urllib.request import unquote
-except ImportError:
-    from urllib import unquote
-
+from ..utils import size_of_fstree, mounted
 
 log = logging.getLogger(__package__)
 
@@ -73,12 +57,9 @@ class LiveimgExtractor():
         remainder = scaled % 512
         return int(scaled + (512 - remainder))
 
-    def write(self, image):
-        raise NotImplementedError
-
     def extract(self, liveimgfile, vendorid, version, release):
         new_base = None
-        log.info("Extracting image '%s'" % image)
+        log.info("Extracting image '%s'" % liveimgfile)
         with mounted(liveimgfile) as squashfs:
             log.debug("Mounted squashfs")
             liveimg = glob.glob(squashfs.target + "/*/*.img").pop()

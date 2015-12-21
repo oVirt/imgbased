@@ -52,7 +52,7 @@ class LVM(object):
 
         @staticmethod
         def from_vg_name(vg_name):
-            vg = VG()
+            vg = LVM.VG()
             vg.vg_name = vg_name
             return vg
 

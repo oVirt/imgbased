@@ -21,8 +21,8 @@ class TestDiff(unittest.TestCase):
         log(imgbase.layer("--add"))
         assert "Image-0.2" in imgbase.layer("--latest")
 
-        touch("/root/marker")
-        touch("/var/tmp/marker")
+        # touch("/root/marker")
+        # touch("/var/tmp/marker")
         diff = imgbase("--debug", "diff", "Image-0.1", "Image-0.2")
         print(diff)
         assert "/root/marker" in diff

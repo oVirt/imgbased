@@ -22,7 +22,7 @@
 #
 
 import logging
-from . import CliApplication
+from . import CliApplication, config
 
 log = logging.getLogger()
 

@@ -20,7 +20,6 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import sys
 import argparse
 import logging
 
@@ -46,7 +45,7 @@ def add_argparse(app, parser, subparsers):
                                         help="Runtime base handling")
     base_parser.add_argument("--add",
                              nargs=3,
-                             metavar=("NAME","VERSION","RELEASE"),
+                             metavar=("NAME", "VERSION", "RELEASE"),
                              help="Add a base layer")
     base_parser.add_argument("--add-with-tree",
                              metavar="PATH_TO_TREE",

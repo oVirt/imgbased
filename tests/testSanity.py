@@ -13,6 +13,7 @@ from imgbased import CliApplication
 import imgbased
 import imgbased.lvm
 
+
 def logcall(func):
     def wraped(*args, **kwargs):
         try:
@@ -23,6 +24,7 @@ def logcall(func):
         print("%s(%s, %s) -> %s" % (func, args, kwargs, v))
         return v
     return wraped
+
 
 class FakeLVM(imgbased.lvm.LVM):
     _vgs = []
@@ -209,12 +211,13 @@ class ImgbaseTestCase(unittest.TestCase):
         pool.size = 10*1024
         vg._lvs.add(pool)
 
-        lvroot = pool.create_thinvol("root", 10)
+        pool.create_thinvol("root", 10)
 
-        print(FakeLVM.lvs())
+        # print(FakeLVM.lvs())
 
     def setUp(self):
         self.autopart()
+
 
 class ImgbasedCliTestCase(ImgbaseTestCase):
     def cli(self, *args):
@@ -223,7 +226,9 @@ class ImgbasedCliTestCase(ImgbaseTestCase):
                 patch("imgbased.lvm.LVM", FakeLVM), \
                 patch("imgbased.imgbase.LVM", FakeLVM), \
                 patch("imgbased.imgbase.Hooks"), \
-                patch("imgbased.imgbase.ImageLayers.current_layer", lambda s: None):
+                patch("imgbased.imgbase.augtool"), \
+                patch("imgbased.imgbase.ImageLayers.current_layer",
+                      lambda s: None):
             try:
                 olderr = sys.stderr
                 oldout = sys.stdout
@@ -261,7 +266,7 @@ class TestLayoutVerb(ImgbasedCliTestCase):
         debug("Bases: %s" % r.stdout)
         assert r.stdout.strip() == "Image-0.0"
 
-    def test_layout_bases(self):
+    def test_layout_layers(self):
         r = self.cli("--debug", "layout", "--layers")
         debug("Layers: %s" % r.stdout)
         assert r.stdout.strip() == "Image-0.1"
@@ -269,26 +274,31 @@ class TestLayoutVerb(ImgbasedCliTestCase):
 
 class TestBaseVerb(ImgbasedCliTestCase):
     def test_base_add(self):
-        self.cli("--debug", "base", "--add", "Bar", "42", "0", "--size", "4096")
+        self.cli("--debug", "base", "--add", "Bar", "42", "0",
+                 "--size", "4096")
         assert "Bar-42.0" in self.cli("layout", "--bases").stdout
 
     def test_base_latest(self):
-        self.cli("--debug", "base", "--add", "Bar", "42", "0", "--size", "4096")
+        self.cli("--debug", "base", "--add", "Bar", "42", "0",
+                 "--size", "4096")
         assert "Bar-42.0" in self.cli("base", "--latest").stdout
 
     def test_base_remove(self):
-        self.cli("--debug", "base", "--add", "Bar", "42", "0", "--size", "4096")
+        self.cli("--debug", "base", "--add", "Bar", "42", "0",
+                 "--size", "4096")
         assert "Bar-42.0" in self.cli("base", "--latest").stdout
 
         self.cli("--debug", "base", "--remove", "Bar-42.0")
         assert "Bar-42.0" not in self.cli("base", "--latest").stdout
 
     def test_base_of_layer(self):
-        self.cli("--debug", "base", "--add", "Image", "42", "0", "--size", "4096")
+        self.cli("--debug", "base", "--add", "Image", "42", "0",
+                 "--size", "4096")
         assert "Image-42.0" in self.cli("base", "--latest").stdout
 
         with self.assertRaises(imgbased.imgbase.LayerOutOfOrderError):
-            # Exception, because we'd add a layer to a previous base, not the latest
+            # Exception, because we'd add a layer to a previous base, not the
+            # latest
             self.cli("--debug", "layer", "--add")
 
         self.cli("--debug", "layer", "--add", "Image-42.0")

@@ -23,7 +23,6 @@
 import subprocess
 import os
 import re
-import io
 from .hooks import Hooks
 from . import naming
 from .utils import ExternalBinary, mounted, find_mount_source, \
@@ -38,6 +37,7 @@ log = logging.getLogger(__package__)
 
 class LayerOutOfOrderError(Exception):
     pass
+
 
 class ImageLayers(object):
     debug = False
@@ -125,8 +125,9 @@ class ImageLayers(object):
         previous_layer = self.latest_layer()
         log.debug("Planning to add layer onto %s" % previous_layer)
         if previous_layer < self.latest_base():
-            raise LayerOutOfOrderError("Last layer is smaller than latest base. "
-                                       "Are you missing a layer on the latest base?")
+            raise LayerOutOfOrderError("Last layer is smaller than latest "
+                                       "base. Are you missing a layer on the "
+                                       "latest base?")
         return self.add_layer(previous_layer)
 
     def add_layer_on_current(self):
@@ -216,7 +217,8 @@ class ImageLayers(object):
                 "80")
 
         version = 0  # int(datetime.date.today().strftime("%Y%m%d"))
-        initial_base = self.naming.suggest_next_base(self.stream_name, version, 0)
+        initial_base = self.naming.suggest_next_base(self.stream_name,
+                                                     version, 0)
         new_layer = self.naming.suggest_next_layer(initial_base)
         log.info("Creating an initial base '%s' for '%s'" %
                  (initial_base, existing_lv))
@@ -259,7 +261,6 @@ class ImageLayers(object):
         self.hooks.emit("pre-base-removed", base_lv)
 
         assert base.is_base()
-        #assert base.layers
 
         if with_children:
             for layer in base.layers:

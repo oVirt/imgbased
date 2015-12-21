@@ -69,8 +69,8 @@ class Layer(object):
 
     def __lt__(self, other):
         """
-        >>> a = Image(None, "Image", 1, 0)
-        >>> b = Image(None, "Image", 2, 0)
+        >>> a = Layer("Image", 1, 0)
+        >>> b = Layer("Image", 2, 0)
         >>> a < b
         True
         >>> a == b
@@ -82,19 +82,19 @@ class Layer(object):
 
     def __eq__(self, other):
         """
-        >>> a = Image(None, "Image", 1, 0)
-        >>> b = Image(None, "Image", 2, 0)
+        >>> a = Layer("Image", 1, 0)
+        >>> b = Layer("Image", 2, 0)
         >>> a == b
         False
 
-        >>> c = Image(None, "Image", 1, 1)
-        >>> d = Image(None, "Image", 21, 0)
-        >>> e = Image(None, "Image", 11, 0)
+        >>> c = Layer("Image", 1, 1)
+        >>> d = Layer("Image", 21, 0)
+        >>> e = Layer("Image", 11, 0)
         >>> sorted([a, b, c, d, e])
-        [<Image Image-1.0 />, <Image Image-1.1 />, <Image Image-2.0 />, \
-<Image Image-11.0 />, <Image Image-21.0 />]
+        [<Layer Image-1.0 />, <Layer Image-1.1 />, <Layer Image-2.0 />, \
+<Layer Image-11.0 />, <Layer Image-21.0 />]
 
-        >>> a = Image(None, "Image", 2, 0)
+        >>> a = Layer("Image", 2, 0)
         >>> a == b
         True
         """

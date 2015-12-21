@@ -33,7 +33,7 @@ EXTRA_DIST = \
   packaging/rpm/imgbased.spec \
   $(TESTS) \
   tests/package/common.sh \
-  tests/runtime/*.py
+  tests/*.py
 
 KS = $(wildcard data/ks/*.ks)
 

@@ -74,7 +74,7 @@ class NamingScheme():
         oidx = layers.index(other_layer)
         return layers[oidx-1]
 
-    def suggest_next_base(self, name, version, release):
+    def suggest_next_base(self, name, version=None, release=None):
         """Dertermine the name for the next base LV name (based on the scheme)
         """
         log.debug("Finding next base")
@@ -139,71 +139,77 @@ class NvrLikeNaming(NamingScheme):
     """This class is for parsing nvr like schemes.
     Example: Image-0.0
 
-    >>> layers = NvrLikeNaming()
+    >>> layers = NvrLikeNaming([])
     >>> layers.last_base()
     Traceback (most recent call last):
     ...
     RuntimeError: No bases found: []
-    >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1", \
-"Image-2.1", "Image-2.0"]
+
+    >>> names = ["Image-0.0", "Image-13.0", "Image-13.1",
+    ... "Image-2.1", "Image-2.0"]
+    >>> layers = NvrLikeNaming(names)
     >>> layers.last_base()
     <Base Image-13.0 [<Layer Image-13.1 />]/>
 
-
-    >>> layers = NvrLikeNaming()
+    >>> layers = NvrLikeNaming([])
     >>> layers.last_layer()
     Traceback (most recent call last):
     ...
     RuntimeError: No bases found: []
-    >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
+
+    >>> names = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
+    >>> layers = NvrLikeNaming(names)
     >>> layers.last_layer()
     <Layer Image-13.1 />
 
 
-
-    >>> layers = NvrLikeNaming()
+    >>> layers = NvrLikeNaming([])
     >>> layers.suggest_next_base(name="Image")
     <Base Image-0.0 />
-    >>> layers.names = ["Image-0.0"]
-    >>> layers.suggest_next_base()
+
+    >>> names = ["Image-0.0"]
+    >>> layers = NvrLikeNaming(names)
+    >>> layers.suggest_next_base(name="Image")
     <Base Image-1.0 />
-    >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0"]
-    >>> layers.names += ["Image-0.1", "Image-2.1"]
-    >>> layers.suggest_next_base()
+
+    >>> names = ["Image-0.0", "Image-13.0", "Image-13.1", "Image-2.0",
+    ... "Image-0.1", "Image-2.1"]
+    >>> layers = NvrLikeNaming(names)
+    >>> layers.suggest_next_base(name="Image")
     <Base Image-14.0 />
-    >>> layers.suggest_next_base(version=20140401)
+    >>> layers.suggest_next_base("Image", version=20140401)
     <Base Image-20140401.0 />
 
     >>> layers.layers()
     [<Layer Image-0.1 />, <Layer Image-2.1 />, <Layer Image-13.1 />]
 
-    >>> layers.layers(for_base=Base(None, "Image", 2, 0))
+    >>> layers.layers(for_base=Base("Image", 2, 0))
     [<Layer Image-2.1 />]
 
-    >>> layers = NvrLikeNaming()
-    >>> layers.names = ["Image-0.0"]
-    >>> layers.suggest_next_layer(Image(None, "Image", "0", "0"))
+    >>> names = ["Image-0.0"]
+    >>> layers = NvrLikeNaming(names)
+    >>> layers.suggest_next_layer(Layer("Image", "0", "0"))
     <Layer Image-0.1 />
-    >>> layers.names = ["Image-0.0", "Image-13.0", "Image-13.1",
+
+    >>> names = ["Image-0.0", "Image-13.0", "Image-13.1",
     ... "Image-2.0", "Image-2.1"]
-    >>> layers.suggest_next_layer(Image(None, "Image", "13", "1"))
+    >>> layers = NvrLikeNaming(names)
+    >>> layers.suggest_next_layer(Layer("Image", "13", "1"))
     <Layer Image-13.2 />
 
-    # FIXME This case must be fixed!
-    # It should be Image-2.2 suggested, but currently 2.1, becaue
-    # the new image has no layers
-    >>> layers.suggest_next_layer(Image(None, "Image", 2, 0))
+    >>> layers.suggest_next_layer(Layer("Image", 2, 0))
     <Layer Image-2.1 />
 
 
-
-    >>> layers = NvrLikeNaming()
+    >>> layers = NvrLikeNaming([])
     >>> print(layers.layout())
     Traceback (most recent call last):
     ...
     RuntimeError: No valid layout found. Initialize if needed.
-    >>> layers.names = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0"]
-    >>> layers.names += ["Image-2.2"]
+
+    >>> names = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0",
+    ... "Image-2.2"]
+    >>> layers = NvrLikeNaming(names)
     >>> layers.layout()
     'Image-0.0\\nImage-2.0\\n ├╼ Image-2.1\\n └╼ Image-2.2\\nImage-13.0'
 
@@ -213,14 +219,15 @@ class NvrLikeNaming(NamingScheme):
 
     def tree(self, datasource=None):
         """Returns a list of bases and children
-        >>> layers = NvrLikeNaming()
+        >>> layers = NvrLikeNaming([])
         >>> layers.tree()
         Traceback (most recent call last):
         ...
         RuntimeError: No bases found: []
 
-        >>> layers.names = ["Image-0.0", "Image-13.0", "Image-2.1"]
-        >>> layers.names += ["Image-2.0"]
+        >>> names = ["Image-0.0", "Image-13.0", "Image-2.1",
+        ... "Image-2.0"]
+        >>> layers = NvrLikeNaming(names)
         >>> layers.tree()
         [<Base Image-0.0 />, <Base Image-2.0 [<Layer Image-2.1 />]/>, \
 <Base Image-13.0 />]
