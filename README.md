@@ -33,41 +33,16 @@ How to build the tools.
     rpmbuild -ta imgbased-*.tar.xz
 
 
-Build an image
---------------
 
-The repository also contains some example kickstarts which create an image with
-the correct LVm layout to get started with this tool.
+Using `imgbase`
+---------------
 
-> Note: The `imgbase` tool is automatically installe inside the image during
-> creation.
-
-    # Lorax provides livemedia-creator
-    pkcon install -y qemu-kvm
-
-    # First create the kickstarts
-    make dist
-
-    # Kickoff the image creation
-    make image-build
-
-    # Do some automatic sanity testing on the image:
-    make check
-
-    # Or run the image yourself
-    # Default password for root: r
-    qemu-kvm -hda runtime-layout.img -smp 4 -m 1024 -net user -net nic
-
-
-Using `imgbase` in the image
---------------------------
-
-The `imgbase` tool is installed within the example image from the previous
-section.
-It can be used to create new *layers* and install new *bases*.
+To use the `imgbase` tool you need a Fedora or CentOS image, which was
+installed using the `autopart --type=thinp` directive.
+`imgbased` can be used to create new *layers* and install new *bases*.
 
     # To create the assumed LVM layout
-    imgbase layout --init
+    imgbase layout --init-from /
 
     # List existing layers and bases
     imgbase layout
@@ -76,19 +51,16 @@ It can be used to create new *layers* and install new *bases*.
     # The `--size` argument specifies the size of the underlying 
     # logical volume. It must be at least the size of the filesystem
     # contained in `$IMGFILE`.
-    imgbase base --add --size 1G $IMGFILE
+    imgbase base --add ExampleBase-1.0 --size 1G
 
     # Get the latest base (which will be used for subsequent layers)
     imgbase base --latest
 
     # Add a new layer on the latest base or latest layer of the latest base
-    imgbase layer --add
+    imgbase layer --add ExampleBase-1.0
 
     # And with more infos
     imgbase --debug layer --add
-
-There is also a dry-mode (`imgbase --debug --dry ...`) which just outputs the
-commands to run.
 
 
 Purpose

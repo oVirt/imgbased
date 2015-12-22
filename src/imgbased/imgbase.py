@@ -214,15 +214,16 @@ class ImageLayers(object):
         log.info("Creating initial layer for initial base")
         self._add_lvm_snapshot(initial_base_lv, new_layer.nvr)
 
-    def add_base(self, size, name, version, release=0, lvs=None,
+    def add_base(self, size, nvr, lvs=None,
                  with_layer=False):
         """Add a new base LV
         """
         assert size
 
-        new_base = self.naming.suggest_next_base(name,
-                                                 version,
-                                                 release)
+        base = self.naming.image_from_name(nvr)
+        new_base = self.naming.suggest_next_base(base.name,
+                                                 base.version,
+                                                 base.release)
 
         log.info("New base will be: %s" % new_base)
         pool = self._thinpool()

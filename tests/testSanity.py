@@ -219,7 +219,7 @@ class ImgbaseTestCase(unittest.TestCase):
         self.autopart()
 
 
-class ImgbasedCliTestCase(ImgbaseTestCase):
+class CliTestCase(ImgbaseTestCase):
     def cli(self, *args):
         debug("$ imgbased %s" % str(args))
         with \
@@ -257,7 +257,7 @@ class ImgbasedCliTestCase(ImgbaseTestCase):
         self.cli("--debug", "layout", "--init-from", "hostvg/root")
 
 
-class TestLayoutVerb(ImgbasedCliTestCase):
+class LayoutVerbTestCase(CliTestCase):
     def test_layout_init_from(self):
         assert "Image-0.0" in FakeLVM.list_lv_names()
         assert "Image-0.1" in FakeLVM.list_lv_names()
@@ -273,19 +273,19 @@ class TestLayoutVerb(ImgbasedCliTestCase):
         assert r.stdout.strip() == "Image-0.1"
 
 
-class TestBaseVerb(ImgbasedCliTestCase):
+class BaseVerbTestCase(CliTestCase):
     def test_base_add(self):
-        self.cli("--debug", "base", "--add", "Bar", "42", "0",
+        self.cli("--debug", "base", "--add", "Bar-42.0",
                  "--size", "4096")
         assert "Bar-42.0" in self.cli("layout", "--bases").stdout
 
     def test_base_latest(self):
-        self.cli("--debug", "base", "--add", "Bar", "42", "0",
+        self.cli("--debug", "base", "--add", "Bar-42.0",
                  "--size", "4096")
         assert "Bar-42.0" in self.cli("base", "--latest").stdout
 
     def test_base_remove(self):
-        self.cli("--debug", "base", "--add", "Bar", "42", "0",
+        self.cli("--debug", "base", "--add", "Bar-42.0",
                  "--size", "4096")
         assert "Bar-42.0" in self.cli("base", "--latest").stdout
 
@@ -293,7 +293,7 @@ class TestBaseVerb(ImgbasedCliTestCase):
         assert "Bar-42.0" not in self.cli("base", "--latest").stdout
 
     def test_base_of_layer(self):
-        self.cli("--debug", "base", "--add", "Image", "42", "0",
+        self.cli("--debug", "base", "--add", "Image-42.0",
                  "--size", "4096")
         assert "Image-42.0" in self.cli("base", "--latest").stdout
 
