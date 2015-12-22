@@ -38,19 +38,6 @@ Basically this is about having read-only bases and writable
 layers atop.
 
 
-%package kickstarts
-Summary:        Kickstarts to create some related images
-Group:          Applications/System
-BuildRequires:  pykickstart
-Requires:       lorax
-
-
-%description kickstarts
-This is a collection of kickstarts to create images to test
-the tool.
-And also provides other kickstarts for reference.
-
-
 %prep
 %setup -q
 
@@ -64,20 +51,12 @@ make %{?_smp_mflags}
 %make_install
 
 
-%check
-%{__make} check TESTS="tests/package/check_python.test"
-
-
 %files
 %doc README.md LICENSE
 %{_sbindir}/imgbase
 %{_datadir}/%{name}/hooks.d/
 %{python_sitelib}/%{name}/
 %{_mandir}/man8/imgbase.8*
-
-
-%files kickstarts
-%{_docdir}/%{name}
 
 
 %changelog

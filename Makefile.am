@@ -7,6 +7,9 @@ hooksdir = $(pkgdatadir)/hooks.d/
 pyimagebaseddir = $(pythondir)/$(PACKAGE_NAME)
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
 
+.PHONY: check check-code check-build
+.SILENT: check check-pyflakes check-pep8 check-nosetests check-build
+
 vpath $(srcdir)
 
 dist_sbin_SCRIPTS = \
@@ -26,14 +29,9 @@ EXTRA_DIST = \
   README.md \
   LICENSE \
   packaging/rpm/imgbased.spec \
-  $(TESTS) \
-  tests/package/common.sh \
   tests/*.py
 
-KS = $(wildcard data/ks/*.ks)
-
 dist_doc_DATA = \
-  $(KS) \
   docs/imgbase.asc \
   docs/imgbase.8.asc
 
@@ -61,13 +59,39 @@ rpm-build-deps:
 	mkdir -p $$(dirname $@)
 	asciidoc -d manpage -b docbook -o $@ $<
 
-check-build:
-	./autogen.sh
-	make dist
-	make doc
-	rpmbuild --nocheck -ta imgbase*.tar.xz
 
-check-code:
-	$(MAKE) -C tests check
+SRCFILES = $(shell find . -xdev -name \*.py)
 
-check: check-code check-builds
+check-build: $(SRCFILES)
+	@echo "[CHECK] rpmbuild"
+	./autogen.sh &> $@.log
+	make -s dist &>> $@.log
+	make -s doc &>> $@.log
+	rpmbuild --quiet --nocheck -ta imgbase*.tar.xz &>> $@.log
+
+
+export PYTHONPATH=src/
+
+check-pyflakes: $(SRCFILES)
+	@echo "[CHECK] pyflakes"
+	find . -xdev -name \*.py | xargs python3-pyflakes
+
+check-pep8: $(SRCFILES)
+	@echo "[CHECK] pep8"
+	find . -xdev -name \*.py | xargs python3-pep8
+
+check-pylint: $(SRCFILES)
+	@echo "[CHECK] pylint"
+	find . -xdev -name \*.py | xargs echo pylint
+
+check-nosetests: $(SRCFILES)
+	@echo "[CHECK] nosetests"
+	nosetests --no-byte-compile --with-xunit \
+		--with-coverage --cover-erase --cover-tests --cover-branches --cover-inclusive --cover-package=imgbased --cover-xml \
+		--with-doctest --doctest-tests &> $@.log
+
+
+check-code: check-pyflakes check-pep8 check-nosetests
+
+check: check-code check-build
+	@echo "PASS"

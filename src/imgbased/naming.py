@@ -207,12 +207,10 @@ class NvrLikeNaming(NamingScheme):
     ...
     RuntimeError: No valid layout found. Initialize if needed.
 
-    >>> names = ["Image-0.0", "Image-13.0", "Image-2.1", "Image-2.0",
-    ... "Image-2.2"]
+    >>> names = ["Image-2.1", "Image-2.0", "Image-2.2"]
     >>> layers = NvrLikeNaming(names)
-    >>> layers.layout()
-    'Image-0.0\\nImage-2.0\\n ├╼ Image-2.1\\n └╼ Image-2.2\\nImage-13.0'
-
+    >>> (layers.layout())
+    u'Image-2.0\\n \u251c\u257c Image-2.1\\n \u2514\u257c Image-2.2'
     """
 
     nvr_fmt = "%s-%d.%d"
