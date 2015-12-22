@@ -9,6 +9,7 @@ pylint
 python-pep8
 pyflakes
 python-nose
+python-mock
 python3-devel
 python3-six
 python3-pylint

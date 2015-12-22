@@ -64,11 +64,8 @@ SRCFILES = $(shell find . -xdev -name \*.py)
 
 check-build: $(SRCFILES)
 	@echo "[CHECK] rpmbuild"
-	./autogen.sh &> $@.log
-	make -s dist &>> $@.log
-	make -s doc &>> $@.log
-	rpmbuild --quiet --nocheck -ta imgbase*.tar.xz &>> $@.log
-
+	./autogen.sh
+	make -s rpm doc
 
 export PYTHONPATH=src/
 
@@ -88,7 +85,7 @@ check-nosetests: $(SRCFILES)
 	@echo "[CHECK] nosetests"
 	nosetests --no-byte-compile --with-xunit \
 		--with-coverage --cover-erase --cover-tests --cover-branches --cover-inclusive --cover-package=imgbased --cover-xml \
-		--with-doctest --doctest-tests &> $@.log
+		--with-doctest --doctest-tests
 
 
 check-code: check-pyflakes check-pep8 check-nosetests
