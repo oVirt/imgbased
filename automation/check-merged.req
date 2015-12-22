@@ -5,6 +5,7 @@ git
 asciidoc
 python-devel
 python-six
+python-coverage
 pylint
 python-pep8
 pyflakes

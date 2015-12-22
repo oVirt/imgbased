@@ -1,16 +1,13 @@
 # vim: et sts=2 sw=2
 
-set -x
+set -xe
 
 export ARTIFACTSDIR=$PWD/exported-artifacts
 export PATH=$PATH:/sbin:/usr/sbin
 
-prepare() {
-  git submodule update --init --recursive
-}
 
 build() {
-  ./autogen.sh && ./configure
+  ./autogen.sh
   make rpm
 
   mkdir "$ARTIFACTSDIR"
@@ -20,5 +17,4 @@ build() {
   ls -shal "$ARTIFACTSDIR/" || :
 }
 
-prepare
 build
