@@ -52,6 +52,7 @@ THEDIR=`pwd`
 
   automake --add-missing
   autoconf
+  ./configure "$@"
 )
 
 if test "x$OBJ_DIR" != x; then

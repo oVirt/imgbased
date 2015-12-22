@@ -21,6 +21,8 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 import logging
+import os
+import subprocess
 
 
 log = logging.getLogger(__package__)
@@ -63,7 +65,6 @@ class Hooks(object):
     """
 
     p = None
-    hooksdir = "/usr/lib/imgbased/hooks.d/"
     hooks = None
     _argspecs = None
 
@@ -117,5 +118,19 @@ class Hooks(object):
         for cb in all_cbs:
             log.debug("Triggering: %s (%s, %s)" % (cb, self.context, args))
             cb(self.context, *args)
+
+    def add_filesystem_emitter(self, path):
+        """Also call scripts on the fs if signals get emitted
+        """
+        def _trigger_fs(app, name, *args):
+            """Trigger internal/pythonic hooks
+            """
+            if not os.path.exists(path):
+                return
+            for handler in os.listdir(path):
+                script = os.path.join(path, handler)
+                log.debug("Triggering: %s (%s %s)" % (script, name, args))
+                subprocess.check_call([script, name] + list(args))
+        self.create(None, _trigger_fs)
 
 # vim: sw=4 et sts=4:

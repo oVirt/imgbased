@@ -4,7 +4,7 @@ import os
 import sys
 import logging
 
-from ..utils import mounted, ExternalBinary
+from .. import utils
 
 
 log = logging.getLogger(__package__)
@@ -64,8 +64,8 @@ def diff(imgbase, left, right, mode="tree"):
     imgl = imgbase.image_from_name(left)
     imgr = imgbase.image_from_name(right)
 
-    with mounted(imgl.path, target="/mnt/%s" % left) as mountl, \
-            mounted(imgr.path, target="/mnt/%s" % right) as mountr:
+    with utils.mounted(imgl.path, target="/mnt/%s" % left) as mountl, \
+            utils.mounted(imgr.path, target="/mnt/%s" % right) as mountr:
         return path_diff(mountl.target, mountr.target, mode,
                          left, right)
 
@@ -79,8 +79,8 @@ def path_diff(left, right, mode, left_alias=None, right_alias=None):
             raise RuntimeError("Path does not exist: %r" % p)
 
     if mode == "tree":
-        l = ExternalBinary().find(["-ls"], cwd=left).splitlines(True)
-        r = ExternalBinary().find(["-ls"], cwd=right).splitlines(True)
+        l = utils.findls(left)
+        r = utils.findls(right)
         udiff = difflib.unified_diff(r, l, fromfile=left_alias,
                                      tofile=right_alias, n=0)
         lines = (l for l in udiff if not l.startswith("@"))

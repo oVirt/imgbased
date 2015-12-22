@@ -1,7 +1,7 @@
 
-import subprocess
 import logging
-from ..utils import mounted
+
+from .. import utils
 
 
 log = logging.getLogger(__package__)
@@ -40,12 +40,11 @@ def nspawn(imgbase, layer, cmd=""):
 
     cmds = [cmd] if cmd else []
     mname = layer.replace(".", "-")
-    with mounted(img.lvm.path) as mnt:
-        cmd = ["systemd-nspawn",
-               "-n",
-               "-D", mnt.target,
-               "--machine", mname,
-               "--read-only"] + cmds
-        subprocess.call(cmd)
+    with utils.mounted(img.lvm.path) as mnt:
+        utils.nspawn("-n",
+                     "-D", mnt.target,
+                     "--machine", mname,
+                     "--read-only",
+                     *cmds)
 
 # vim: sw=4 et sts=4

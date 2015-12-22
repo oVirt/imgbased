@@ -46,6 +46,10 @@ def request_url(url):
     return urlopen(url).read().decode()
 
 
+def grub2_set_default(key):
+    ExternalBinary().grub2_set_default([key])
+
+
 def findmnt(options, path):
     findmnt = ExternalBinary().findmnt
     try:
@@ -174,6 +178,28 @@ def nspawn(*args, **kwargs):
     return ExternalBinary().nspawn(list(args), **kwargs)
 
 
+def source_of_mountpoint(path):
+    return ExternalBinary().findmnt(["--noheadings", "-o", "SOURCE", path])
+
+
+class Ext4():
+    def mkfs(self, path, debug=False):
+        cmd = ["mkfs.ext4", "-c", "-E", "discard", path]
+        if not debug:
+            cmd.append("-q")
+        log.debug("Running: %s" % cmd)
+        subprocess.check_call(cmd)
+
+    @staticmethod
+    def randomize_uuid(path):
+        ExternalBinary().tune2fs(["-U", "random",
+                                  path])
+
+
+def findls(path):
+    return ExternalBinary().find(["-ls"], cwd=path).splitlines(True)
+
+
 class ExternalBinary(object):
     dry = False
 
@@ -235,6 +261,16 @@ class ExternalBinary(object):
 
     def systemctl(self, args, **kwargs):
         return self.call(["systemctl"] + args, **kwargs)
+
+
+class LvmCLI():
+    lvs = ExternalBinary().lvs
+    vgs = ExternalBinary().vgs
+    lvcreate = ExternalBinary().lvcreate
+    lvchange = ExternalBinary().lvchange
+    lvremove = ExternalBinary().lvremove
+    vgcreate = ExternalBinary().vgcreate
+    vgchange = ExternalBinary().vgchange
 
 
 class File():

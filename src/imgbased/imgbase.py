@@ -20,12 +20,11 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import subprocess
 import os
 import re
 from .hooks import Hooks
-from . import naming
-from .utils import ExternalBinary, mounted, find_mount_source, \
+from . import naming, utils
+from .utils import mounted, find_mount_source, \
     Rsync, augtool
 from .lvm import LVM
 
@@ -44,6 +43,7 @@ class ImageLayers(object):
     dry = False
 
     hooks = None
+    hooksdir = "/usr/lib/imgbased/hooks.d/"
 
     stream_name = "Image"
     vg_tag = "imgbased:vg"
@@ -52,8 +52,6 @@ class ImageLayers(object):
     lv_base_tag = "imgbased:base"
     lv_layer_tag = "imgbased:layer"
 
-    run = None
-
     naming = None
 
     def __init__(self):
@@ -61,16 +59,7 @@ class ImageLayers(object):
 
         # A default wildcard hook is to also trigger
         # filesystem based hooks
-        def _trigger_fs(app, name, *args):
-            """Trigger internal/pythonic hooks
-            """
-            if not os.path.exists(self.hooksdir):
-                return
-            for handler in os.listdir(self.hooksdir):
-                script = os.path.join(self.hooksdir, handler)
-                log.debug("Triggering: %s (%s %s)" % (script, name, args))
-                self.context.run.call([script, name] + list(args))
-        self.hooks.create(None, _trigger_fs)
+        self.hooks.add_filesystem_emitter(self.hooksdir)
 
         #
         # Add availabel hooks
@@ -92,7 +81,6 @@ class ImageLayers(object):
         self.hooks.create("layer-removed",
                           ("lv_fullname",))
 
-        self.run = ExternalBinary()
         # FIXME just pass tagged LVs
         self.naming = naming.NvrLikeNaming(datasource=LVM.list_lv_names)
 
@@ -168,8 +156,7 @@ class ImageLayers(object):
             raise RuntimeError("Failed to create a new layer")
 
         # Assign a new filesystem UUID and label
-        self.run.tune2fs(["-U", "random",
-                          new_lv.path])
+        utils.Ext4.randomize_uuid(new_lv.path)
 
         # Handle the previous layer
         # FIXME do a correct check if it's a base
@@ -296,13 +283,8 @@ class ImageLayers(object):
 
         with new_base_lv.unprotected():
             log.info("Creating new filesystem on base")
-            mkfscmd = ["mkfs.ext4", "-c", "-E", "discard", new_base_lv.path]
-            if not self.debug:
-                mkfscmd.append("-q")
-            log.debug("Running: %s" % mkfscmd)
             if not self.dry:
-                pass
-                subprocess.check_call(mkfscmd)
+                utils.Ext4.mkfs(new_base_lv.path, self.debug)
 
             log.info("Writing tree to base")
             with mounted(new_base_lv.path) as mount:
@@ -340,7 +322,7 @@ class ImageLayers(object):
     def current_layer(self):
         path = "/"
         log.debug("Fetching image for '%s'" % path)
-        lv = self.run.findmnt(["--noheadings", "-o", "SOURCE", path])
+        lv = utils.source_of_mountpoint(path)
         log.debug("Found '%s'" % lv)
         try:
             return self.image_from_path(lv)

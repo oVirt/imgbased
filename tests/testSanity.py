@@ -222,7 +222,8 @@ class ImgbaseTestCase(unittest.TestCase):
 class ImgbasedCliTestCase(ImgbaseTestCase):
     def cli(self, *args):
         debug("$ imgbased %s" % str(args))
-        with patch("imgbased.imgbase.ExternalBinary"), \
+        with \
+                patch("imgbased.utils.subprocess"), \
                 patch("imgbased.lvm.LVM", FakeLVM), \
                 patch("imgbased.imgbase.LVM", FakeLVM), \
                 patch("imgbased.imgbase.Hooks"), \

@@ -22,14 +22,10 @@
 #
 import logging
 import os
-from .utils import File, ExternalBinary
+from .utils import File, grub2_set_default
 
 
 log = logging.getLogger(__package__)
-
-
-def grub2_set_default(key):
-    ExternalBinary().grub2_set_default([key])
 
 
 class Bootloader(object):

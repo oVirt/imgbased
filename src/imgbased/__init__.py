@@ -25,7 +25,7 @@ import sys
 import logging
 import argparse
 from . import config
-from .imgbase import ImageLayers, ExternalBinary
+from .imgbase import ImageLayers
 from .hooks import Hooks
 from . import plugins
 
@@ -58,7 +58,6 @@ def CliApplication(args=None):
     subparsers = parser.add_subparsers(title="Sub-commands", dest="command")
 
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--dry", action="store_true")
     parser.add_argument("--experimental", action="store_true",
                         help="Enable experimental functionality")
     parser.add_argument("--stream", default="Image")
@@ -75,10 +74,7 @@ def CliApplication(args=None):
 #                        "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
 
     app.imgbase.debug = args.debug
-    app.imgbase.dry = args.dry
     app.imgbase.stream = args.stream
-
-    ExternalBinary.dry = args.dry
 
     #
     # Now let the plugins check if they need to run something

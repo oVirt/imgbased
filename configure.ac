@@ -1,8 +1,6 @@
 AC_INIT([imgbased], [0.3], [fabiand@fedoraproject.org])
 
 AC_PREFIX_DEFAULT([/usr])
-AC_CONFIG_AUX_DIR([build-aux])
-AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_PROG_AWK
 
 AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules tar-pax no-dist-gzip dist-xz subdir-objects])

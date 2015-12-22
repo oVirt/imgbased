@@ -22,20 +22,20 @@
 #
 import shlex
 import logging
-from .utils import ExternalBinary
+from .utils import LvmCLI
 
 
 log = logging.getLogger(__package__)
 
 
 class LVM(object):
-    _lvs = ExternalBinary().lvs
-    _vgs = ExternalBinary().vgs
-    _lvcreate = ExternalBinary().lvcreate
-    _lvchange = ExternalBinary().lvchange
-    _lvremove = ExternalBinary().lvremove
-    _vgcreate = ExternalBinary().vgcreate
-    _vgchange = ExternalBinary().vgchange
+    _lvs = LvmCLI.lvs
+    _vgs = LvmCLI.vgs
+    _lvcreate = LvmCLI.lvcreate
+    _lvchange = LvmCLI.lvchange
+    _lvremove = LvmCLI.lvremove
+    _vgcreate = LvmCLI.vgcreate
+    _vgchange = LvmCLI.vgchange
 
     @staticmethod
     def list_lv_names():
