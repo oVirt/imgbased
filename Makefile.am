@@ -3,11 +3,6 @@ CLEANFILES=
 
 SHELL := /bin/bash
 
-TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
-                  $(top_srcdir)/build-aux/tap-driver.sh
-TESTS = tests/package/check_python.test tests/package/check_packaging.test
-
-
 hooksdir = $(pkgdatadir)/hooks.d/
 pyimagebaseddir = $(pythondir)/$(PACKAGE_NAME)
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
@@ -66,5 +61,13 @@ rpm-build-deps:
 	mkdir -p $$(dirname $@)
 	asciidoc -d manpage -b docbook -o $@ $<
 
-check:
+check-build:
+	./autogen.sh
+	make dist
+	make doc
+	rpmbuild --nocheck -ta imgbase*.tar.xz
+
+check-code:
 	$(MAKE) -C tests check
+
+check: check-code check-builds
