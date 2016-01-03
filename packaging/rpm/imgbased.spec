@@ -60,7 +60,6 @@ make %{?_smp_mflags}
 %{_datadir}/%{name}/hooks.d/
 %{python_sitelib}/%{name}/
 %{_mandir}/man8/imgbase.8*
-%{_pkgdocdir}/
 
 %changelog
 * Wed Apr 02 2014 Fabian Deutsch <fabiand@fedoraproject.org> - 0.1-0.1
