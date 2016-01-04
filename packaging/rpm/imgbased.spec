@@ -55,12 +55,12 @@ make %{?_smp_mflags}
 
 
 %files
-%doc %{_pkgdocdir}/*.asc
 %doc README.md LICENSE
 %{_sbindir}/imgbase
 %{_datadir}/%{name}/hooks.d/
 %{python_sitelib}/%{name}/
 %{_mandir}/man8/imgbase.8*
+/%{_pkgdocdir}/*.asc
 
 
 %changelog
