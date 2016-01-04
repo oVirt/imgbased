@@ -87,8 +87,6 @@ def format_to_pattern(fmt):
     """Take a format string and make a pattern from it
     https://docs.python.org/2/library/re.html#simulating-scanf
 
-    >>> import re
-
     >>> fmt = "Bar-%d"
     >>> pat = format_to_pattern(fmt)
     >>> pat
