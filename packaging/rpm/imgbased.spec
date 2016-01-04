@@ -60,7 +60,7 @@ make %{?_smp_mflags}
 %{_datadir}/%{name}/hooks.d/
 %{python_sitelib}/%{name}/
 %{_mandir}/man8/imgbase.8*
-/%{_pkgdocdir}/*.asc
+/%{_docdir}/%{name}/*.asc
 
 
 %changelog
