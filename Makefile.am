@@ -71,11 +71,11 @@ export PYTHONPATH=src/
 
 check-pyflakes: $(SRCFILES)
 	@echo "[CHECK] pyflakes"
-	find . -xdev -name \*.py | xargs python3-pyflakes
+	find . -xdev -name \*.py | xargs pyflakes
 
 check-pep8: $(SRCFILES)
 	@echo "[CHECK] pep8"
-	find . -xdev -name \*.py | xargs python3-pep8
+	find . -xdev -name \*.py | xargs pep8
 
 check-pylint: $(SRCFILES)
 	@echo "[CHECK] pylint"
