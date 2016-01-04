@@ -22,10 +22,9 @@ BuildRequires:       python-devel python-six
 BuildRequires:       pylint python-pep8 pyflakes python-nose
 
 %if 0%{?is_el7}
-BuildRequires:       systemd-python
 BuildRequires:       python-six
 %else
-BuildRequires:       systemd-python3
+Recommends:          systemd-python3
 BuildRequires:       python3-six
 %endif
 
