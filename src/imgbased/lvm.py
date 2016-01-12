@@ -156,7 +156,7 @@ class LVM(object):
             LVM._lvcreate(["--snapshot",
                            "--name", new_name,
                            self.lvm_name])
-            return LVM.from_lv_name(self.vg_name, new_name)
+            return LVM.LV.from_lv_name(self.vg_name, new_name)
 
         def remove(self, force=False):
             cmd = ["-f"] if force else []
