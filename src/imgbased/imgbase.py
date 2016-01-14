@@ -92,7 +92,7 @@ class ImageLayers(object):
         return LVM.LV.from_lv_name(self._vg().vg_name, lv_name)
 
     def _thinpool(self):
-        return LVM.LV.from_tag(self.thinpool_tag)
+        return LVM.Thinpool.from_tag(self.thinpool_tag)
 
     def _lvm_from_layer(self, layer):
         return self.lv(layer.nvr)

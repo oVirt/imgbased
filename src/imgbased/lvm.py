@@ -97,9 +97,9 @@ class LVM(object):
         def path(self):
             return LVM._lvs(["--noheadings", "-olv_path", self.lvm_name])
 
-        @staticmethod
-        def from_lv_name(vg_name, lv_name):
-            lv = LVM.LV()
+        @classmethod
+        def from_lv_name(cls, vg_name, lv_name):
+            lv = cls()
             lv.vg_name = vg_name
             lv.lv_name = lv_name
             return lv
@@ -107,34 +107,34 @@ class LVM(object):
         def __repr__(self):
             return "<LV '%s' />" % self.lvm_name
 
-        @staticmethod
-        def try_find(mixed):
+        @classmethod
+        def try_find(cls, mixed):
             log.debug("Trying to find LV for: %s" % mixed)
             assert mixed
             if mixed.startswith("/dev"):
-                return LVM.LV.from_path(mixed)
+                return cls.from_path(mixed)
             elif "/" in mixed:
-                return LVM.LV.from_lvm_name(mixed)
+                return cls.from_lvm_name(mixed)
             elif "@" in mixed:
-                return LVM.LV.from_tag(mixed)
+                return cls.from_tag(mixed)
             else:
                 raise RuntimeError("Can't find LV for: %s" % mixed)
 
-        @staticmethod
-        def find_by_tag(tag):
+        @classmethod
+        def find_by_tag(cls, tag):
             lvs = LVM._vgs(["--noheadings", "@%s" % tag,
                             "-o", "lv_full_name"])
-            return [LVM.LV.from_lvm_name(lv.strip())
+            return [cls.from_lvm_name(lv.strip())
                     for lv in lvs.splitlines()]
 
-        @staticmethod
-        def from_tag(tag):
-            lvs = LVM.LV.find_by_tag(tag)
+        @classmethod
+        def from_tag(cls, tag):
+            lvs = cls.find_by_tag(tag)
             assert len(lvs) == 1
             return lvs[0]
 
-        @staticmethod
-        def from_lvm_name(lvm_name):
+        @classmethod
+        def from_lvm_name(cls, lvm_name):
             """Easy way to get an opbject for the lvm name
 
             >>> lv = LVM.LV.from_lvm_name("HostVG/Foo")
@@ -143,10 +143,10 @@ class LVM(object):
             >>> lv.lv_name
             'Foo'
             """
-            return LVM.LV.from_lv_name(*lvm_name.split("/"))
+            return cls.from_lv_name(*lvm_name.split("/"))
 
-        @staticmethod
-        def from_path(path):
+        @classmethod
+        def from_path(cls, path):
             """Get an object for the path
             """
             data = LVM._lvs(["--noheadings", "-ovg_name,lv_name", path])
@@ -154,7 +154,7 @@ class LVM(object):
             assert data, "Failed to find LV for path: %s" % path
             log.debug("Found LV for path %s: %s" % (path, data))
             assert len(data.splitlines()) == 1
-            return LVM.LV.from_lv_name(*shlex.split(data))
+            return cls.from_lv_name(*shlex.split(data))
 
         def create_snapshot(self, new_name):
             LVM._lvcreate(["--snapshot",
