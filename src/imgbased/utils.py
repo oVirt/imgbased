@@ -327,9 +327,12 @@ class Fstab(File):
         _index = None
         source = None
         target = None
+        fs = None
+        options = []
 
         def __repr__(self):
-            return "<Entry {self._index} {self.source} {self.target} />"\
+            return ("<Entry {self._index} {self.source} {self.target} "
+                    "{self.fs} {self.options} />")\
                 .format(self=self)
 
     def _read(self):
@@ -340,8 +343,9 @@ class Fstab(File):
         >>> fstab = Fstab(None)
         >>> fstab._read = lambda: Fstab._testdata
         >>> fstab.parse()
-        [<Entry / <root> / />, <Entry /boot <boot> /boot />, \
-<Entry swap <swap> swap />]
+        [<Entry / <root> / ext4 ['defaults', 'discard'] />, \
+<Entry /boot <boot> /boot ext4 ['defaults'] />, \
+<Entry swap <swap> swap swap ['defaults'] />]
         """
         entries = []
         data = self._read()
@@ -353,6 +357,8 @@ class Fstab(File):
             entry._index = target  # target is unique
             entry.source = source
             entry.target = target
+            entry.fs = fs
+            entry.options = options.split(",")
             entries.append(entry)
 
         return sorted(entries, key=lambda e: e._index)
@@ -418,6 +424,8 @@ class Fstab(File):
             if tokens[1] == entry._index:
                 tokens[0] = entry.source
                 tokens[1] = entry.target
+                tokens[2] = entry.fs
+                tokens[3] = ",".join(entry.options)
                 newdata.append(" ".join(tokens))
             else:
                 newdata.append(line)
@@ -428,11 +436,11 @@ class Fstab(File):
         >>> Fstab._read = lambda x: Fstab._testdata
         >>> fstab = Fstab(None)
         >>> sorted(fstab.by_source().items())
-        [('<boot>', <Entry /boot <boot> /boot />), \
-('<root>', <Entry / <root> / />), \
-('<swap>', <Entry swap <swap> swap />)]
+        [('<boot>', <Entry /boot <boot> /boot ext4 ['defaults'] />), \
+('<root>', <Entry / <root> / ext4 ['defaults', 'discard'] />), \
+('<swap>', <Entry swap <swap> swap swap ['defaults'] />)]
         >>> Fstab(None).by_source('<root>')
-        <Entry / <root> / />
+        <Entry / <root> / ext4 ['defaults', 'discard'] />
         """
         sources = dict((e.source, e) for e in self.parse())
         if source:
@@ -445,11 +453,11 @@ class Fstab(File):
         >>> Fstab._read = lambda x: Fstab._testdata
         >>> fstab = Fstab(None)
         >>> sorted(fstab.by_target().items())
-        [('/', <Entry / <root> / />), \
-('/boot', <Entry /boot <boot> /boot />), \
-('swap', <Entry swap <swap> swap />)]
+        [('/', <Entry / <root> / ext4 ['defaults', 'discard'] />), \
+('/boot', <Entry /boot <boot> /boot ext4 ['defaults'] />), \
+('swap', <Entry swap <swap> swap swap ['defaults'] />)]
         >>> Fstab(None).by_target('/')
-        <Entry / <root> / />
+        <Entry / <root> / ext4 ['defaults', 'discard'] />
         """
         targets = dict((e.target, e) for e in self.parse())
         if target:
