@@ -1,7 +1,8 @@
 
 import glob
 import logging
-from ..utils import size_of_fstree, mounted
+import os
+from ..utils import size_of_fstree, mounted, Ext4, Rsync
 
 log = logging.getLogger(__package__)
 
@@ -57,6 +58,28 @@ class LiveimgExtractor():
         remainder = scaled % 512
         return int(scaled + (512 - remainder))
 
+    def add_base_with_tree(self, sourcetree, size, name, version=None,
+                           release=None, lvs=None):
+        new_base_lv = self.imgbase.add_base(size, name,
+                                            version, release, lvs)
+
+        if not os.path.exists(sourcetree):
+            raise RuntimeError("Sourcetree does not exist: %s" % sourcetree)
+
+        with new_base_lv.unprotected():
+            log.info("Creating new filesystem on base")
+            if not self.dry:
+                Ext4.mkfs(new_base_lv.path, self.debug)
+
+            log.info("Writing tree to base")
+            with mounted(new_base_lv.path) as mount:
+                dst = mount.target + "/"
+                rsync = Rsync()
+                rsync.sync(sourcetree, dst)
+                log.debug("Trying to copy prev fstab")
+
+        return new_base_lv
+
     def extract(self, liveimgfile, vendorid, version, release):
         new_base = None
         log.info("Extracting image '%s'" % liveimgfile)
@@ -68,7 +91,7 @@ class LiveimgExtractor():
                 size = self._recommend_size_for_tree(rootfs.target, 3.0)
                 log.debug("Recommeneded base size: %s" % size)
                 log.info("Starting base creation")
-                add_tree = self.imgbase.add_base_with_tree
+                add_tree = self.add_base_with_tree
                 new_base = add_tree(rootfs.target,
                                     "%sB" % size,
                                     name=vendorid,

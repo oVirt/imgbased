@@ -24,8 +24,8 @@ import os
 import re
 from .hooks import Hooks
 from . import naming, utils
-from .utils import mounted, find_mount_source, \
-    Rsync, augtool
+from .utils import find_mount_source, \
+    augtool
 from .lvm import LVM
 
 import logging
@@ -274,30 +274,6 @@ class ImageLayers(object):
         lv.remove()
 
         self.hooks.emit("layer-removed", lv)
-
-    def add_base_with_tree(self, sourcetree, size, name, version=None,
-                           release=None, lvs=None):
-        new_base_lv = self.add_base(size, name, version, release, lvs)
-
-        if not os.path.exists(sourcetree):
-            raise RuntimeError("Sourcetree does not exist: %s" % sourcetree)
-
-        with new_base_lv.unprotected():
-            log.info("Creating new filesystem on base")
-            if not self.dry:
-                utils.Ext4.mkfs(new_base_lv.path, self.debug)
-
-            log.info("Writing tree to base")
-            with mounted(new_base_lv.path) as mount:
-                dst = mount.target + "/"
-                rsync = Rsync()
-                if not self.dry:
-                    rsync.sync(sourcetree, dst)
-                    log.debug("Trying to copy prev fstab")
-
-                self.hooks.emit("new-base-with-tree-added", dst)
-
-        return new_base_lv
 
     def free_space(self, units="m"):
         """Free space in the thinpool for bases and layers
