@@ -147,9 +147,10 @@ class LVM(object):
             """Get an object for the path
             """
             data = LVM._lvs(["--noheadings", "-ovg_name,lv_name", path])
+            data = data.strip()
             assert data, "Failed to find LV for path: %s" % path
             log.debug("Found LV for path %s: %s" % (path, data))
-            assert len(data.splitlines().strip()) == 1
+            assert len(data.splitlines()) == 1
             return LVM.LV.from_lv_name(*shlex.split(data))
 
         def create_snapshot(self, new_name):
