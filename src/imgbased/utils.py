@@ -541,7 +541,9 @@ class RpmPackageDb(PackageDb):
 
 
 class systemctl():
-    _systemctl = lambda *a: ExternalBinary().systemctl(list(a))
+    @staticmethod
+    def _systemctl(*a):
+        ExternalBinary().systemctl(list(a))
 
     @staticmethod
     def start(*units):
