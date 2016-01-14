@@ -579,7 +579,6 @@ class Rsync():
 
     def sync(self, sourcetree, dst):
         assert os.path.isdir(sourcetree)
-        assert os.path.isdir(dst)
 
         cmd = ["ionice", "rsync"]
         cmd += ["-pogAXtlHrx"]

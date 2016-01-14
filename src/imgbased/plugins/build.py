@@ -49,9 +49,7 @@ def postprocess(app):
     log.info("Launching image post-processing")
 
     factorize("/etc")
-    # ostree is using /usr/etc
-    os.symlink("/usr/share/factory/etc", "/usr/etc")
-
+    # FIXME Do we need ostree compat (-> /usr/etc)?
     factorize("/var")
 
 # vim: sw=4 et sts=4
