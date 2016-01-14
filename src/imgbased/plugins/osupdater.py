@@ -83,25 +83,23 @@ def on_register_checks(app, register):
 
 def on_new_layer(imgbase, previous_lv, new_lv):
 
-    new_layer = imgbase.naming.image_from_name(new_lv.lv_name)
-    previous_layer = imgbase.naming.layer_before(new_layer)
-    log.debug("Got: %s and %s" % (new_layer, previous_layer))
+    log.debug("Got: %s and %s" % (new_lv, previous_lv))
 
     try:
-        migrate_etc(imgbase, new_layer, previous_layer)
+        migrate_etc(imgbase, new_lv, previous_lv)
     except:
         log.error("Failed to migrate etc", exc_info=True)
 
     try:
-        adjust_mounts_and_boot(imgbase, new_layer, previous_layer)
+        adjust_mounts_and_boot(imgbase, new_lv, previous_lv)
     except:
         # FIXME Handle and rollback
         raise
 
 
-def migrate_etc(imgbase, new_layer, previous_layer):
-    with mounted(new_layer.lvm.path) as new_fs,\
-            mounted(previous_layer.lvm.path) as old_fs:
+def migrate_etc(imgbase, new_lv, previous_lv):
+    with mounted(new_lv.path) as new_fs,\
+            mounted(previous_lv.path) as old_fs:
         old_etc = old_fs.path("/etc")
         new_etc = new_fs.path("/etc")
 
@@ -155,7 +153,7 @@ def migrate_etc(imgbase, new_layer, previous_layer):
         rsync.sync(old_fs.path("/root/"), new_fs.path("/root"))
 
 
-def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
+def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
     log.info("Inspecting if the layer contains OS data")
 
     """Add a new BLS based boot entry and update the layers /etc/fstab
@@ -164,11 +162,10 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
     """
     log.info("Adjusting mount and boot related points")
 
-    new_lv = new_layer.lvm
     new_lvm_name = new_lv.lvm_name
 
     oldrootsource = None
-    with mounted(previous_layer.lvm.path) as oldrootmnt:
+    with mounted(previous_lv.path) as oldrootmnt:
         oldfstab = Fstab("%s/etc/fstab" % oldrootmnt.target)
         if not oldfstab.exists():
             log.warn("No old fstab found, skipping os-upgrade")
@@ -244,7 +241,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
 
             pkgfiles = pkgs.get_files("kernel")
             if not pkgfiles:
-                log.info("No kernel found on %s" % new_layer)
+                log.info("No kernel found on %s" % new_lv)
                 return
 
             kfiles = ["%s/%s" % (newroot, f)
@@ -327,7 +324,7 @@ def adjust_mounts_and_boot(imgbase, new_layer, previous_layer):
         add_bootentry(newroot.target)
 
     imgbase.hooks.emit("os-upgraded",
-                       previous_layer.lvm.lv_name,
+                       previous_lv.lv_name,
                        new_lvm_name)
 
 

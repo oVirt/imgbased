@@ -25,8 +25,6 @@ import logging
 
 log = logging.getLogger(__package__)
 
-from .utils import memoize
-
 
 class Layer(object):
     nvr_fmt = "%s-%s.%s"
@@ -38,11 +36,6 @@ class Layer(object):
     @property
     def nvr(self):
         return self.nvr_fmt % (self.name, self.version, self.release)
-
-    @property
-    @memoize
-    def path(self):
-        return self.lvm.path
 
     @property
     def version_release(self):

@@ -53,7 +53,8 @@ class FakeLVM(imgbased.lvm.LVM):
 
         @staticmethod
         def from_vg_name(vg_name):
-            debug("Available VGs: %s" % FakeLVM._vgs)
+            debug("Looking for %r in Available VGs: %s" %
+                  (vg_name, FakeLVM._vgs))
             return [vg for vg in FakeLVM._vgs
                     if vg.vg_name == vg_name].pop()
 

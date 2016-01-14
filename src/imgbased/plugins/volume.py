@@ -122,7 +122,7 @@ WantedBy=local-fs.target
 
         volname = self._volname(where)
         self.detach(where)
-        LVM.LV.from_lv_name(self.imgbase._vg(), volname).remove()
+        self.imgbase.lv(volname).remove()
 
         log.info("Volume for '%s' was removed successful" % where)
 
@@ -130,7 +130,7 @@ WantedBy=local-fs.target
         assert self.is_volume(where), "Path is no volume: %s" % where
 
         volname = self._volname(where)
-        what = "/dev/%s/%s" % (self.imgbase._vg(), volname)
+        what = self.imgbase.lv(volname).path
         f = File(self._mountfilename(where, "mount"))
         f.write(self.mountfile_tmpl.format(what=what,
                                            where=where,

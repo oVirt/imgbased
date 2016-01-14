@@ -86,11 +86,16 @@ class ImageLayers(object):
     def _vg(self):
         return LVM.VG.from_tag(self.vg_tag)
 
+    def lv(self, lv_name):
+        """Return an LV for an lv_name in the imgbase VG context
+        """
+        return LVM.LV.from_lv_name(self._vg().vg_name, lv_name)
+
     def _thinpool(self):
         return LVM.LV.from_tag(self.thinpool_tag)
 
     def _lvm_from_layer(self, layer):
-        return LVM.LV.from_lv_name(self._vg().vg_name, layer.nvr)
+        return self.lv(layer.nvr)
 
     def image_from_name(self, name):
         return self.naming.image_from_name(name)
@@ -102,7 +107,7 @@ class ImageLayers(object):
 
     def image_from_lvm_name(self, lvm_name):
         lv = LVM.LV.from_lvm_name(lvm_name)
-        assert lv.vg_name == self._vg()
+        assert lv.vg_name == self._vg().vg_name
         return self.image_from_name(lv.lv_name)
 
     def layout(self):
@@ -126,12 +131,12 @@ class ImageLayers(object):
         """
         log.info("Adding a new layer after %s" % previous_layer)
 
-        if type(previous_layer) in [str]:
+        if type(previous_layer) in [str, unicode, bytes]:
             previous_layer = self.naming.image_from_name(previous_layer)
 
-        log.debug("Basing new layer on previous: %s" % previous_layer)
+        log.debug("Basing new layer on previous: %r" % previous_layer)
         new_layer = self.naming.suggest_next_layer(previous_layer)
-        log.info("New layer will be: %s" % new_layer)
+        log.info("New layer will be: %r" % new_layer)
 
         prev_lv = self._lvm_from_layer(previous_layer)
 
@@ -235,7 +240,7 @@ class ImageLayers(object):
 
     def remove_base(self, name, with_children=True):
         base = self.image_from_name(name)
-        log.debug("Removal candidate: %s" % repr(base))
+        log.debug("Removal candidate base: %r" % base)
 
         base_lv = self._lvm_from_layer(base)
         self.hooks.emit("pre-base-removed", base_lv)
@@ -254,7 +259,7 @@ class ImageLayers(object):
     def remove_layer(self, name):
         layer = self.image_from_name(name)
         lv = self._lvm_from_layer(layer)
-        log.debug("Removal candidate: %s" % layer)
+        log.debug("Removal candidate layer: %r" % layer)
 
         self.hooks.emit("pre-layer-removed", lv)
 
@@ -271,7 +276,7 @@ class ImageLayers(object):
         """Free space in the thinpool for bases and layers
         """
         log.debug("Calculating free space in thinpool %s" % self._thinpool())
-        lvm_name = LVM.LV.from_lv_name(self._vg(), self._thinpool()).lvm_name
+        lvm_name = self._thinpool().lvm_name
         args = ["--noheadings", "--nosuffix", "--units", units,
                 "--options", "data_percent,lv_size",
                 lvm_name]
@@ -303,7 +308,7 @@ class ImageLayers(object):
         base = None
         args = ["--noheadings", "--options", "origin"]
         get_origin = lambda l: LVM._lvs(args +
-                                        ["%s/%s" % (self._vg(), l)])
+                                        ["%s/%s" % (self._vg().vg_name, l)])
 
         while base is None and layer is not None:
             layer = get_origin(layer)

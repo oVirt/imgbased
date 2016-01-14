@@ -47,6 +47,9 @@ class LVM(object):
     class VG(object):
         vg_name = None
 
+        def __init__(self, vg_name):
+            self.vg_name = vg_name
+
         def __repr__(self):
             return "<VG '%s' />" % self.vg_name
 
@@ -60,7 +63,7 @@ class LVM(object):
         def find_by_tag(tag):
             vgs = LVM._vgs(["--noheadings", "--select",
                             "vg_tags = %s" % tag, "-o", "vg_name"])
-            return vgs.splitlines()
+            return [LVM.VG(vg_name.strip()) for vg_name in vgs.splitlines()]
 
         @staticmethod
         def from_tag(tag):
