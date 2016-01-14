@@ -24,8 +24,7 @@ import os
 import re
 from .hooks import Hooks
 from . import naming, utils
-from .utils import find_mount_source, \
-    augtool
+from .utils import find_mount_source
 from .lvm import LVM
 
 import logging
@@ -195,13 +194,6 @@ class ImageLayers(object):
         existing_pool = existing_lv.thinpool()
         log.debug("Tagging existing pool: %s" % existing_pool)
         existing_pool.addtag(self.thinpool_tag)
-
-        # FIXME this should go into a plugin
-        log.debug("Setting autoextend for thin pool, to prevent starvation")
-        augtool("set", "-s",
-                "/files/etc/lvm/lvm.conf/activation/dict/" +
-                "thin_pool_autoextend_threshold/int",
-                "80")
 
         version = 0  # int(datetime.date.today().strftime("%Y%m%d"))
         initial_base = self.naming.suggest_next_base(self.stream_name,

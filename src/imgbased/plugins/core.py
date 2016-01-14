@@ -22,6 +22,7 @@
 #
 import argparse
 import logging
+from ..utils import augtool
 
 
 log = logging.getLogger(__package__)
@@ -106,8 +107,10 @@ def add_argparse(app, parser, subparsers):
     #
     # check
     #
-    subparsers.add_parser("check",
-                          help="Perform some runtime checks")
+    check_parser = subparsers.add_parser("check",
+                                         help="Perform some runtime checks")
+    check_parser.add_argument("--fix", action="store_true",
+                              help="Try to fix if a check fails")
 
 
 def check_argparse(app, args):
@@ -155,10 +158,10 @@ def check_argparse(app, args):
             print(app.imgbase.layout())
 
     elif args.command == "check":
-        run_check(app)
+        run_check(app, args.fix)
 
 
-def run_check(app):
+def run_check(app, try_fix):
     checks = []
 
     def register_func(check):
@@ -171,7 +174,8 @@ def run_check(app):
                     app.imgbase._thinpool().lvm_name])
     datap, metap = map(float, lvs.replace(",", ".").split())
 
-    def thin_check():
+    @register_func
+    def thin_check(try_fix):
         log.info("Checking available space in thinpool")
         fail = any(v > 80 for v in [datap, metap])
         if fail:
@@ -179,13 +183,27 @@ def run_check(app):
             print(LVM._lvs([app.imgbase._thinpool().lvm_name]))
         return fail
 
-    checks += [thin_check]
+    @register_func
+    def thin_extend_check(try_fix):
+        fail = False
+        ap = ("/files/etc/lvm/lvm.conf/activation/dict/"
+              "thin_pool_autoextend_threshold/int")
+
+        if augtool("get", ap).endswith("= 0"):
+            log.warn("Thinpool autoextend is disabled, must be enabled")
+            fail = True
+            if try_fix:
+                log.info("Thinpool autoextend is disabled, enabling")
+                augtool("set", "-s", ap, "80")
+        else:
+            log.debug("Thinpool autoextend is set")
+        return fail
 
     log.debug("Running checks: %s" % checks)
 
     any_fail = False
     for check in checks:
-        if not check():
+        if not check(try_fix):
             any_fail = True
 
     if any_fail:

@@ -108,6 +108,10 @@ def format_to_pattern(fmt):
     return pat
 
 
+def remount(target, opts=""):
+    ExternalBinary().call(["mount", "-oremount" + opts, target])
+
+
 class mounted(object):
     source = None
     options = None
@@ -270,6 +274,10 @@ class File():
     def contents(self):
         return self.read()
 
+    @property
+    def stat(self):
+        return os.stat(self.filename)
+
     def __init__(self, fn):
         self.filename = fn
 
@@ -308,6 +316,9 @@ class File():
         for line in self.lines():
             r += re.findall(pat, line)
         return r
+
+    def chmod(self, mode):
+        return os.chmod(self.filename, mode)
 
 
 class Fstab(File):

@@ -24,11 +24,12 @@
 import logging
 import glob
 import os
+import stat
 import shutil
-from .. import bootloader
+from .. import bootloader, utils
 from ..lvm import LVM
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File, SystemRelease, Rsync, kernel_versions_in_path, findmnt, \
+    File, SystemRelease, Rsync, kernel_versions_in_path, \
     nspawn, IDMap
 
 
@@ -48,28 +49,35 @@ def init(app):
 
 def on_register_checks(app, register):
     @register
-    def bls_check():
+    def bls_check(try_fix):
         log.info("Checking bootloader configuration")
         fail = True
-        if File("/etc/grub.d/50_imgbased").exists():
+        grubbls = File("/etc/grub.d/50_imgbased")
+        if grubbls.exists():
             fail = False
         else:
             log.warning("Bootloader is not configured propperly")
-            print("cat <<EOF > /etc/grub.d/50_imgbased")
-            print("echo -e syslinux_source /syslinux.cfg")
-            print("echo -e bls_import")
-            print("EOF")
-            print("chmod a+x /etc/grub.d/50_imgbased")
+            if try_fix:
+                log.info("Fixing bootloader configuration")
+                grubbls.write("echo -e syslinux_source /syslinux.cfg\n" +
+                              "echo -e bls_import\n")
+                grubbls.chmod(grubbls.stat.st_mode | stat.S_IEXEC)
         return fail
 
     @register
-    def mount_check():
+    def mount_check(try_fix):
         log.info("Checking if 'discard' is used")
         # FIXME we need to check mopts of correct path
-        fail = "discard" not in findmnt("options", "/").split(",")
+        fstab = Fstab("/etc/fstab")
+        entry = fstab.by_target("/")
+        fail = "discard" not in entry.options
         if fail:
             log.warning("/ is not mounted with discard")
-            # print(findmnt("/"))
+            if try_fix:
+                log.info("Adding 'discard' mount option and remounting")
+                entry.options.append("discard")
+                fstab.update(entry)
+                utils.remount("/")
         return fail
 
 
