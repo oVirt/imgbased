@@ -320,6 +320,9 @@ class File():
     def chmod(self, mode):
         return os.chmod(self.filename, mode)
 
+    def basename(self):
+        return os.path.basename(self.filename)
+
 
 class Fstab(File):
     _testdata = """#

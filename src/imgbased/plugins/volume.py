@@ -66,14 +66,6 @@ SloppyOptions=yes
 WantedBy=local-fs.target
 """
 
-    automountfile_tmpl = """# Created by imgbased
-[Automount]
-Where={where}
-
-[Install]
-WantedBy=local-fs.target
-"""
-
     def __init__(self, imgbase):
         self.imgbase = imgbase
 
@@ -88,9 +80,9 @@ WantedBy=local-fs.target
     def _volname(self, where):
         return where.strip("/").replace("-", "--").replace("/", "-")
 
-    def _mountfilename(self, where, unittype):
+    def _mountfile(self, where, unittype="mount"):
         safewhere = self._volname(where)
-        return "/etc/systemd/system/%s.%s" % (safewhere, unittype)
+        return File("/etc/systemd/system/%s.%s" % (safewhere, unittype))
 
     def create(self, where, size):
         assert not self.is_volume(where), \
@@ -131,20 +123,16 @@ WantedBy=local-fs.target
 
         volname = self._volname(where)
         what = self.imgbase.lv(volname).path
-        f = File(self._mountfilename(where, "mount"))
-        f.write(self.mountfile_tmpl.format(what=what,
-                                           where=where,
-                                           options="discard"))
 
-        automountunitfile = self._mountfilename(where, "automount")
-        automountunit = os.path.basename(automountunitfile)
-        f = File(automountunitfile)
-        f.write(self.automountfile_tmpl.format(where=where))
+        unitfile = self._mountfile(where)
+        unitfile.write(self.mountfile_tmpl.format(what=what,
+                                                  where=where,
+                                                  options="discard"))
 
         systemctl.daemon_reload()
 
-        systemctl.enable(automountunit)
-        systemctl.start(automountunit)
+        systemctl.enable(unitfile.basename())
+        systemctl.start(unitfile.basename())
 
         # Access it to start it
         os.listdir(where)
@@ -154,14 +142,11 @@ WantedBy=local-fs.target
     def detach(self, where):
         assert self.is_volume(where), "Path is no volume: %s" % where
 
-        mount = self._mountfilename(where, "mount")
-        automount = self._mountfilename(where, "automount")
+        unitfile = self._mountfile(where)
 
-        for unitfile in [automount, mount]:
-            unit = os.path.basename(unitfile)
-            systemctl.disable(unit)
-            systemctl.stop(unit)
-            File(unitfile).remove()
+        systemctl.disable(unitfile.basename())
+        systemctl.stop(unitfile.basename())
+        unitfile.remove()
 
         systemctl.daemon_reload()
 
