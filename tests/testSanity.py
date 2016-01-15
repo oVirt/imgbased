@@ -18,8 +18,7 @@ import imgbased.lvm
 
 class ImgbaseTestCase(unittest.TestCase):
     def autopart(self):
-        vg = FakeLVM.VG()
-        vg.vg_name = "hostvg"
+        vg = FakeLVM.VG("hostvg")
         vg._pvs = ["/dev/sda", "/dev/sdb"]
         FakeLVM._vgs = [vg]
 

@@ -46,7 +46,8 @@ class FakeLVM(imgbased.lvm.LVM):
         _pvs = None
         _lvs = None
 
-        def __init__(self):
+        def __init__(self, vg_name=None):
+            self.vg_name = vg_name
             self._tags = set()
             self._pvs = set()
             self._lvs = set()
@@ -74,8 +75,7 @@ class FakeLVM(imgbased.lvm.LVM):
 
         @staticmethod
         def create(vg_name, pv_paths):
-            vg = FakeLVM.VG()
-            vg.vg_name = vg_name
+            vg = FakeLVM.VG(vg_name)
             vg._pvs = pv_paths
             FakeLVM._vgs.append(vg)
             debug("Creating %s" % vg)
