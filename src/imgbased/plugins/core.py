@@ -86,9 +86,8 @@ def add_argparse(app, parser, subparsers):
     layout_group.add_argument("--free-space", action="store_true",
                               default=False,
                               help="How much space there is in the thinpool")
-    layout_group.add_argument("--init-from", type=str, default="",
-                              metavar="VG/LV",
-                              help="Make an existing thin LV consumable")
+    layout_group.add_argument("--init", action="store_true",
+                              help="Initialize an imgbased layout")
     layout_group.add_argument("--bases", action="store_true",
                               help="List all bases")
     layout_group.add_argument("--layers", action="store_true",
@@ -100,6 +99,9 @@ def add_argparse(app, parser, subparsers):
     init_group = layout_parser.add_argument_group("Initialization arguments")
     init_group.add_argument("--size",
                             help="Size of the thinpool (in MB)")
+    init_group.add_argument("--from", type=str, dest="volume", default="/",
+                            metavar="VG/LV",
+                            help="Make an existing thin LV consumable")
     init_group.add_argument("pv", nargs="*", metavar="PV",
                             type=argparse.FileType(),
                             help="LVM PVs to use")
@@ -146,8 +148,12 @@ def check_argparse(app, args):
         log.info(msg)
 
     if args.command == "layout":
-        if args.init_from:
-            app.imgbase.init_layout_from(args.init_from)
+        if args.init:
+            try:
+                app.imgbase.init_layout_from(args.volume)
+            except RuntimeError:
+                log.exception("Failed to initialized layout from %r" %
+                              args.volume)
         elif args.free_space:
             print(app.imgbase.free_space(args.units))
         elif args.bases:

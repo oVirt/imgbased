@@ -20,11 +20,9 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import os
 import re
 from .hooks import Hooks
 from . import naming, utils
-from .utils import find_mount_source
 from .lvm import LVM
 
 import logging
@@ -96,6 +94,21 @@ class ImageLayers(object):
 
     def _lvm_from_layer(self, layer):
         return self.lv(layer.nvr)
+
+    def has_tags(self):
+        try:
+            self._vg()
+        except AssertionError:
+            return False
+        for tag in [self.thinpool_tag, self.lv_init_tag]:
+            try:
+                LVM.LV.from_tag(tag)
+            except AssertionError:
+                raise RuntimeError("A tagged volume group was found, but no "
+                                   "logical volumes were tagged with %s. "
+                                   "Please remove tags from volume groups "
+                                   "and logical volumes, then retry" % tag)
+        return True
 
     def image_from_name(self, name):
         return self.naming.image_from_name(name)
@@ -176,29 +189,32 @@ class ImageLayers(object):
 
         return new_lv
 
+    def init_tags_on(self, lv):
+        lv = lv if type(lv) in [LVM.LV] else LVM.LV.try_find(lv)
+        log.debug("Tagging LV: %s" % lv)
+        lv.addtag(self.lv_init_tag)
+
+        vg = LVM.VG.from_vg_name(lv.vg_name)
+        log.debug("Tagging VG: %s" % vg)
+        vg.addtag(self.vg_tag)
+
+        pool = lv.thinpool()
+        log.debug("Tagging pool: %s" % pool)
+        pool.addtag(self.thinpool_tag)
+
     def init_layout_from(self, lvm_name_or_mount_target):
         """Create a snapshot from an existing thin LV to make it suitable
         """
-        log.info("Trying to create a manageable base from '%s'" %
-                 lvm_name_or_mount_target)
-        if os.path.ismount(lvm_name_or_mount_target):
-            lvm_path = find_mount_source(lvm_name_or_mount_target)
-            existing_lv = LVM.LV.from_path(lvm_path)
+        if self.has_tags():
+            raise RuntimeError("An existing imgbase was found with tags, but "
+                               "imgbase was called with --init. If this was"
+                               "intentional, please untag the existing "
+                               "volumes and try again.")
         else:
-            # If it's not a mount point, then we assume it's a LVM name
-            existing_lv = LVM.LV.from_lvm_name(lvm_name_or_mount_target)
-        log.debug("Found existing LV '%s'" % existing_lv)
-
-        log.debug("Tagging existing LV: %s" % existing_lv)
-        existing_lv.addtag(self.lv_init_tag)
-
-        existing_vg = LVM.VG.from_vg_name(existing_lv.vg_name)
-        log.debug("Tagging existing VG: %s" % existing_vg)
-        existing_vg.addtag(self.vg_tag)
-
-        existing_pool = existing_lv.thinpool()
-        log.debug("Tagging existing pool: %s" % existing_pool)
-        existing_pool.addtag(self.thinpool_tag)
+            log.info("Trying to create a manageable base from '%s'" %
+                     lvm_name_or_mount_target)
+            existing_lv = LVM.LV.try_find(lvm_name_or_mount_target)
+            self.init_tags_on(existing_lv)
 
         version = 0  # int(datetime.date.today().strftime("%Y%m%d"))
         initial_base = self.naming.suggest_next_base(self.stream_name,

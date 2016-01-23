@@ -20,9 +20,10 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
+import os
 import shlex
 import logging
-from .utils import LvmCLI
+from .utils import find_mount_source, LvmCLI
 
 
 log = logging.getLogger(__package__)
@@ -112,6 +113,8 @@ class LVM(object):
             assert mixed
             if mixed.startswith("/dev"):
                 return cls.from_path(mixed)
+            elif os.path.ismount(mixed):
+                return cls.from_path(find_mount_source(mixed))
             elif "/" in mixed:
                 return cls.from_lvm_name(mixed)
             elif "@" in mixed:

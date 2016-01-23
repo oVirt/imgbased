@@ -71,7 +71,7 @@ class CliTestCase(ImgbaseTestCase):
 
     def setUp(self):
         ImgbaseTestCase.setUp(self)
-        self.cli("--debug", "layout", "--init-from", "hostvg/root")
+        self.cli("--debug", "layout", "--init", "--from", "hostvg/root")
 
 
 class LayoutVerbTestCase(CliTestCase):
