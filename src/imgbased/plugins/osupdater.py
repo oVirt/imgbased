@@ -36,6 +36,18 @@ from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
 log = logging.getLogger(__package__)
 
 
+class ConfigMigrationError(Exception):
+    pass
+
+
+class BootSetupError(Exception):
+    pass
+
+
+class MissingKernelFilesError(BootSetupError):
+    pass
+
+
 def pre_init(app):
     app.imgbase.hooks.create("os-upgraded",
                              ("previous-lv_fullname", "new-lv_fullname"))
@@ -92,14 +104,15 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     try:
         migrate_etc(imgbase, new_lv, previous_layer_lv)
     except:
-        log.error("Failed to migrate etc", exc_info=True)
+        log.exception("Failed to migrate etc")
+        raise ConfigMigrationError()
 
     try:
         adjust_mounts_and_boot(imgbase, new_lv, previous_layer_lv)
     except:
         # FIXME Handle and rollback
         log.exception("Failed to update OS")
-        raise
+        raise BootSetupError()
 
 
 def migrate_etc(imgbase, new_lv, previous_lv):
@@ -242,10 +255,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 log.info("No kernel found on %s" % new_lv)
                 return
 
-            kfiles = ["%s/%s" % (newroot, f)
-                      for f in pkgfiles
-                      if f.startswith("/boot/")]
-            log.debug("Found kernel files: %s" % kfiles)
+            kfiles = __check_kernel_files(pkgfiles, newroot)
 
             os.mkdir(bootdir)
             copy_files(bootdir, kfiles)
@@ -256,7 +266,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
         log.info("Regenerating initramfs ...")
 
-        def chroot_b(*args):
+        def chroot(*args):
             log.debug("Running: %s" % str(args))
             with utils.bindmounted(bootdir, newroot + "/boot"):
                 return utils.nsenter(args, root=newroot)
@@ -266,7 +276,32 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         log.debug("Found kvers: %s" % kvers)
         log.debug("Using kver: %s" % kver)
         initrd = "/boot/initramfs-%s.img" % kver
-        chroot_b("dracut", "-f", initrd, "--kver", kver)
+        chroot("dracut", "-f", initrd, "--kver", kver)
+
+    def __check_kernel_files(pkgfiles, newroot):
+        kfiles = ["%s/%s" % (newroot, f)
+                  for f in pkgfiles
+                  if f.startswith("/boot/")]
+
+        log.debug("Found kernel files: %s" % kfiles)
+        log.debug("Making sure kernel files exist")
+
+        if os.path.ismount("/boot"):
+            log.info("/boot is mounted. Checking for the files there")
+
+            bootfiles = [f for f in pkgfiles if f.startswith("/boot")]
+
+            if all([File(f).exists() for f in bootfiles]):
+                log.info("All kernel files found on the mounted /boot "
+                         "filesystem. Using those")
+                kfiles = bootfiles
+
+        if not all([File(f).exists() for f in kfiles]):
+            log.info("Some kernel files are not found on %s and /boot"
+                     % newroot)
+            raise MissingKernelFilesError("Failed to find kernel and initrd")
+
+        return kfiles
 
     def add_bootentry(newroot):
         if not File("%s/boot" % newroot).exists():
