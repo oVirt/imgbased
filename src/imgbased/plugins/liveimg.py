@@ -37,7 +37,7 @@ def check_argparse(app, args):
         return
 
     if args.subcmd == "update":
-        new_base = LiveimgExtractor(app.imgbase)\
+        LiveimgExtractor(app.imgbase)\
             .extract(args.FILENAME,
                      args.NVR)
         log.info("Update was pulled successfully")

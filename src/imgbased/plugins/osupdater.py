@@ -85,15 +85,20 @@ def on_new_layer(imgbase, previous_lv, new_lv):
 
     log.debug("Got: %s and %s" % (new_lv, previous_lv))
 
+    # FIXME this can be improved by providing a better methods in .naming
+    new_layer = imgbase.image_from_name(new_lv.lv_name)
+    previous_layer_lv = \
+        imgbase._lvm_from_layer(imgbase.naming.layer_before(new_layer))
     try:
-        migrate_etc(imgbase, new_lv, previous_lv)
+        migrate_etc(imgbase, new_lv, previous_layer_lv)
     except:
         log.error("Failed to migrate etc", exc_info=True)
 
     try:
-        adjust_mounts_and_boot(imgbase, new_lv, previous_lv)
+        adjust_mounts_and_boot(imgbase, new_lv, previous_layer_lv)
     except:
         # FIXME Handle and rollback
+        log.exception("Failed to update OS")
         raise
 
 
@@ -135,7 +140,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             else:
                 log.debug("No drift detected")
 
-            log.info("Migrating /etc")
+            log.info("Migrating /etc (from %r)" % previous_lv)
             rsync = Rsync()
             # Don't copy release files to have up to date release infos
             rsync.exclude = ["etc/fedora-release*", "/etc/redhat-release*"]
@@ -260,9 +265,9 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
         def chroot_b(*args):
             log.debug("Running: %s" % str(args))
-            args = (  # "-q", is not supported in el7
-                "--bind", "%s:/boot" % bootdir,
-                "-D", newroot) + args
+            args = ("-q",
+                    "--bind", "%s:/boot" % bootdir,
+                    "-D", newroot) + args
             return nspawn(*args)
 
         kvers = kernel_versions_in_path(bootdir)
