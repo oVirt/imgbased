@@ -70,8 +70,6 @@ def CliApplication(args=None):
 
     if args.debug:
         log.setLevel(logging.DEBUG)
-#        add_log_handler(logging.DEBUG, "%(asctime)s - %(levelname)s - "
-#                        "%(module)s.%(funcName)s:%(lineno)s - %(message)s")
 
     app.imgbase.debug = args.debug
     app.imgbase.stream = args.stream

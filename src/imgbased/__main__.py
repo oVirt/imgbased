@@ -22,25 +22,27 @@
 #
 
 import logging
+import sys
 from . import CliApplication, config
 
 log = logging.getLogger()
 
 
-def add_log_handler(lvl, fmt):
+if __name__ == '__main__':
+    lvl = logging.DEBUG if "--debug" in sys.argv else logging.INFO
+    fmt = "[%(levelname)s] %(message)s"
+
     try:
         from systemd import journal
         h = journal.JournalHandler(SYSLOG_IDENTIFIER=config.PACKAGE_NAME)
     except:
         h = logging.StreamHandler()
+
     h.setLevel(lvl)
     h.setFormatter(logging.Formatter(fmt))
+
     log.addHandler(h)
-
-
-if __name__ == '__main__':
-    log.setLevel(logging.INFO)
-    add_log_handler(logging.INFO, "[%(levelname)s] %(message)s")
+    log.setLevel(lvl)
 
     CliApplication()
 
