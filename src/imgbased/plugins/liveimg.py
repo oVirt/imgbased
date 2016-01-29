@@ -23,9 +23,7 @@ def add_argparse(app, parser, subparsers):
 
     su_add = su.add_parser("update",
                            help="Update from a liveimg")
-    su_add.add_argument("VENDORID")
-    su_add.add_argument("VERSION")
-    su_add.add_argument("RELEASE")
+    su_add.add_argument("NVR", metavar="NAME-VERSION-RELEASE")
     su_add.add_argument("FILENAME")
 
 
@@ -35,14 +33,13 @@ def check_argparse(app, args):
     """
     log.debug("Operating on: %s" % app.imgbase)
 
-    if args.command == "update":
+    if not args.command == "liveimg":
+        return
+
+    if args.subcmd == "update":
         new_base = LiveimgExtractor(app.imgbase)\
-            .extract(args.filename,
-                     args.vendorid,
-                     args.version,
-                     args.release)
-        assert new_base
-        app.imgbase.add_layer(new_base)
+            .extract(args.FILENAME,
+                     args.NVR)
         log.info("Update was pulled successfully")
 
 
@@ -58,18 +55,18 @@ class LiveimgExtractor():
         remainder = scaled % 512
         return int(scaled + (512 - remainder))
 
-    def add_base_with_tree(self, sourcetree, size, name, version=None,
-                           release=None, lvs=None):
-        new_base_lv = self.imgbase.add_base(size, name,
-                                            version, release, lvs)
-
+    def add_base_with_tree(self, sourcetree, size, nvr, lvs=None):
         if not os.path.exists(sourcetree):
             raise RuntimeError("Sourcetree does not exist: %s" % sourcetree)
 
+        new_base = self.imgbase.add_base(size,
+                                         nvr,
+                                         lvs)
+        new_base_lv = self.imgbase._lvm_from_layer(new_base)
+
         with new_base_lv.unprotected():
             log.info("Creating new filesystem on base")
-            if not self.dry:
-                Ext4.mkfs(new_base_lv.path, self.debug)
+            Ext4().mkfs(new_base_lv.path)
 
             log.info("Writing tree to base")
             with mounted(new_base_lv.path) as mount:
@@ -78,9 +75,11 @@ class LiveimgExtractor():
                 rsync.sync(sourcetree, dst)
                 log.debug("Trying to copy prev fstab")
 
+        self.imgbase.add_layer(new_base)
+
         return new_base_lv
 
-    def extract(self, liveimgfile, vendorid, version, release):
+    def extract(self, liveimgfile, nvr):
         new_base = None
         log.info("Extracting image '%s'" % liveimgfile)
         with mounted(liveimgfile) as squashfs:
@@ -93,10 +92,7 @@ class LiveimgExtractor():
                 log.info("Starting base creation")
                 add_tree = self.add_base_with_tree
                 new_base = add_tree(rootfs.target,
-                                    "%sB" % size,
-                                    name=vendorid,
-                                    version=version,
-                                    release=release)
+                                    "%sB" % size, nvr)
                 log.info("Files extracted")
         log.debug("Extraction done")
         return new_base

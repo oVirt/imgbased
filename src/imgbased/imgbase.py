@@ -252,7 +252,7 @@ class ImageLayers(object):
         if with_layer:
             self.add_layer(new_base)
 
-        return new_base_lv
+        return new_base
 
     def remove_base(self, name, with_children=True):
         base = self.image_from_name(name)
