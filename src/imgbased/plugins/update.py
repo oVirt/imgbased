@@ -16,15 +16,12 @@ def add_argparse(app, parser, subparsers):
     """Add our argparser bit's to the overall parser
     It will be called when the app is launched
     """
-    s = subparsers.add_parser("liveimg",
-                              help="Liveimg handling")
+    s = subparsers.add_parser("update",
+                              help="Update handling")
 
-    su = s.add_subparsers(help="Commands around liveimg", dest="subcmd")
-
-    su_add = su.add_parser("update",
-                           help="Update from a liveimg")
-    su_add.add_argument("NVR", metavar="NAME-VERSION-RELEASE")
-    su_add.add_argument("FILENAME")
+    s.add_argument("--format", default="liveimg")
+    s.add_argument("NVR", metavar="NAME-VERSION-RELEASE")
+    s.add_argument("FILENAME")
 
 
 def check_argparse(app, args):
@@ -33,14 +30,16 @@ def check_argparse(app, args):
     """
     log.debug("Operating on: %s" % app.imgbase)
 
-    if not args.command == "liveimg":
+    if not args.command == "update":
         return
 
-    if args.subcmd == "update":
+    if args.format == "liveimg":
         LiveimgExtractor(app.imgbase)\
             .extract(args.FILENAME,
                      args.NVR)
         log.info("Update was pulled successfully")
+    else:
+        log.error("Unknown update format %r" % args.format)
 
 
 class LiveimgExtractor():
