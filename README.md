@@ -42,7 +42,7 @@ installed using the `autopart --type=thinp` directive.
 `imgbased` can be used to create new *layers* and install new *bases*.
 
     # To create the assumed LVM layout
-    imgbase layout --init-from /
+    imgbase layout --init Base-1-0 --from /
 
     # List existing layers and bases
     imgbase layout
@@ -51,13 +51,13 @@ installed using the `autopart --type=thinp` directive.
     # The `--size` argument specifies the size of the underlying 
     # logical volume. It must be at least the size of the filesystem
     # contained in `$IMGFILE`.
-    imgbase base --add ExampleBase-1.0 --size 1G
+    imgbase base --add Base-2-0 --size 1G
 
     # Get the latest base (which will be used for subsequent layers)
     imgbase base --latest
 
     # Add a new layer on the latest base or latest layer of the latest base
-    imgbase layer --add ExampleBase-1.0
+    imgbase layer --add Base-1-0
 
     # And with more infos
     imgbase --debug layer --add
@@ -120,18 +120,18 @@ Assumptions about the host:
     |
     +--+ Config (LV)
     |
-    +--+ Base-0 (LV, ro)
+    +--+ Base-1-0 (LV, ro)
     |   \
     |    \
-    |     + Base-0.1 (LV, rw)
+    |     + Base-1-0+1 (LV, rw)
     |     |
-    |     + Base-0.2 (LV, rw)
+    |     + Base-1-0+2 (LV, rw)
     |   
     |   
-    +--+ Base-1 (LV, ro)
+    +--+ Base-2-0 (LV, ro)
     |   \
     |    \
-    |     + Base-1.1 (LV, rw)
+    |     + Base-2-0+1 (LV, rw)
     :     :
 
 With a boot entry for each Base-\* this allows the user to boot into each

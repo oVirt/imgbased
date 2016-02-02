@@ -42,7 +42,6 @@ class ImageLayers(object):
     hooks = None
     hooksdir = "/usr/lib/imgbased/hooks.d/"
 
-    stream_name = "Image"
     vg_tag = "imgbased:vg"
     thinpool_tag = "imgbased:pool"
     lv_init_tag = "imgbased:init"
@@ -79,7 +78,14 @@ class ImageLayers(object):
                           ("lv_fullname",))
 
         # FIXME just pass tagged LVs
-        self.naming = naming.NvrLikeNaming(datasource=LVM.list_lv_names)
+        self.naming = naming.NvrNaming(datasource=self.list_our_lv_names)
+
+    def list_our_lv_names(self):
+        log.debug("All LVS: %s" % LVM.list_lv_names())
+        lvs = LVM.list_lv_names([self.lv_base_tag,
+                                 self.lv_layer_tag])
+        log.debug("Our LVS: %s" % lvs)
+        return lvs
 
     def _vg(self):
         return LVM.VG.from_tag(self.vg_tag)
@@ -93,7 +99,7 @@ class ImageLayers(object):
         return LVM.Thinpool.from_tag(self.thinpool_tag)
 
     def _lvm_from_layer(self, layer):
-        return self.lv(layer.nvr)
+        return self.lv(layer.lv_name)
 
     def has_tags(self):
         try:
@@ -142,10 +148,11 @@ class ImageLayers(object):
     def add_layer(self, previous_layer):
         """Add a new thin LV
         """
-        log.info("Adding a new layer after %s" % previous_layer)
+        log.info("Adding a new layer after %r" % previous_layer)
 
         if type(previous_layer) in [str, unicode, bytes]:
             previous_layer = self.naming.image_from_name(previous_layer)
+        log.info("Adding a new layer after %r" % previous_layer)
 
         log.debug("Basing new layer on previous: %r" % previous_layer)
         new_layer = self.naming.suggest_next_layer(previous_layer)
@@ -153,7 +160,7 @@ class ImageLayers(object):
 
         prev_lv = self._lvm_from_layer(previous_layer)
 
-        new_lv = self._add_lvm_snapshot(prev_lv, new_layer.nvr)
+        new_lv = self._add_lvm_snapshot(prev_lv, new_layer.lv_name)
 
         self.hooks.emit("new-layer-added", prev_lv, new_lv)
 
@@ -202,7 +209,7 @@ class ImageLayers(object):
         log.debug("Tagging pool: %s" % pool)
         pool.addtag(self.thinpool_tag)
 
-    def init_layout_from(self, lvm_name_or_mount_target):
+    def init_layout_from(self, lvm_name_or_mount_target, initial_nvr):
         """Create a snapshot from an existing thin LV to make it suitable
         """
         if self.has_tags():
@@ -210,22 +217,24 @@ class ImageLayers(object):
                                "imgbase was called with --init. If this was"
                                "intentional, please untag the existing "
                                "volumes and try again.")
-        else:
-            log.info("Trying to create a manageable base from '%s'" %
-                     lvm_name_or_mount_target)
-            existing_lv = LVM.LV.try_find(lvm_name_or_mount_target)
-            self.init_tags_on(existing_lv)
+        log.info("Trying to create a manageable base from '%s'" %
+                 lvm_name_or_mount_target)
+        existing_lv = LVM.LV.try_find(lvm_name_or_mount_target)
+        self.init_tags_on(existing_lv)
 
-        version = 0  # int(datetime.date.today().strftime("%Y%m%d"))
-        initial_base = self.naming.suggest_next_base(self.stream_name,
-                                                     version, 0)
+        initial_base = self.naming.image_from_name(initial_nvr)
+        log.info("Initial base will be %r" % initial_base)
+
         new_layer = self.naming.suggest_next_layer(initial_base)
-        log.info("Creating an initial base '%s' for '%s'" %
-                 (initial_base, existing_lv))
-        initial_base_lv = self._add_lvm_snapshot(existing_lv, initial_base.nvr)
+        log.info("Initial layer will be %r" % new_layer)
 
-        log.info("Creating initial layer for initial base")
-        self._add_lvm_snapshot(initial_base_lv, new_layer.nvr)
+        log.info("Creating an initial base %r for %r" %
+                 (initial_base, existing_lv))
+        initial_base_lv = self._add_lvm_snapshot(existing_lv,
+                                                 initial_base.lv_name)
+
+        log.info("Creating initial layer %r for initial base" % new_layer)
+        self._add_lvm_snapshot(initial_base_lv, new_layer.lv_name)
 
     def add_base(self, size, nvr, lvs=None,
                  with_layer=False):
@@ -233,15 +242,13 @@ class ImageLayers(object):
         """
         assert size
 
-        base = self.naming.image_from_name(nvr)
-        new_base = self.naming.suggest_next_base(base.name,
-                                                 base.version,
-                                                 base.release)
-
+        new_base = self.naming.image_from_name(nvr)
         log.info("New base will be: %s" % new_base)
+
         pool = self._thinpool()
         log.debug("Pool: %s" % pool)
-        new_base_lv = pool.create_thinvol(new_base.nvr, size)
+
+        new_base_lv = pool.create_thinvol(new_base.lv_name, size)
         new_base_lv.addtag(self.lv_base_tag)
         log.info("New LV is: %s" % new_base_lv)
 
@@ -321,19 +328,6 @@ class ImageLayers(object):
             raise
 
     def base_of_layer(self, layer):
-        base = None
-        args = ["--noheadings", "--options", "origin"]
-        get_origin = lambda l: LVM._lvs(args +
-                                        ["%s/%s" % (self._vg().vg_name, l)])
-
-        while base is None and layer is not None:
-            layer = get_origin(layer)
-            base_candidate = self.image_from_name(layer)
-            if base_candidate.is_base():
-                base = base_candidate
-
-        if not base:
-            raise RuntimeError("No base found for: %s" % layer)
-        return base
+        return self.image_from_name(layer).base
 
 # vim: sw=4 et sts=4

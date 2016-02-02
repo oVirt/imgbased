@@ -30,8 +30,13 @@ class FakeLVM(imgbased.lvm.LVM):
     _vgs = []
 
     @staticmethod
-    def list_lv_names():
-        return [lv.lv_name for lv in FakeLVM.lvs()]
+    def list_lv_names(tags=[]):
+        lvs = [lv for lv in FakeLVM.lvs()]
+        debug("LVS %s" % lvs)
+        if tags:
+            lvs = [lv for lv in lvs if any(tag in lv._tags for tag in tags)]
+            debug("Tagged LVS %s" % lvs)
+        return [lv.lv_name for lv in lvs]
 
     @staticmethod
     def lvs():

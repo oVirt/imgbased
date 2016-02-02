@@ -71,61 +71,65 @@ class CliTestCase(ImgbaseTestCase):
 
     def setUp(self):
         ImgbaseTestCase.setUp(self)
-        self.cli("--debug", "layout", "--init", "--from", "hostvg/root")
+        self.cli("--debug",
+                 "layout",
+                 "--init", "Image-1.0-0",
+                 "--from", "hostvg/root")
 
 
 class LayoutVerbTestCase(CliTestCase):
     def test_layout_init_from(self):
-        assert "Image-0.0" in FakeLVM.list_lv_names()
-        assert "Image-0.1" in FakeLVM.list_lv_names()
+        assert "Image-1.0-0" in FakeLVM.list_lv_names()
+        assert "Image-1.0-0+1" in FakeLVM.list_lv_names()
 
     def test_layout_bases(self):
         r = self.cli("--debug", "layout", "--bases")
         debug("Bases: %s" % r.stdout)
-        assert r.stdout.strip() == "Image-0.0"
+        assert r.stdout.strip() == "Image-1.0-0"
 
     def test_layout_layers(self):
         r = self.cli("--debug", "layout", "--layers")
         debug("Layers: %s" % r.stdout)
-        assert r.stdout.strip() == "Image-0.1"
+        assert r.stdout.strip() == "Image-1.0-0+1"
 
 
 class BaseVerbTestCase(CliTestCase):
     def test_base_add(self):
-        self.cli("--debug", "base", "--add", "Bar-42.0",
+        self.cli("--debug", "base", "--add", "Image-42-0",
                  "--size", "4096")
-        assert "Bar-42.0" in self.cli("layout", "--bases").stdout
+        print self.cli("layout", "--bases").stdout
+        assert "Image-42-0" in self.cli("layout", "--bases").stdout
 
     def test_base_latest(self):
-        self.cli("--debug", "base", "--add", "Bar-42.0",
+        self.cli("--debug", "base", "--add", "Image-42-0",
                  "--size", "4096")
-        assert "Bar-42.0" in self.cli("base", "--latest").stdout
+        assert "Image-42-0" in self.cli("base", "--latest").stdout
 
     def test_base_remove(self):
-        self.cli("--debug", "base", "--add", "Bar-42.0",
+        self.cli("--debug", "base", "--add", "Image-42-0",
                  "--size", "4096")
-        assert "Bar-42.0" in self.cli("base", "--latest").stdout
+        assert "Image-42-0" in self.cli("base", "--latest").stdout
 
-        self.cli("--debug", "base", "--remove", "Bar-42.0")
-        assert "Bar-42.0" not in self.cli("base", "--latest").stdout
+        self.cli("--debug", "base", "--remove", "Image-42-0")
+        assert "Image-42-0" not in self.cli("base", "--latest").stdout
 
     def test_base_of_layer(self):
-        self.cli("--debug", "base", "--add", "Image-42.0",
+        self.cli("--debug", "base", "--add", "Image-42-0",
                  "--size", "4096")
-        assert "Image-42.0" in self.cli("base", "--latest").stdout
+        assert "Image-42-0" in self.cli("base", "--latest").stdout
 
         with self.assertRaises(imgbased.imgbase.LayerOutOfOrderError):
             # Exception, because we'd add a layer to a previous base, not the
             # latest
             self.cli("--debug", "layer", "--add")
 
-        self.cli("--debug", "layer", "--add", "Image-42.0")
+        self.cli("--debug", "layer", "--add", "Image-42-0")
         layers = self.cli("layout", "--layers").stdout
-        assert "Image-42.1" in layers
+        assert "Image-42-0+1" in layers
 
         self.cli("--debug", "layer", "--add")
         layers = self.cli("layout", "--layers").stdout
-        assert "Image-42.2" in layers
+        assert "Image-42-0+2" in layers
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,7 +16,7 @@ def _on_all_plugins(funcname, *args):
     for p in plugins:
         if hasattr(p, funcname):
             f = getattr(p, funcname)
-            log.debug("Calling init on: %s" % f)
+            # log.debug("Calling init on: %s" % f)
             f(*args)
 
 

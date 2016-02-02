@@ -116,7 +116,7 @@ class Hooks(object):
         all_cbs = wildcard.union(specific)
 
         for cb in all_cbs:
-            log.debug("Triggering: %s (%s, %s)" % (cb, self.context, args))
+            # log.debug("Triggering: %s (%s, %s)" % (cb, self.context, args))
             cb(self.context, *args)
 
     def add_filesystem_emitter(self, path):
@@ -129,7 +129,7 @@ class Hooks(object):
                 return
             for handler in os.listdir(path):
                 script = os.path.join(path, handler)
-                log.debug("Triggering: %s (%s %s)" % (script, name, args))
+                # log.debug("Triggering: %s (%s %s)" % (script, name, args))
                 subprocess.check_call([script, name] + list(args))
         self.create(None, _trigger_fs)
 
