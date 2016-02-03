@@ -20,6 +20,7 @@ BuildRequires:       asciidoc
 
 BuildRequires:       python-devel python-six
 BuildRequires:       pylint python-pep8 pyflakes python-nose
+BuildRequires:       rpm-python
 
 %if 0%{?is_el7}
 BuildRequires:       python-six

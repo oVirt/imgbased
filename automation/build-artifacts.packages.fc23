@@ -17,3 +17,4 @@ python3-pyflakes
 python3-nose
 systemd-python3
 pykickstart
+rpm-python
