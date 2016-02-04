@@ -1,4 +1,4 @@
-AC_INIT([imgbased], [0.3], [fabiand@fedoraproject.org])
+AC_INIT([imgbased], [0.5], [fabiand@fedoraproject.org])
 
 AC_PREFIX_DEFAULT([/usr])
 AC_PROG_AWK

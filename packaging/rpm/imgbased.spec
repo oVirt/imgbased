@@ -2,7 +2,7 @@
 %define is_el7 %(test 0%{?centos} -eq 07 || test 0%{?rhel} -eq 07 && echo 1 || echo 0)
 
 Name:           imgbased
-Version:        0.3
+Version:        0.5
 Release:        %{?_release}%{?!_release:0.1}%{?dist}
 Summary:        Tools to work with an image based rootfs
 
