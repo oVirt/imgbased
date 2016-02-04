@@ -34,9 +34,6 @@ class NamingScheme():
     def __init__(self, datasource):
         self.datasource = datasource
 
-    def image_from_name(self, name):
-        raise NotImplementedError
-
     def tree(self):
         """Returns an ordered list of bases and children
         """
@@ -212,7 +209,7 @@ class NvrNaming(NamingScheme):
         images = []
         for name in names:
             try:
-                images.append(self.image_from_name(name))
+                images.append(Image.from_nvr(name))
             except:
                 log.debug("Failed to parse name %r" % name)
                 continue
@@ -230,18 +227,6 @@ class NvrNaming(NamingScheme):
             raise RuntimeError("No bases found: %s" % names)
 
         return list(sorted(bases.values()))
-
-    def image_from_name(self, name):
-        """
-        >>> naming = NvrNaming(["Image-1-0", "Image-24-0"])
-        >>> naming.image_from_name("Image-1-0")
-        <Base Image-1-0 [] />
-        >>> naming.image_from_name("Image-24-0")
-        <Base Image-24-0 [] />
-        >>> naming.image_from_name("Image-24-0+1")
-        <Layer Image-24-0+1 />
-        """
-        return Image.from_nvr(name)
 
 
 class NVR(object):
@@ -327,6 +312,7 @@ class Image(object):
     <Base Image-1-2 [] />
     """
     _sep = "+"
+    _re_is_lv_name = re.compile("^[a-zA-Z0-9_.+-]+$")
     nvr = None
 
     @classmethod
@@ -334,6 +320,16 @@ class Image(object):
         if cls._sep in nvr:
             return Layer(nvr)
         return Base(nvr)
+
+    @classmethod
+    def from_lv_name(cls, lv_name):
+        cls._assert_lv_name(lv_name)
+        return cls.from_nvr(lv_name)
+
+    @classmethod
+    def _assert_lv_name(cls, lv_name):
+        assert cls._re_is_lv_name.search(lv_name), \
+            "Invalid LV name: %s" % lv_name
 
     @property
     def lv_name(self):
@@ -352,8 +348,7 @@ class Image(object):
         'Image-1-2+3'
         """
         name = str(self)
-        assert re.search("^[a-zA-Z0-9_.+-]+$", name), \
-            "Invalid LV name: %s" % name
+        Image._assert_lv_name(name)
         return name
 
     def __hash__(self):

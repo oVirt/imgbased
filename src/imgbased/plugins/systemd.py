@@ -2,6 +2,7 @@
 import logging
 
 from .. import utils
+from ..naming import Image
 
 
 log = logging.getLogger(__package__)
@@ -36,11 +37,11 @@ def nspawn(imgbase, layer, cmd=""):
     """
     log.info("Spawning the layer in a new namespace")
 
-    img = imgbase.naming.image_from_name(layer)
+    img = imgbase._lvm_from_layer(Image.from_nvr(layer))
 
     cmds = [cmd] if cmd else []
     mname = layer.replace(".", "-")
-    with utils.mounted(img.lvm.path) as mnt:
+    with utils.mounted(img.path) as mnt:
         utils.nspawn("-n",
                      "-D", mnt.target,
                      "--machine", mname,

@@ -28,6 +28,7 @@ import stat
 import shutil
 from .. import bootloader, utils
 from ..lvm import LVM
+from ..naming import Image
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, \
     nspawn, IDMap
@@ -86,7 +87,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     log.debug("Got: %s and %s" % (new_lv, previous_lv))
 
     # FIXME this can be improved by providing a better methods in .naming
-    new_layer = imgbase.image_from_name(new_lv.lv_name)
+    new_layer = Image.from_name(new_lv.lv_name)
     previous_layer_lv = \
         imgbase._lvm_from_layer(imgbase.naming.layer_before(new_layer))
     try:

@@ -5,6 +5,7 @@ import sys
 import logging
 
 from .. import utils
+from ..naming import Image
 
 
 log = logging.getLogger(__package__)
@@ -61,8 +62,8 @@ def diff(imgbase, left, right, mode="tree"):
     """
     log.info("Diff '%s' between '%s' and '%s'" % (mode, left, right))
 
-    imgl = imgbase.image_from_name(left)
-    imgr = imgbase.image_from_name(right)
+    imgl = imgbase._lvm_from_layer(Image.from_nvr(left))
+    imgr = imgbase._lvm_from_layer(Image.from_nvr(right))
 
     with utils.mounted(imgl.path, target="/mnt/%s" % left) as mountl, \
             utils.mounted(imgr.path, target="/mnt/%s" % right) as mountr:

@@ -23,6 +23,7 @@
 import re
 from .hooks import Hooks
 from . import naming, utils
+from .naming import Image
 from .lvm import LVM
 
 import logging
@@ -116,18 +117,15 @@ class ImageLayers(object):
                                    "and logical volumes, then retry" % tag)
         return True
 
-    def image_from_name(self, name):
-        return self.naming.image_from_name(name)
-
     def image_from_path(self, path):
         name = LVM.LV.from_path(path).lv_name
         log.debug("Found LV '%s' for path '%s'" % (name, path))
-        return self.image_from_name(name)
+        return Image.from_lv_name(name)
 
     def image_from_lvm_name(self, lvm_name):
         lv = LVM.LV.from_lvm_name(lvm_name)
         assert lv.vg_name == self._vg().vg_name
-        return self.image_from_name(lv.lv_name)
+        return Image.from_lv_name(lv.lv_name)
 
     def layout(self):
         return self.naming.layout()
@@ -151,7 +149,7 @@ class ImageLayers(object):
         log.info("Adding a new layer after %r" % previous_layer)
 
         if type(previous_layer) in [str, unicode, bytes]:
-            previous_layer = self.naming.image_from_name(previous_layer)
+            previous_layer = Image.from_nvr(previous_layer)
         log.info("Adding a new layer after %r" % previous_layer)
 
         log.debug("Basing new layer on previous: %r" % previous_layer)
@@ -183,12 +181,16 @@ class ImageLayers(object):
         utils.Ext4.randomize_uuid(new_lv.path)
 
         # Handle the previous layer
-        # FIXME do a correct check if it's a base
-        skip_if_is_base = new_lv.lv_name.endswith(".0")
+        skip_if_is_base = Image.from_lv_name(new_lv.lv_name).is_base()
         new_lv.setactivationskip(skip_if_is_base)
 
-        skip_if_is_base = prev_lv.lv_name.endswith(".0")
-        prev_lv.setactivationskip(skip_if_is_base)
+        try:
+            # It can happen (i.e. on init) that the prev_lv name
+            # is not nvr based.
+            skip_if_is_base = Image.from_lv_name(prev_lv.lv_name).is_base()
+            prev_lv.setactivationskip(skip_if_is_base)
+        except RuntimeError:
+            log.debug("Failed to set activationskip on prev_lv", exc_info=True)
 
         self.hooks.emit("new-snapshot-added",
                         prev_lv,
@@ -222,7 +224,7 @@ class ImageLayers(object):
         existing_lv = LVM.LV.try_find(lvm_name_or_mount_target)
         self.init_tags_on(existing_lv)
 
-        initial_base = self.naming.image_from_name(initial_nvr)
+        initial_base = Image.from_nvr(initial_nvr)
         log.info("Initial base will be %r" % initial_base)
 
         new_layer = self.naming.suggest_next_layer(initial_base)
@@ -242,7 +244,7 @@ class ImageLayers(object):
         """
         assert size
 
-        new_base = self.naming.image_from_name(nvr)
+        new_base = Image.from_nvr(nvr)
         log.info("New base will be: %s" % new_base)
 
         pool = self._thinpool()
@@ -262,7 +264,7 @@ class ImageLayers(object):
         return new_base
 
     def remove_base(self, name, with_children=True):
-        base = self.image_from_name(name)
+        base = Image.from_nvr(name)
         log.debug("Removal candidate base: %r" % base)
 
         base_lv = self._lvm_from_layer(base)
@@ -280,7 +282,7 @@ class ImageLayers(object):
         self.hooks.emit("base-removed", base_lv)
 
     def remove_layer(self, name):
-        layer = self.image_from_name(name)
+        layer = Image.from_nvr(name)
         lv = self._lvm_from_layer(layer)
         log.debug("Removal candidate layer: %r" % layer)
 
@@ -328,6 +330,6 @@ class ImageLayers(object):
             raise
 
     def base_of_layer(self, layer):
-        return self.image_from_name(layer).base
+        return Image.from_nvr(layer).base
 
 # vim: sw=4 et sts=4
