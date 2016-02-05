@@ -1,3 +1,25 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# imgbase
+#
+# Copyright (C) 2014  Red Hat, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Author(s): Fabian Deutsch <fabiand@redhat.com>
+#
 
 import functools
 import subprocess
@@ -267,7 +289,7 @@ class LvmCLI():
     vgchange = ExternalBinary().vgchange
 
 
-class File():
+class File(object):
     filename = None
 
     @property
@@ -522,6 +544,60 @@ class ShellVarFile(File):
         self.sub(r"%s=.*" % key, "%s=%r" % (key, str(val)))
 
 
+def fileMappedPropperty(key, default=None):
+    """Can be used to create "mapped" properties
+
+    The benefit compared to __get and __setattr__ is that
+    by explicitly defining the properties, it is obvious
+    by looking at the class what properties get exported
+    and it is also clear what default will be used - and
+    if a default is allowed or not (in that case it is mandatory)
+    that the variable is defined in the file.
+
+    >>> class Example(ShellVarFile):
+    ...    # No default, KeyError if not set
+    ...    A = fileMappedPropperty("a")
+    ...    # Defaults to "", returned if unset
+    ...    B = fileMappedPropperty("b", "")
+
+    >>> data = {"a": 1, "b": 2}
+    >>> example = Example("")
+    >>> example.parse = lambda: data
+    >>> example.set = lambda k, v: data.update({k: v})
+
+    >>> (example.A, example.B)
+    (1, 2)
+
+    >>> data = {}
+    >>> example.A
+    Traceback (most recent call last):
+    ...
+    KeyError: 'a'
+    >>> example.B
+    ''
+
+    >>> example.A = 1
+    >>> example.A
+    1
+
+    >>> example.B = 2
+    >>> example.B
+    2
+    """
+    def getter(self):
+        assert isinstance(self, ShellVarFile), \
+            "%s must be an instance of ShelllVarFile" % self
+        if default is not None:
+            return self.get(key, default)
+        else:
+            return self.parse()[key]
+
+    def setter(self, v):
+        return self.set(key, v)
+
+    return property(getter, setter)
+
+
 class PackageDb():
     root = None
 
@@ -540,8 +616,11 @@ class RpmPackageDb(PackageDb):
             args += ("--root", self.root)
         return self._rpm_cmd(list(args)).splitlines(False)
 
-    def get_packages(self):
-        return self._rpm("-qa")
+    def get_packages(self, filter="", exclude=None):
+        rpms = [p for p in self._rpm("-qa") if filter in p]
+
+        return [p for p in rpms if exclude not in p] if exclude is not None \
+            else rpms
 
     def get_files(self, pkgname):
         return self._rpm("-ql", pkgname)
@@ -778,5 +857,19 @@ class SystemRelease(File):
             raise RuntimeError("Can not parse CPE string in %s" %
                                self.CPE_FILE)
         self.VENDOR, self.PRODUCT, self.VERSION = cpe_parts[2:5]
+
+
+class OSRelease(ShellVarFile):
+    """Information about the OS based on /etc/os-release
+    """
+    NAME = fileMappedPropperty("NAME")
+    VERSION = fileMappedPropperty("VERSION")
+    PRETTY_NAME = fileMappedPropperty("PRETTY_NAME")
+    ID = fileMappedPropperty("ID")
+    VARIANT = fileMappedPropperty("VARIANT")
+    VARIANT_ID = fileMappedPropperty("VARIANT_ID")
+
+    def __init__(self, fn="/etc/os-release"):
+        super(OSRelease, self).__init__(fn)
 
 # vim: sw=4 et sts=4
