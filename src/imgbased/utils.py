@@ -28,6 +28,7 @@ import logging
 import re
 import glob
 import shlex
+from contextlib import contextmanager
 
 
 log = logging.getLogger(__package__)
@@ -97,12 +98,6 @@ def call(*args, **kwargs):
     kwargs["close_fds"] = True
     log.debug("Calling: %s %s" % (args, kwargs))
     return subprocess.check_output(*args, **kwargs).strip()
-
-
-def chroot(target_root):
-    if target_root and target_root != '/':
-        os.chroot(target_root)
-        os.chdir("/")
 
 
 def format_to_pattern(fmt):
@@ -179,6 +174,12 @@ class mounted(object):
         return self.target + "/" + subpath
 
 
+@contextmanager
+def bindmounted(source, target):
+    with mounted(source, target=target, options="bind") as mnt:
+        yield mnt
+
+
 def sorted_versions(versions, delim="."):
     return sorted(list(versions),
                   key=lambda s: list(map(int, s.split(delim))))
@@ -190,8 +191,17 @@ def kernel_versions_in_path(path):
     return versions
 
 
-def nspawn(*args, **kwargs):
-    return ExternalBinary().nspawn(list(args), **kwargs)
+def nsenter(args, root=None, wd="/"):
+    _args = ["nsenter"]
+
+    add_arg = lambda k, v: _args.append("--%s=%s" % (k, v))
+
+    add_arg("root", root)
+    add_arg("wd", wd)
+
+    args = _args + list(args)
+
+    return ExternalBinary().call(args)
 
 
 def source_of_mountpoint(path):
@@ -256,9 +266,6 @@ class ExternalBinary(object):
 
     def tune2fs(self, args, **kwargs):
         return self.call(["tune2fs"] + args, **kwargs)
-
-    def nspawn(self, args, **kwargs):
-        return self.call(["systemd-nspawn"] + args, **kwargs)
 
     def du(self, args, **kwargs):
         return self.call(["du"] + args, **kwargs)

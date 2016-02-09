@@ -30,8 +30,7 @@ from .. import bootloader, utils
 from ..lvm import LVM
 from ..naming import Image
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File, SystemRelease, Rsync, kernel_versions_in_path, \
-    nspawn, IDMap
+    File, SystemRelease, Rsync, kernel_versions_in_path, IDMap
 
 
 log = logging.getLogger(__package__)
@@ -87,7 +86,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     log.debug("Got: %s and %s" % (new_lv, previous_lv))
 
     # FIXME this can be improved by providing a better methods in .naming
-    new_layer = Image.from_name(new_lv.lv_name)
+    new_layer = Image.from_lv_name(new_lv.lv_name)
     previous_layer_lv = \
         imgbase._lvm_from_layer(imgbase.naming.layer_before(new_layer))
     try:
@@ -234,13 +233,6 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
         bootdir = "/boot/%s" % new_lv.lv_name
         try:
-            def chroot(*args):
-                args = (  # "-q", is not supported in el7
-                    "--bind", "/boot",
-                    "--bind", "%s:/image" % newroot,
-                    "-D", newroot) + args
-                return nspawn(*args)
-
             # FIXME we could work with globbing as well
             pkgs = RpmPackageDb()
             pkgs.root = newroot
@@ -266,10 +258,8 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
         def chroot_b(*args):
             log.debug("Running: %s" % str(args))
-            args = ("-q",
-                    "--bind", "%s:/boot" % bootdir,
-                    "-D", newroot) + args
-            return nspawn(*args)
+            with utils.bindmounted(bootdir, newroot + "/boot"):
+                return utils.nsenter(args, root=newroot)
 
         kvers = kernel_versions_in_path(bootdir)
         kver = kvers.pop()

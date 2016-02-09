@@ -1,5 +1,6 @@
 
 import logging
+from subprocess import check_call
 
 from .. import utils
 from ..naming import Image
@@ -29,10 +30,10 @@ def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "nspawn":
         if args.IMAGE:
-            nspawn(app.imgbase, args.IMAGE, args.COMMAND)
+            systemd_nspawn(app.imgbase, args.IMAGE, args.COMMAND)
 
 
-def nspawn(imgbase, layer, cmd=""):
+def systemd_nspawn(imgbase, layer, cmd=""):
     """Spawn a container off the root of layer layer
     """
     log.info("Spawning the layer in a new namespace")
@@ -42,10 +43,10 @@ def nspawn(imgbase, layer, cmd=""):
     cmds = [cmd] if cmd else []
     mname = layer.replace(".", "-")
     with utils.mounted(img.path) as mnt:
-        utils.nspawn("-n",
-                     "-D", mnt.target,
-                     "--machine", mname,
-                     "--read-only",
-                     *cmds)
+        check_call(["systemd-nspawn",
+                    "-n",
+                    "-D", mnt.target,
+                    "--machine", mname,
+                    "--read-only"] + cmds)
 
 # vim: sw=4 et sts=4
