@@ -77,10 +77,6 @@ check-pep8: $(SRCFILES)
 	@echo "[CHECK] pep8"
 	find . -xdev -name \*.py | xargs pep8
 
-check-pylint: $(SRCFILES)
-	@echo "[CHECK] pylint"
-	find . -xdev -name \*.py | xargs echo pylint
-
 check-nosetests: $(SRCFILES)
 	@echo "[CHECK] nosetests"
 	nosetests --no-byte-compile --with-xunit \
