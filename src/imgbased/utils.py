@@ -323,6 +323,10 @@ class File():
     def basename(self):
         return os.path.basename(self.filename)
 
+    def truncate(self, size=None):
+        with open(self.filename, "w") as fd:
+            fd.truncate(size)
+
 
 class Fstab(File):
     _testdata = """#

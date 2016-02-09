@@ -1,7 +1,7 @@
 
 import logging
 import os
-from ..utils import Rsync
+from ..utils import Rsync, File
 
 
 log = logging.getLogger(__package__)
@@ -45,11 +45,19 @@ def factorize(path):
     rsync.sync(path, fpath)
 
 
+def empty_machineid():
+    """Empty the machine-id file, systemd will populate it
+    """
+    File("/etc/machine-id").truncate()
+
+
 def postprocess(app):
     log.info("Launching image post-processing")
 
     factorize("/etc")
     # FIXME Do we need ostree compat (-> /usr/etc)?
     factorize("/var")
+
+    empty_machineid()
 
 # vim: sw=4 et sts=4
