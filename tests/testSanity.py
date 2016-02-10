@@ -79,8 +79,11 @@ class CliTestCase(ImgbaseTestCase):
 
 class LayoutVerbTestCase(CliTestCase):
     def test_layout_init_from(self):
-        assert "Image-1.0-0" in FakeLVM._list_lv_names()
-        assert "Image-1.0-0+1" in FakeLVM._list_lv_names()
+        debug("LVs: %s" % FakeLVM.lvs())
+        lv_names = [lv.lv_name for lv in FakeLVM.list_lvs()]
+        debug("LV Names: %s" % lv_names)
+        assert "Image-1.0-0" in lv_names
+        assert "Image-1.0-0+1" in lv_names
 
     def test_layout_bases(self):
         r = self.cli("--debug", "layout", "--bases")

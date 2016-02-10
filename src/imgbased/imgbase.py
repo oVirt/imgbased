@@ -81,12 +81,12 @@ class ImageLayers(object):
 
         def has_our_tag(lv):
             our_tags = [self.lv_base_tag, self.lv_layer_tag]
-            return any(tag in lv.tags
+            return any(tag in lv.tags()
                        for tag in our_tags)
 
         our_lvs = [lv for lv in lvs if has_our_tag(lv)]
         log.debug("Our LVS: %s" % lvs)
-        return our_lvs
+        return [lv.lv_name for lv in our_lvs]
 
     def _vg(self):
         return LVM.VG.from_tag(self.vg_tag)
