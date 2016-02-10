@@ -74,15 +74,19 @@ class ImageLayers(object):
         self.hooks.create("layer-removed",
                           ("lv_fullname",))
 
-        # FIXME just pass tagged LVs
         self.naming = naming.NvrNaming(datasource=self.list_our_lv_names)
 
     def list_our_lv_names(self):
-        log.debug("All LVS: %s" % LVM.list_lv_names())
-        lvs = LVM.list_lv_names([self.lv_base_tag,
-                                 self.lv_layer_tag])
+        lvs = LVM.list_lvs()
+
+        def has_our_tag(lv):
+            our_tags = [self.lv_base_tag, self.lv_layer_tag]
+            return any(tag in lv.tags
+                       for tag in our_tags)
+
+        our_lvs = [lv for lv in lvs if has_our_tag(lv)]
         log.debug("Our LVS: %s" % lvs)
-        return lvs
+        return our_lvs
 
     def _vg(self):
         return LVM.VG.from_tag(self.vg_tag)
