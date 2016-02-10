@@ -352,7 +352,9 @@ class File(object):
     def basename(self):
         return os.path.basename(self.filename)
 
-    def truncate(self, size=None):
+    def truncate(self, size=0):
+        """Truncate the file to size
+        """
         with open(self.filename, "w") as fd:
             fd.truncate(size)
 
