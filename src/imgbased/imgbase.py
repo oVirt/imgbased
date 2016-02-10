@@ -61,12 +61,8 @@ class ImageLayers(object):
         #
         # Add availabel hooks
         #
-        self.hooks.create("new-snapshot-added",
-                          ("previous-lv_fullname", "new-lv_fullname"))
         self.hooks.create("new-layer-added",
                           ("previous-lv_fullname", "new-lv_fullname"))
-        self.hooks.create("new-base-added",
-                          ("new-lv_fullname",))
         self.hooks.create("new-base-with-tree-added",
                           ("new-fs",))
         self.hooks.create("pre-base-removed",
@@ -143,7 +139,7 @@ class ImageLayers(object):
         previous_layer = self.current_layer()
         return self.add_layer(previous_layer)
 
-    def add_layer(self, previous_layer):
+    def add_layer(self, previous_layer, new_layer=None):
         """Add a new thin LV
         """
         log.info("Adding a new layer after %r" % previous_layer)
@@ -153,7 +149,7 @@ class ImageLayers(object):
         log.info("Adding a new layer after %r" % previous_layer)
 
         log.debug("Basing new layer on previous: %r" % previous_layer)
-        new_layer = self.naming.suggest_next_layer(previous_layer)
+        new_layer = new_layer or self.naming.suggest_next_layer(previous_layer)
         log.info("New layer will be: %r" % new_layer)
 
         prev_lv = self._lvm_from_layer(previous_layer)
@@ -192,10 +188,6 @@ class ImageLayers(object):
         except RuntimeError:
             log.debug("Failed to set activationskip on prev_lv", exc_info=True)
 
-        self.hooks.emit("new-snapshot-added",
-                        prev_lv,
-                        new_lv)
-
         return new_lv
 
     def init_tags_on(self, lv):
@@ -232,11 +224,11 @@ class ImageLayers(object):
 
         log.info("Creating an initial base %r for %r" %
                  (initial_base, existing_lv))
-        initial_base_lv = self._add_lvm_snapshot(existing_lv,
-                                                 initial_base.lv_name)
+        self._add_lvm_snapshot(existing_lv,
+                               initial_base.lv_name)
 
         log.info("Creating initial layer %r for initial base" % new_layer)
-        self._add_lvm_snapshot(initial_base_lv, new_layer.lv_name)
+        self.add_layer(initial_base, new_layer)
 
     def add_base(self, size, nvr, lvs=None,
                  with_layer=False):
@@ -253,8 +245,6 @@ class ImageLayers(object):
         new_base_lv = pool.create_thinvol(new_base.lv_name, size)
         new_base_lv.addtag(self.lv_base_tag)
         log.info("New LV is: %s" % new_base_lv)
-
-        self.hooks.emit("new-base-added", new_base_lv.path)
 
         new_base_lv.protect()
 
