@@ -29,6 +29,13 @@ AM_CONDITIONAL(TARGET_CENTOS, test x"$CENTOS" != x)
 AM_CONDITIONAL(TARGET_EL6, test x"$RHEL" != x || test x"$CENTOS" != x)
 AM_CONDITIONAL(TARGET_SYSTEMD, test 0$RHEL -ge 7 || test 0$FEDORA -ge 16 || test 0$CENTOS -ge 7)
 
+AC_ARG_VAR([ASCIIDOC], [Path to asciidoc command])
+AC_PATH_PROG([ASCIIDOC], [asciidoc])
+AM_CONDITIONAL([HAVE_DOCTOOLS], [test "x$ASCIIDOC" != "x"])
+if test "x$ASCIIDOC" = "x"; then
+        AC_MSG_ERROR([asciidoc not found - cannot create man pages without it])
+fi
+
 AM_PATH_PYTHON
 
 AC_CONFIG_FILES([Makefile
