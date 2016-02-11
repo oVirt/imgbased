@@ -300,16 +300,16 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             return
 
         log.debug("Checking OS release")
-        with open("%s/etc/system-release" % newroot) as src:
-            sysrel = src.read()
         osrel = ShellVarFile("%s/etc/os-release" % newroot)
-        if sysrel:
-            title = "%s (%s)" % (new_lvm_name, sysrel)
-        elif osrel.exists():
-            name = osrel.parse()["PRETTY_NAME"]
+        sysrel = File("%s/etc/system-release" % newroot)
+        if osrel.exists():
+            name = osrel.parse()["PRETTY_NAME"].strip()
             title = "%s (%s)" % (new_lvm_name, name)
+        elif sysrel.exists():
+            title = "%s (%s)" % (new_lvm_name,
+                                 sysrel.contents.strip())
         else:
-            log.info("No os-release file exists, can not create "
+            log.info("No release files exists, can not create "
                      "pretty name")
             title = new_lvm_name
 
