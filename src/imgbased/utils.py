@@ -61,6 +61,10 @@ def size_of_fstree(path):
     return int(du(["-sxb", path]).split()[0])
 
 
+def grubby(*args, **kwargs):
+    return ExternalBinary().grubby(list(args), **kwargs)
+
+
 def grub2_set_default(key):
     ExternalBinary().grub2_set_default([key])
 
@@ -281,6 +285,9 @@ class ExternalBinary(object):
 
     def grub2_set_default(self, args, **kwargs):
         return self.call(["grub2-set-default"] + args, **kwargs)
+
+    def grubby(self, args, **kwargs):
+        return self.call(["grubby"] + args, **kwargs)
 
     def systemctl(self, args, **kwargs):
         return self.call(["systemctl"] + args, **kwargs)

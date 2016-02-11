@@ -24,7 +24,6 @@
 import logging
 import glob
 import os
-import stat
 import shutil
 from .. import bootloader, utils
 from ..lvm import LVM
@@ -60,22 +59,6 @@ def init(app):
 
 
 def on_register_checks(app, register):
-    @register
-    def bls_check(try_fix):
-        log.info("Checking bootloader configuration")
-        fail = True
-        grubbls = File("/etc/grub.d/50_imgbased")
-        if grubbls.exists():
-            fail = False
-        else:
-            log.warning("Bootloader is not configured propperly")
-            if try_fix:
-                log.info("Fixing bootloader configuration")
-                grubbls.write("echo -e syslinux_source /syslinux.cfg\n" +
-                              "echo -e bls_import\n")
-                grubbls.chmod(grubbls.stat.st_mode | stat.S_IEXEC)
-        return fail
-
     @register
     def mount_check(try_fix):
         log.info("Checking if 'discard' is used")
@@ -174,8 +157,9 @@ def migrate_etc(imgbase, new_lv, previous_lv):
 def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
     log.info("Inspecting if the layer contains OS data")
 
-    """Add a new BLS based boot entry and update the layers /etc/fstab
+    """Add a new boot entry and update the layers /etc/fstab
 
+    Another option is to use BLS - but it has issues with EFI:
     http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec/
     """
     log.info("Adjusting mount and boot related points")
@@ -344,7 +328,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             .split()
         # Make sure we don't have duplicate args
         append = " ".join(list(set(grub_append).union(set(append))))
-        loader = bootloader.BlsBootloader()
+        loader = bootloader.Grubby()
         loader.add_entry(new_lv.lv_name, title, vmlinuz, initrd, append)
         loader.set_default(new_lv.lv_name)
 
@@ -369,7 +353,7 @@ def remove_boot(imgbase, lv_fullname):
 
     bootdir = "/boot/%s" % lv_name
 
-    loader = bootloader.BlsBootloader()
+    loader = bootloader.Grubby()
     loader.remove_entry(lv_name)
 
     assert bootdir.strip("/") != "boot"

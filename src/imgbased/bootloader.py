@@ -21,11 +21,19 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 import logging
-import os
-from .utils import File, grub2_set_default
+import re
+from .utils import grubby
 
 
 log = logging.getLogger(__package__)
+
+
+class BootloaderError(Exception):
+    pass
+
+
+class NoKeyFoundError(BootloaderError):
+    pass
 
 
 class Bootloader(object):
@@ -47,48 +55,118 @@ class Bootloader(object):
         raise NotImplementedError()
 
 
-class BlsBootloader(Bootloader):
-    """Fixme can probably use new-kernel-pkg
+class Grubby(Bootloader):
+    """This class can do bootloader configuration by using grubby
     """
-    bls_dir = "/boot/loader/entries"
+    _keyarg = "img.bootid"
 
-    def _efile(self, key):
-        return File(os.path.join(self.bls_dir, "%s.conf" % key))
+    class GrubbyEntry(object):
+        """Simple class to parse out grubby entries
+        >>> entry = '''index=0
+        ... kernel=/boot/ovirt-node-4.0+1/vmlinuz-3.10.0-327.4.5.el7.x86_64
+        ... args="ro crashkernel=auto rd.lvm.lv=centos_installed/root \
+        ... rd.lvm.lv=centos_installed/swap rhgb quiet LANG=en_US.UTF-8"
+        ... root=/dev/mapper/centos_installed-root
+        ... initrd=\
+        ... /boot/ovirt-node-4.0+1/initramfs-3.10.0-327.4.5.el7.x86_64.img
+        ... title=ovirt-node-4.0+1'''
+
+        >>> parsed = Grubby.GrubbyEntry.parse(entry)
+        >>> parsed.title
+        'ovirt-node-4.0+1'
+        >>> parsed.root
+        '/dev/mapper/centos_installed-root'
+
+        >>> entry = '''index=2
+        ... kernel=/boot/vmlinuz-4.0.0.fc23.x86_64
+        ... args="ro console=ttyS0"
+        ... root=/dev/sda3
+        ... initrd=/boot/initramfs-4.0.0.fc23.x86_64.img
+        ... title=dummy'''
+
+        >>> parsed = Grubby.GrubbyEntry.parse(entry)
+        >>> parsed.kernel
+        '/boot/vmlinuz-4.0.0.fc23.x86_64'
+        >>> parsed.initrd
+        '/boot/initramfs-4.0.0.fc23.x86_64.img'
+
+        >>> entry = '''index=1
+        ... non linux entry'''
+        >>> parsed = Grubby.GrubbyEntry.parse(entry)
+        >>> parsed.title
+        'non linux entry'
+        >>> assert parsed.kernel == None
+        """
+
+        args = None
+        root = None
+        index = None
+        title = None
+        kernel = None
+        initrd = None
+
+        @staticmethod
+        def parse(entry):
+            g = Grubby.GrubbyEntry()
+
+            r = re.compile(r"""(?:index=)(\d+)\n?
+                               (?:(?:kernel=)?(.*?)\n)?
+                               (?:(?:args=)?(.*?)\n)?
+                               (?:(?:root=)?(.*?)\n)?
+                               (?:(?:initrd=)?(.*?)\n)?
+                               (?:(?:title=)?(.*))?
+                            """, re.VERBOSE)
+            matches = r.match(entry)
+            g.index, g.kernel, g.args, g.root, g.initrd, g.title = \
+                matches.groups()
+            return g
+
+    def _parse_key_from_args(self, args):
+        matches = re.findall("%s=([^\s]+)" % self._keyarg, args)
+        if len(matches) == 0:
+            raise NoKeyFoundError()
+        return matches[0]
+
+    def _get_entries(self):
+        r = re.compile(r'(index.*?)(?=index)', re.DOTALL)
+        stanzas = filter(None, r.split(grubby("--info=ALL")))
+
+        entries = (self.GrubbyEntry.parse(stanza) for stanza in stanzas)
+
+        entrymap = {}
+        for entry in entries:
+            try:
+                key = self._parse_key_from_args(entry.args)
+            except NoKeyFoundError:
+                log.debub("No key found in entry: %s" % entry.args)
+                continue
+
+            entrymap[key] = entry
+
+        return entrymap
 
     def add_entry(self, key, title, linux, initramfs, append):
-        edir = self.bls_dir
+        log.debug("Adding entry: %s" % key)
 
-        if not os.path.isdir(edir):
-            os.makedirs(edir)
+        assert " " not in key
+        keyarg = " %s=%s" % (self._keyarg, key)
+        append += keyarg
 
-        entry = ["title %s" % title,
-                 "linux /%s" % linux,
-                 "initrd /%s" % initramfs,
-                 "options %s" % append]
-
-        log.debug("Entry: %s" % entry)
-
-        if not self.dry:
-            efile = self._efile(key)
-            efile.writen("\n".join(entry))
+        grubby("--add-kernel", "/boot/%s" % linux,
+               "--initrd", "/boot/%s" % initramfs,
+               "--args", append,
+               "--title", title)
 
         return key
 
     def remove_entry(self, key):
-        f = self._efile(key)
-        log.debug("Removing boot entry: %s" % f.contents)
-        f.remove()
-
-    def _key_val(self, key):
-        kvs = dict()
-        for line in self._efile(key).lines():
-            k, sep, v = line.partition(" ")
-            kvs[k] = v
-        return kvs
+        entry = self._get_entries()[key]
+        log.debug("Removing boot entry: %s" % entry.title)
+        grubby("--remove-kernel", entry.kernel)
 
     def set_default(self, key):
-        title = self._key_val(key)["title"]
-        log.debug("Making default: %s" % title)
-        grub2_set_default(title)
+        entry = self._get_entries()[key]
+        log.debug("Making default: %s" % entry.title)
+        grubby("--set-default", entry.kernel)
 
 # vim: sw=4 et sts=4:
