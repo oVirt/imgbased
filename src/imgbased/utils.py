@@ -212,18 +212,70 @@ def source_of_mountpoint(path):
     return ExternalBinary().findmnt(["--noheadings", "-o", "SOURCE", path])
 
 
-class Ext4():
-    def mkfs(self, path, debug=False):
+class Filesystem():
+    @staticmethod
+    def get_type(path):
+        cmd = ["blkid", "-o", "value", "-s", "TYPE", path]
+        return subprocess.check_output(cmd)
+
+    @classmethod
+    def from_device(cls, path):
+        typ = cls.get_type(path)
+        if typ == "ext4":
+            cls = Ext4
+        elif typ == "xfs":
+            cls = XFS
+        else:
+            raise RuntimeError("Unknown filesystem %s on %s" % (typ, path))
+        return cls(path)
+
+    @classmethod
+    def from_mountpoint(cls, path):
+        source = source_of_mountpoint(path)
+        assert source
+        return cls.from_device(source)
+
+    path = None
+
+    def __init__(self, path):
+        self.path = path
+
+    @staticmethod
+    def mkfs(path, debug=False):
+        raise NotImplemented
+
+    def randomize_uuid(self):
+        raise NotImplemented
+
+
+class Ext4(Filesystem):
+    @staticmethod
+    def mkfs(path, debug=False):
         cmd = ["mkfs.ext4", "-c", "-E", "discard", path]
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
         subprocess.check_call(cmd)
 
+    def randomize_uuid(self):
+        cmd = ["tune2fs", "-U", "random", self.path]
+        log.debug("Running: %s" % cmd)
+        subprocess.check_call(cmd)
+
+
+class XFS(Filesystem):
     @staticmethod
-    def randomize_uuid(path):
-        ExternalBinary().tune2fs(["-U", "random",
-                                  path])
+    def mkfs(path, debug=False):
+        cmd = ["mkfs.xfs", path]
+        if not debug:
+            cmd.append("-q")
+        log.debug("Running: %s" % cmd)
+        subprocess.check_call(cmd)
+
+    def randomize_uuid(self):
+        cmd = ["xfs_admin", "-U", "generate", self]
+        log.debug("Running: %s" % cmd)
+        subprocess.check_call(cmd)
 
 
 def findls(path):
@@ -267,9 +319,6 @@ class ExternalBinary(object):
 
     def findmnt(self, args, **kwargs):
         return self.call(["findmnt"] + args, **kwargs)
-
-    def tune2fs(self, args, **kwargs):
-        return self.call(["tune2fs"] + args, **kwargs)
 
     def du(self, args, **kwargs):
         return self.call(["du"] + args, **kwargs)

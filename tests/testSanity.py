@@ -44,6 +44,7 @@ class CliTestCase(ImgbaseTestCase):
                 patch("imgbased.lvm.LVM", FakeLVM), \
                 patch("imgbased.imgbase.LVM", FakeLVM), \
                 patch("imgbased.imgbase.Hooks"), \
+                patch("imgbased.imgbase.utils.Filesystem"), \
                 patch("imgbased.plugins.core.augtool"), \
                 patch("imgbased.imgbase.ImageLayers.current_layer",
                       lambda s: None):
