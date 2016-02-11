@@ -138,7 +138,7 @@ class Grubby(Bootloader):
             try:
                 key = self._parse_key_from_args(entry.args)
             except NoKeyFoundError:
-                log.debub("No key found in entry: %s" % entry.args)
+                log.debug("No key found in entry: %s" % entry.args)
                 continue
 
             entrymap[key] = entry
