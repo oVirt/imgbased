@@ -152,7 +152,8 @@ class Grubby(Bootloader):
         keyarg = " %s=%s" % (self._keyarg, key)
         append += keyarg
 
-        grubby("--add-kernel", "/boot/%s" % linux,
+        grubby("--copy-default",
+               "--add-kernel", "/boot/%s" % linux,
                "--initrd", "/boot/%s" % initramfs,
                "--args", append,
                "--title", title)

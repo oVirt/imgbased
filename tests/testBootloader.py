@@ -50,7 +50,8 @@ class GrubbyTestCase(unittest.TestCase):
                              "a-append")
         self.assertEquals(r, "a")
         self.assertEquals(_fake_grubby.last_data,
-                          (('--add-kernel', '/boot/a-linux', '--initrd',
+                          (('--copy-default', '--add-kernel',
+                            '/boot/a-linux', '--initrd',
                             '/boot/a-initramfs', '--args',
                             'a-append img.bootid=a', '--title',
                             'a-title'),
