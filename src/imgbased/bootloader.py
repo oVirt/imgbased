@@ -32,6 +32,10 @@ class BootloaderError(Exception):
     pass
 
 
+class InvalidBootEntryError(BootloaderError):
+    pass
+
+
 class NoKeyFoundError(BootloaderError):
     pass
 
@@ -89,13 +93,32 @@ class Grubby(Bootloader):
         '/boot/vmlinuz-4.0.0.fc23.x86_64'
         >>> parsed.initrd
         '/boot/initramfs-4.0.0.fc23.x86_64.img'
+        >>> parsed.args
+        '"ro console=ttyS0"'
 
         >>> entry = '''index=1
         ... non linux entry'''
         >>> parsed = Grubby.GrubbyEntry.parse(entry)
-        >>> parsed.title
-        'non linux entry'
-        >>> assert parsed.kernel == None
+        Traceback (most recent call last):
+        ...
+        InvalidBootEntryError
+
+        >>> entries = '''index=0
+        ... kernel=ker0
+        ... args=ar0 img.bootid=0
+        ... initrd=in0
+        ... title=tit0
+        ... index=1
+        ... kernel=ker1
+        ... args=ar1
+        ... initrd=in1
+        ... title=tit1
+        ... index=4
+        ... non linux entry'''
+
+        There will be only one entry, because only one has a key
+        >>> len(Grubby()._parse_valid_entries(entries))
+        1
         """
 
         args = None
@@ -119,29 +142,49 @@ class Grubby(Bootloader):
             matches = r.match(entry)
             g.index, g.kernel, g.args, g.root, g.initrd, g.title = \
                 matches.groups()
+
+            if not all([g.kernel, g.args, g.initrd]):
+                raise InvalidBootEntryError()
+
             return g
 
     def _parse_key_from_args(self, args):
-        matches = re.findall("%s=([^\s]+)" % self._keyarg, args)
+        """
+        >>> g = Grubby()
+        >>> g._parse_key_from_args("rhgb crashkernel=auto "
+        ... "rd.lvm.lv=onn/ovirt-node-ng-4.0.0-0.0.master.20160211.0.el7+1 "
+        ... "quiet rd.lvm.lv=onn/swap img.bootid=ovirt-node-ng-4.0.0"
+        ... "-0.0.master.20160211.0.el7+1")
+        'ovirt-node-ng-4.0.0-0.0.master.20160211.0.el7+1'
+        """
+        log.debug("Finding key in args: %s" % args)
+        matches = re.findall("%s=([^\s\"']+)" % self._keyarg, args)
         if len(matches) == 0:
             raise NoKeyFoundError()
         return matches[0]
 
     def _get_entries(self):
-        r = re.compile(r'(index.*?)(?=index)', re.DOTALL)
-        stanzas = filter(None, r.split(grubby("--info=ALL")))
+        return self._parse_valid_entries(grubby("--info=ALL"))
 
-        entries = (self.GrubbyEntry.parse(stanza) for stanza in stanzas)
+    def _parse_valid_entries(self, data):
+        r = re.compile(r'(index.*?)(?=index)', re.DOTALL)
+        stanzas = filter(None, r.split(data))
 
         entrymap = {}
-        for entry in entries:
+        for stanza in stanzas:
             try:
+                entry = self.GrubbyEntry.parse(stanza)
                 key = self._parse_key_from_args(entry.args)
+            except InvalidBootEntryError:
+                log.debug("Failed to parse entry: %s" % stanza)
+                continue
             except NoKeyFoundError:
                 log.debug("No key found in entry: %s" % entry.args)
                 continue
 
             entrymap[key] = entry
+
+        log.debug("Found valid entries: %s" % entrymap)
 
         return entrymap
 
