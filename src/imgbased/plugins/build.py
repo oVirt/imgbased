@@ -1,6 +1,7 @@
 
 import logging
 import os
+import shutil
 from ..utils import Rsync, File
 
 
@@ -51,6 +52,17 @@ def empty_machineid():
     File("/etc/machine-id").truncate()
 
 
+def handle_rpm_and_yum():
+    log.info("Relocating rpmdb")
+    # Move out of /var
+    shutil.move("/var/lib/rpm", "/usr/share/rpm")
+    # Make the /var entry a symlink to the moved db
+    os.symlink("../../../usr/share/rpm", "/var/lib/rpm")
+
+    log.info("Cleaning yum")
+    shutil.rmtree("/var/lib/yum")
+
+
 def postprocess(app):
     log.info("Launching image post-processing")
 
@@ -59,5 +71,7 @@ def postprocess(app):
     factorize("/var")
 
     empty_machineid()
+
+    handle_rpm_and_yum()
 
 # vim: sw=4 et sts=4
