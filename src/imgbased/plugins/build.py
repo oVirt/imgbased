@@ -57,7 +57,7 @@ def handle_rpm_and_yum():
     # Move out of /var
     shutil.move("/var/lib/rpm", "/usr/share/rpm")
     # Make the /var entry a symlink to the moved db
-    os.symlink("../../../usr/share/rpm", "/var/lib/rpm")
+    os.symlink("../../usr/share/rpm", "/var/lib/rpm")
 
     log.info("Cleaning yum")
     shutil.rmtree("/var/lib/yum")
