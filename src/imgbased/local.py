@@ -52,6 +52,10 @@ class Configuration():
     VENDOR_CFG_PREFIX = "/usr/lib/imgbased/"
     cfgstr = None
 
+    @property
+    def core(self):
+        return self.section(Configuration.CoreSection)
+
     class Section(object):
         def __repr__(self):
             vals = sorted(self.__dict__.items())
@@ -70,7 +74,6 @@ class Configuration():
 
     class CoreSection(Section):
         _type = "core"
-        mode = None
 
 
     _known_section_types = [
@@ -123,9 +126,6 @@ class Configuration():
                 read_loc(loc)
 
         return p
-
-    def core(self):
-        return self.section(Configuration.CoreSection)
 
     def section(self, filter_type, name=None):
         sections = [s for s in self.sections(filter_type)
