@@ -2,6 +2,7 @@
 import glob
 import logging
 import os
+from .. import local
 from ..bootloader import Grubby
 from ..naming import Image
 from ..utils import size_of_fstree, mounted, Filesystem, Rsync, \
@@ -10,9 +11,16 @@ from ..utils import size_of_fstree, mounted, Filesystem, Rsync, \
 log = logging.getLogger(__package__)
 
 
+class UpdateConfigurationSection(local.Configuration.Section):
+    _type = "update"
+    images_to_keep = 3
+
+
 def init(app):
     app.hooks.connect("pre-arg-parse", add_argparse)
     app.hooks.connect("post-arg-parse", check_argparse)
+
+    local.Configuration.register_section(UpdateConfigurationSection)
 
 
 def add_argparse(app, parser, subparsers):
@@ -84,6 +92,10 @@ def check_argparse(app, args):
         LiveimgExtractor(app.imgbase)\
             .extract(args.FILENAME)
         log.info("Update was pulled successfully")
+
+        # FIXME we should read this value form the config file.
+        # app.imgbase.config.section("update").images_to_keep
+        GarbageCollector(app.imgbase).run(keep=2)
     else:
         log.error("Unknown update format %r" % args.format)
 
@@ -143,5 +155,71 @@ class LiveimgExtractor():
                 log.info("Files extracted")
         log.debug("Extraction done")
         return new_base
+
+
+class GarbageCollector():
+    """The garbage collector will remove old updates
+    The naming order can be used to find the oldest images
+    """
+    imgbase = None
+
+    def __init__(self, imgbase):
+        self.imgbase = imgbase
+
+    def run(self, keep):
+        log.info("Starting garbage collection")
+
+        assert keep > 0
+
+        bases = sorted(self.imgbase.naming.bases())
+
+        if len(bases) <= keep:
+            log.info("No bases to free")
+            return
+
+        current_layer = self.imgbase.current_layer()
+        remove_bases = self._filter_overflow(bases, current_layer.base, keep)
+
+        for base in remove_bases:
+            log.info("Freeing %s" % base)
+            self.imgbase.remove_base(base.nvr)
+
+        log.info("Garbage collection done.")
+
+    def _filter_candidates(self, bases, current_layer_base, keep):
+        """
+
+        >>> gc = GarbageCollector(None)
+        >>> bases = [1, 2, 3]
+        >>> keep = 2
+
+        >>> cur = 1
+        >>> gc._filter_candidates(bases, cur, keep)
+        []
+
+        >>> cur = 2
+        >>> gc._filter_candidates(bases, cur, keep)
+        [1]
+
+        >>> cur = 3
+        >>> gc._filter_candidates(bases, cur, keep)
+        [1]
+
+        """
+        bases_to_keep = bases[-keep:]
+        bases_to_free = bases[:-keep]
+
+        log.debug("Keeping bases: %s" % bases_to_keep)
+        log.debug("Freeing bases: %s" % bases_to_free)
+
+        remove_bases = []
+
+        for base in bases_to_free:
+            if base == current_layer_base:
+                log.info("Not freeing %s, because it is in use" % base)
+                continue
+            remove_bases.append(base)
+
+        return remove_bases
 
 # vim: sw=4 et sts=4:

@@ -75,15 +75,14 @@ class Configuration():
     class CoreSection(Section):
         _type = "core"
 
-
     _known_section_types = [
         # Add some default classes
         CoreSection,
     ]
 
-    @staticmethod
-    def register_section(klass):
-        Configuration._known_section_types.append(klass)
+    @classmethod
+    def register_section(cls, klass):
+        cls._known_section_types.append(klass)
 
     def _parser(self, only_user_file=False):
         p = configparser.ConfigParser()
@@ -127,13 +126,16 @@ class Configuration():
 
         return p
 
-    def section(self, filter_type, name=None):
+    def section(self, filter_type, name=None, default=None):
         sections = [s for s in self.sections(filter_type)
                     if (name is None
                         or (hasattr(s, "name") and s.name == name))]
         if not sections:
-            raise RuntimeError("Failed to retrieve section: %s %s" %
-                               (filter_type, name))
+            if default:
+                sections = [default]
+            else:
+                raise RuntimeError("Failed to retrieve section: %s %s" %
+                                   (filter_type, name))
         return sections[0]
 
     def sections(self, filter_type=None):

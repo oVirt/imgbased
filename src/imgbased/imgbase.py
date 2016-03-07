@@ -22,7 +22,7 @@
 #
 import re
 from .hooks import Hooks
-from . import naming, utils
+from . import naming, utils, local
 from .naming import Image
 from .lvm import LVM
 
@@ -37,6 +37,8 @@ class LayerOutOfOrderError(Exception):
 
 
 class ImageLayers(object):
+    config = local.Configuration()
+
     debug = False
     dry = False
 
