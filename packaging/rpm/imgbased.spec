@@ -12,6 +12,13 @@ Source0:        %{name}-%{version}.tar.xz
 
 BuildArch:      noarch
 
+# Skips check since rhel default repos lack pep8, pyflakes and python-nose
+%if ! 0%{?rhel}
+%{!?with_check:%global with_check 1}
+%else
+%{!?with_check:%global with_check 0}
+%endif
+
 BuildRequires:       make
 BuildRequires:       automake autoconf
 BuildRequires:       rpm-build
@@ -19,7 +26,11 @@ BuildRequires:       git
 BuildRequires:       asciidoc
 
 BuildRequires:       python-devel python-six
+
+%if 0%{?with_check}
 BuildRequires:       python-pep8 pyflakes python-nose
+%endif
+
 BuildRequires:       rpm-python
 
 %if 0%{?is_el7}
