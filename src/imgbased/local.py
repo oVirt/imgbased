@@ -72,15 +72,10 @@ class Configuration():
         _type = "core"
         mode = None
 
-    class PoolSection(Section):
-        _type = "pool"
-        name = None
-        pull = None
 
     _known_section_types = [
         # Add some default classes
         CoreSection,
-        PoolSection
     ]
 
     @staticmethod
@@ -132,9 +127,6 @@ class Configuration():
     def core(self):
         return self.section(Configuration.CoreSection)
 
-    def pool(self, name):
-        return self.section(Configuration.PoolSection, name)
-
     def section(self, filter_type, name=None):
         sections = [s for s in self.sections(filter_type)
                     if (name is None
@@ -184,14 +176,6 @@ class Configuration():
         >>> rs.remove(rs.section("core"))
         <BLANKLINE>
 
-        >>> pool = Configuration.PoolSection()
-        >>> pool.name = "<pool>"
-        >>> pool.url = "<url>"
-        >>> rs.save(pool)
-        [pool <pool>]
-        url = <url>
-        <BLANKLINE>
-        <BLANKLINE>
         """
         p = self._parser()
 
