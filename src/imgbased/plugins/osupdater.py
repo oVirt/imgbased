@@ -127,7 +127,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                 log.info("UID/GID drift was detected")
                 log.debug("Drifted uids: %s gids: %s" %
                           idmaps.get_drift())
-                changes = idmaps.fix_drift(new_fs)
+                changes = idmaps.fix_drift(new_fs.path("/"))
                 if changes:
                     log.info("UID/GID adjustments were applied")
                     log.debug("Changed files: %s" % list(changes))
