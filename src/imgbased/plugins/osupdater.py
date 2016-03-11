@@ -99,6 +99,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
 
 
 def migrate_etc(imgbase, new_lv, previous_lv):
+    log.debug("Migrating etc (%s -> %s)" % (previous_lv, new_lv))
     with mounted(new_lv.path) as new_fs,\
             mounted(previous_lv.path) as old_fs:
         old_etc = old_fs.path("/etc")

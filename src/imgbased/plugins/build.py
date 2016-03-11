@@ -2,6 +2,8 @@
 import logging
 import os
 import shutil
+import glob
+import subprocess
 from ..utils import Rsync, File
 
 
@@ -52,7 +54,7 @@ def empty_machineid():
     File("/etc/machine-id").truncate()
 
 
-def handle_rpm_and_yum():
+def handle_rpm_and_yum_dbs():
     log.info("Relocating rpmdb")
     # Move out of /var
     shutil.move("/var/lib/rpm", "/usr/share/rpm")
@@ -61,6 +63,15 @@ def handle_rpm_and_yum():
 
     log.info("Cleaning yum")
     shutil.rmtree("/var/lib/yum")
+
+
+def disable_and_clean_yum_repos():
+    log.info("Disabling all yum repositories")
+    repofiles = glob.glob("/etc/yum.repos.d/*")
+    log.debug("Disabling repositories in files: %s" % repofiles)
+    subprocess.call(["sed", "-i",
+                     "/enabled=/ d ; /\[/ a enabled=0"] + repofiles)
+    subprocess.call(["yum", "clean", "all"])
 
 
 def postprocess(app):
@@ -72,6 +83,9 @@ def postprocess(app):
 
     empty_machineid()
 
-    handle_rpm_and_yum()
+    handle_rpm_and_yum_dbs()
+    disable_and_clean_yum_repos()
+
+    # FIXME symlink in /etc: system-release, release-cpe, rpm
 
 # vim: sw=4 et sts=4
