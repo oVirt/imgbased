@@ -70,7 +70,7 @@ def disable_and_clean_yum_repos():
     repofiles = glob.glob("/etc/yum.repos.d/*")
     log.debug("Disabling repositories in files: %s" % repofiles)
     subprocess.call(["sed", "-i",
-                     "/enabled=/ d ; /\[/ a enabled=0"] + repofiles)
+                     "/enabled=/ d ; /^\[/ a enabled=0"] + repofiles)
     subprocess.call(["yum", "clean", "all"])
 
 
