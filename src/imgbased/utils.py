@@ -907,7 +907,7 @@ class BuildMetadata():
         assert key in self.allowed_keys
         return File(self._meta_path + "/" + key)
 
-    def add(self, key, value):
+    def set(self, key, value):
         self._metafile(key).write(value)
 
     def get(self, key):
