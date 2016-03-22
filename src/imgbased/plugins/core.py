@@ -21,7 +21,7 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 import logging
-from ..utils import augtool
+from ..utils import augtool, BuildMetadata
 
 
 log = logging.getLogger(__package__)
@@ -89,7 +89,8 @@ def add_argparse(app, parser, subparsers):
                               help="List all bases")
     layout_group.add_argument("--layers", action="store_true",
                               help="List all layers")
-    layout_group.add_argument("--init", metavar="NVR",
+    layout_group.add_argument("--init", metavar="NVR", nargs="?",
+                              default=None,
                               help="Initialize an imgbased layout")
 
     init_group = layout_parser.add_argument_group("Initialization arguments")
@@ -147,7 +148,12 @@ def check_argparse(app, args):
     if args.command == "layout":
         if args.init:
             try:
-                app.imgbase.init_layout_from(args.source, args.init)
+                init_nvr = args.init or BuildMetadata().get("nvr")
+            except:
+                log.error("There is no NVR set for this build, in this "
+                          "case you need to specify it.")
+            try:
+                app.imgbase.init_layout_from(args.source, init_nvr)
             except RuntimeError:
                 log.exception("Failed to initialized layout from %r" %
                               args.source)

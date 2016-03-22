@@ -641,6 +641,9 @@ class RpmPackageDb(PackageDb):
     def get_files(self, pkgname):
         return self._rpm("-ql", pkgname)
 
+    def get_nvr(self, pkgname):
+        return self._rpm("-q", pkgname)
+
 
 class systemctl():
     @staticmethod
@@ -887,5 +890,30 @@ class OSRelease(ShellVarFile):
 
     def __init__(self, fn="/etc/os-release"):
         super(OSRelease, self).__init__(fn)
+
+
+class BuildMetadata():
+    """Store some metdata in the image
+    """
+    _meta_path = "/usr/share/imgbase/build/meta/"
+
+    allowed_keys = ["nvr"]
+
+    def __init__(self):
+        if not os.path.exists(self._meta_path):
+            os.makedirs(self._meta_path)
+
+    def _metafile(self, key):
+        assert key in self.allowed_keys
+        return File(self._meta_path + "/" + key)
+
+    def add(self, key, value):
+        self._metafile(key).write(value)
+
+    def get(self, key):
+        return self._metafile(key).contents
+
+    def delete(self, key):
+        self._metafile(key).remove()
 
 # vim: sw=4 et sts=4
