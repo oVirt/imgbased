@@ -39,7 +39,7 @@ def check_argparse(app, args):
 
 def set_build_nvr_from_package(pkg):
     pkgdb = RpmPackageDb()
-    nvr = pkgdb.get_nvr(pkg)
+    nvr = pkgdb.get_nvr(pkg)[0]
     BuildMetadata().set("nvr", nvr)
 
 

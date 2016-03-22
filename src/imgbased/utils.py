@@ -894,6 +894,15 @@ class OSRelease(ShellVarFile):
 
 class BuildMetadata():
     """Store some metdata in the image
+
+    >>> import tempfile
+    >>> tmpdir = tempfile.mkdtemp()
+    >>> BuildMetadata._meta_path = tmpdir
+
+    >>> m = BuildMetadata()
+    >>> m.set("nvr", "nvr")
+    >>> m.get("nvr")
+    'nvr'
     """
     _meta_path = "/usr/share/imgbase/build/meta/"
 
