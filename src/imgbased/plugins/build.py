@@ -32,7 +32,9 @@ def check_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "image-build":
         if args.postprocess:
-            postprocess(app)
+            Postprocessor.postprocess(app)
+        if args.set_build_nvr_from_package:
+            set_build_nvr_from_package(args.set_build_nvr_from_package)
 
 
 def set_build_nvr_from_package(pkg):
@@ -57,12 +59,50 @@ def factorize(path):
     rsync.sync(path, fpath)
 
 
+class Postprocessor():
+    """
+    >>> Postprocessor._steps = []
+    >>> print(Postprocessor._steps)
+    []
+
+    >>> @Postprocessor.add_step
+    ... def poo():
+    ...     print("Poo")
+
+    >>> Postprocessor.postprocess(None)
+    Poo
+    """
+    _steps = []
+
+    @classmethod
+    def add_step(cls, func):
+        cls._steps.append(func)
+
+    @classmethod
+    def postprocess(cls, app):
+        log.info("Launching image post-processing")
+
+        for func in cls._steps:
+            func()
+
+        # FIXME symlink in /etc: system-release, release-cpe, rpm
+
+
+@Postprocessor.add_step
+def factorize_paths():
+    factorize("/etc")
+    # FIXME Do we need ostree compat (-> /usr/etc)?
+    factorize("/var")
+
+
+@Postprocessor.add_step
 def empty_machineid():
     """Empty the machine-id file, systemd will populate it
     """
     File("/etc/machine-id").truncate()
 
 
+@Postprocessor.add_step
 def handle_rpm_and_yum_dbs():
     log.info("Relocating rpmdb")
     # Move out of /var
@@ -74,6 +114,7 @@ def handle_rpm_and_yum_dbs():
     shutil.rmtree("/var/lib/yum")
 
 
+@Postprocessor.add_step
 def disable_and_clean_yum_repos():
     log.info("Disabling all yum repositories")
     repofiles = glob.glob("/etc/yum.repos.d/*")
@@ -81,20 +122,5 @@ def disable_and_clean_yum_repos():
     subprocess.call(["sed", "-i",
                      "/enabled=/ d ; /^\[/ a enabled=0"] + repofiles)
     subprocess.call(["yum", "clean", "all"])
-
-
-def postprocess(app):
-    log.info("Launching image post-processing")
-
-    factorize("/etc")
-    # FIXME Do we need ostree compat (-> /usr/etc)?
-    factorize("/var")
-
-    empty_machineid()
-
-    handle_rpm_and_yum_dbs()
-    disable_and_clean_yum_repos()
-
-    # FIXME symlink in /etc: system-release, release-cpe, rpm
 
 # vim: sw=4 et sts=4
