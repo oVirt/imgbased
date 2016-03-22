@@ -72,6 +72,8 @@ make %{?_smp_mflags}
 %{python_sitelib}/%{name}/
 %{_mandir}/man8/imgbase.8*
 /%{_docdir}/%{name}/*.asc
+%{_sysconfdir}/yum/pluginconf.d/imgbased-warning.conf
+%{_prefix}/lib/yum-plugins/imgbased-warning.py*
 
 
 %changelog

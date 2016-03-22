@@ -6,6 +6,8 @@ SHELL := /bin/bash
 hooksdir = $(pkgdatadir)/hooks.d/
 pyimagebaseddir = $(pythondir)/$(PACKAGE_NAME)
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
+plugindir = $(prefix)/lib/yum-plugins/
+pluginconfdir = $(sysconfdir)/yum/pluginconf.d/
 
 .PHONY: check check-code check-build
 .SILENT: check check-pyflakes check-pep8 check-nosetests check-build
@@ -24,6 +26,14 @@ dist_pyimagebasedplugins_PYTHON = \
 dist_hooks_SCRIPTS = \
   data/hooks/persistence \
   data/hooks/rebase
+
+dist_plugin_SCRIPTS = \
+        src/plugin-yum/imgbased-warning.py \
+        $(NULL)
+
+dist_pluginconf_SCRIPTS = \
+        src/plugin-yum/imgbased-warning.conf \
+        $(NULL)
 
 EXTRA_DIST = \
   README.md \
