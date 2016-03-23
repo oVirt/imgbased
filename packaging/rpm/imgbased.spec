@@ -65,6 +65,11 @@ make %{?_smp_mflags}
 %if 0%{?fedora}
 install -Dm 0644 src/plugin-dnf/imgbased-warning.py \
                  %{buildroot}/%{python3_sitelib}/dnf-plugins/imgbased-warning.py
+%else
+install -Dm 0644 src/plugin-yum/imgbased-warning.py \
+                 %{buildroot}/%{_prefix}/lib/yum-plugins/imgbased-warning.py
+install -Dm 0644 src/plugin-yum/imgbased-warning.conf \
+                 %{buildroot}/%{_sysconfdir}/yum/pluginconf.d/imgbased-warning.conf
 %endif
 %make_install
 
@@ -76,12 +81,12 @@ install -Dm 0644 src/plugin-dnf/imgbased-warning.py \
 %{python_sitelib}/%{name}/
 %{_mandir}/man8/imgbase.8*
 /%{_docdir}/%{name}/*.asc
-%{_sysconfdir}/yum/pluginconf.d/imgbased-warning.conf
-%{_prefix}/lib/yum-plugins/imgbased-warning.py*
-
 %if 0%{?fedora}
 %{python3_sitelib}/dnf-plugins/imgbased-warning.py*
 %{python3_sitelib}/dnf-plugins/__pycache__/imgbased*
+%else
+%{_sysconfdir}/yum/pluginconf.d/imgbased-warning.conf
+%{_prefix}/lib/yum-plugins/imgbased-warning.py*
 %endif
 
 %changelog
