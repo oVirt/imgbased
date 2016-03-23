@@ -89,9 +89,11 @@ def add_argparse(app, parser, subparsers):
                               help="List all bases")
     layout_group.add_argument("--layers", action="store_true",
                               help="List all layers")
-    layout_group.add_argument("--init", metavar="NVR", nargs="?",
-                              default=None,
+    layout_group.add_argument("--init", action="store_true",
                               help="Initialize an imgbased layout")
+    layout_group.add_argument("--init-nvr", metavar="NVR",
+                              help="Initialize an imgbased layout "
+                              "with a given NVR")
 
     init_group = layout_parser.add_argument_group("Initialization arguments")
     init_group.add_argument("--size",
@@ -146,12 +148,12 @@ def check_argparse(app, args):
         log.info(msg)
 
     if args.command == "layout":
-        if args.init:
+        if args.init or args.init_nvr:
             try:
-                init_nvr = args.init or BuildMetadata().get("nvr")
+                init_nvr = args.init_nvr or BuildMetadata().get("nvr")
             except:
                 log.error("There is no NVR set for this build, in this "
-                          "case you need to specify it.")
+                          "case you need to initialize with --init-nvr")
             try:
                 app.imgbase.init_layout_from(args.source, init_nvr)
             except RuntimeError:

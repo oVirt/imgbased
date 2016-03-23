@@ -4,7 +4,7 @@ import os
 import shutil
 import glob
 import subprocess
-from ..utils import Rsync, File, RpmPackageDb, BuildMetadata
+from ..utils import Rsync, File, BuildMetadata
 
 
 log = logging.getLogger(__package__)
@@ -23,9 +23,8 @@ def add_argparse(app, parser, subparsers):
                               help="Image build related tooling")
     s.add_argument("--postprocess", action="store_true",
                    help="Do some post-processing")
-    s.add_argument("--set-build-nvr-from-package",
-                   help="Define which package defines the nvr of "
-                   "this build")
+    s.add_argument("--set-nvr",
+                   help="Define the nvr of this build")
 
 
 def check_argparse(app, args):
@@ -33,14 +32,8 @@ def check_argparse(app, args):
     if args.command == "image-build":
         if args.postprocess:
             Postprocessor.postprocess(app)
-        if args.set_build_nvr_from_package:
-            set_build_nvr_from_package(args.set_build_nvr_from_package)
-
-
-def set_build_nvr_from_package(pkg):
-    pkgdb = RpmPackageDb()
-    nvr = pkgdb.get_nvr(pkg)[0]
-    BuildMetadata().set("nvr", nvr)
+        if args.set_nvr:
+            BuildMetadata().set("nvr", args.set_nvr)
 
 
 def factorize(path):

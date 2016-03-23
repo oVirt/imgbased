@@ -73,7 +73,7 @@ class CliTestCase(ImgbaseTestCase):
         ImgbaseTestCase.setUp(self)
         self.cli("--debug",
                  "layout",
-                 "--init", "Image-1.0-0",
+                 "--init-nvr", "Image-1.0-0",
                  "--from", "hostvg/root")
 
 
