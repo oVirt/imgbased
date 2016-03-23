@@ -62,6 +62,10 @@ make %{?_smp_mflags}
 
 
 %install
+%if 0%{?fedora}
+install -Dm 0644 src/plugin-dnf/imgbased-warning.py \
+                 %{buildroot}/%{python3_sitelib}/dnf-plugins/imgbased-warning.py
+%endif
 %make_install
 
 
@@ -75,6 +79,10 @@ make %{?_smp_mflags}
 %{_sysconfdir}/yum/pluginconf.d/imgbased-warning.conf
 %{_prefix}/lib/yum-plugins/imgbased-warning.py*
 
+%if 0%{?fedora}
+%{python3_sitelib}/dnf-plugins/imgbased-warning.py*
+%{python3_sitelib}/dnf-plugins/__pycache__/imgbased*
+%endif
 
 %changelog
 * Wed Apr 02 2014 Fabian Deutsch <fabiand@fedoraproject.org> - 0.1-0.1
