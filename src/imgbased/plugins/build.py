@@ -116,4 +116,22 @@ def disable_and_clean_yum_repos():
                      "/enabled=/ d ; /^\[/ a enabled=0"] + repofiles)
     subprocess.call(["yum", "clean", "all"])
 
+
+@Postprocessor.add_step
+def check_etc_symlinks():
+    log.info("Checking symlinks")
+
+    def is_symlink(fn):
+        log.debug("Checking if %s" % fn)
+        if not os.path.islink(fn):
+            raise RuntimeError("This file is not a symlink %s" % fn)
+
+    fns = ["/etc/os-release"]
+
+    # FIXME all relesae fiels should point to /usr/etc
+    # fns += list(glob.glob("/etc/*release*")
+
+    for fn in fns:
+        is_symlink(fn)
+
 # vim: sw=4 et sts=4
