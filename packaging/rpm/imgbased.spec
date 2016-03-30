@@ -36,7 +36,6 @@ BuildRequires:       rpm-python
 %if 0%{?is_el7}
 BuildRequires:       python-six
 %else
-Recommends:          systemd-python3
 BuildRequires:       python3-six
 %endif
 
