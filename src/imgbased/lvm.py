@@ -23,6 +23,7 @@
 import os
 import shlex
 import logging
+import re
 from .utils import find_mount_source, LvmCLI
 
 
@@ -52,6 +53,31 @@ class LVM(object):
         log.debug("All LVS: %s" % lvs)
         return lvs
 
+    @staticmethod
+    def is_name_valid(name):
+        """Taken from blivet
+        """
+        # No . or ..
+        if name == '.' or name == '..':
+            return False
+
+        # Check that all characters are in the allowed set and that the name
+        # does not start with a -
+        if not re.match('^[a-zA-Z0-9+_.][a-zA-Z0-9+_.-]*$', name):
+            return False
+
+        # According to the LVM developers, vgname + lvname is limited to
+        # 126 characters
+        # minus the number of hyphens, and possibly minus up to another
+        # 8 characters
+        # in some unspecified set of situations. Instead of figuring all
+        # of that out,
+        # no one gets a vg or lv name longer than, let's say, 55.
+        if len(name) > 55:
+            return False
+
+        return True
+
     class VG(object):
         vg_name = None
 
@@ -80,6 +106,7 @@ class LVM(object):
 
         @staticmethod
         def create(vg_name, pv_paths):
+            assert LVM.is_name_valid(vg_name)
             LVM._vgcreate([vg_name] + pv_paths)
             return LVM.VG(vg_name)
 
@@ -166,6 +193,7 @@ class LVM(object):
             return cls.from_lv_name(*shlex.split(data))
 
         def create_snapshot(self, new_name):
+            assert LVM.is_name_valid(new_name)
             LVM._lvcreate(["--snapshot",
                            "--name", new_name,
                            self.lvm_name])
@@ -247,6 +275,7 @@ class LVM(object):
 
     class Thinpool(LV):
         def create_thinvol(self, vol_name, volsize):
+            assert LVM.is_name_valid(vol_name)
             vol = LVM.LV.from_lv_name(self.vg_name, vol_name)
             LVM._lvcreate(["--thin",
                            "--virtualsize", volsize,

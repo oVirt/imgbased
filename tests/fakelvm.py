@@ -77,6 +77,7 @@ class FakeLVM(imgbased.lvm.LVM):
 
         @staticmethod
         def create(vg_name, pv_paths):
+            assert FakeLVM.is_name_valid(vg_name)
             vg = FakeLVM.VG(vg_name)
             vg._pvs = pv_paths
             FakeLVM._vgs.append(vg)
@@ -132,6 +133,7 @@ class FakeLVM(imgbased.lvm.LVM):
             raise NotImplementedError()
 
         def create_snapshot(self, new_name):
+            assert FakeLVM.is_name_valid(new_name)
             lv = FakeLVM.LV()
             lv.vg_name = self.vg_name
             lv.lv_name = new_name
@@ -188,6 +190,7 @@ class FakeLVM(imgbased.lvm.LVM):
             self._pool = True
 
         def create_thinvol(self, vol_name, volsize):
+            assert FakeLVM.is_name_valid(vol_name)
             lv = FakeLVM.LV()
             lv.vg_name = self.vg_name
             lv.lv_name = vol_name
