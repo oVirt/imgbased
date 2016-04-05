@@ -2,7 +2,7 @@
 import glob
 import logging
 import os
-from ..utils import size_of_fstree, mounted, Filesystem, Rsync
+from ..utils import size_of_fstree, mounted, Ext4, Rsync
 
 log = logging.getLogger(__package__)
 
@@ -65,7 +65,7 @@ class LiveimgExtractor():
 
         with new_base_lv.unprotected():
             log.info("Creating new filesystem on base")
-            Filesystem.from_mountpoint("/").mkfs(new_base_lv.path)
+            Ext4().mkfs(new_base_lv.path)
 
             log.info("Writing tree to base")
             with mounted(new_base_lv.path) as mount:

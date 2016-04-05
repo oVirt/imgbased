@@ -177,8 +177,8 @@ class ImageLayers(object):
             log.debug("Snapshot creation failed", exc_info=True)
             raise RuntimeError("Failed to create a new layer")
 
-        # Assign a new filesystem UUID
-        utils.Filesystem.from_device(new_lv.path).randomize_uuid()
+        # Assign a new filesystem UUID and label
+        utils.Ext4.randomize_uuid(new_lv.path)
 
         # Handle the previous layer
         skip_if_is_base = Image.from_lv_name(new_lv.lv_name).is_base()
