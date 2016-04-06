@@ -3,6 +3,7 @@ import glob
 import logging
 import os
 from ..utils import size_of_fstree, mounted, Filesystem, Rsync
+from ..bootloader import Grubby
 
 log = logging.getLogger(__package__)
 
@@ -22,6 +23,8 @@ def add_argparse(app, parser, subparsers):
     s.add_argument("--format", default="liveimg")
     s.add_argument("NVR", metavar="NAME-VERSION-RELEASE")
     s.add_argument("FILENAME")
+    subparsers.add_parser("rollback",
+                          help="Rollback to previous image")
 
 
 def check_argparse(app, args):
@@ -30,10 +33,22 @@ def check_argparse(app, args):
     """
     log.debug("Operating on: %s" % app.imgbase)
 
-    if not args.command == "update":
+    if not args.command == "update" and not args.command == "rollback":
         return
 
-    if args.format == "liveimg":
+    if args.command == "rollback":
+        if app.imgbase.current_layer() == app.imgbase.latest_layer():
+            log.info("Current and latest layers are the same, nothing to do!")
+            return
+
+        log.info("Current layer: %s.." % app.imgbase.current_layer())
+        latest_layer = str(app.imgbase.latest_layer())
+        log.info("Rollback to: %s.." % latest_layer)
+        # FIXME: Hide Grubby implementation
+        Grubby().set_default(latest_layer)
+        log.info("This change will take effect after a reboot!")
+
+    elif args.format == "liveimg":
         LiveimgExtractor(app.imgbase)\
             .extract(args.FILENAME,
                      args.NVR)
