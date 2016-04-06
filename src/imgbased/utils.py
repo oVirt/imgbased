@@ -1061,9 +1061,15 @@ class BuildMetadata():
     >>> BuildMetadata._meta_path = tmpdir
 
     >>> m = BuildMetadata()
-    >>> m.set("nvr", "nvr")
+    >>> m.set("nvr", "0.0.1")
     >>> m.get("nvr")
-    'nvr'
+    '0.0.1'
+
+    >>> m.keys()
+    ['nvr']
+
+    >>> m.items()
+    [('nvr', '0.0.1')]
     """
     _meta_path = "/usr/share/imgbase/build/meta/"
 
@@ -1077,6 +1083,13 @@ class BuildMetadata():
     def _metafile(self, key):
         assert key in self.allowed_keys
         return File(self._meta_path + "/" + key)
+
+    def keys(self):
+        return os.listdir(self._meta_path)
+
+    def items(self):
+        return [(k, self.get(k))
+                for k in self.keys()]
 
     def set(self, key, value):
         self._metafile(key).write(value)

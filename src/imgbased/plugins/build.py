@@ -4,6 +4,7 @@ import os
 import shutil
 import glob
 import subprocess
+import json
 from ..utils import Rsync, File, BuildMetadata
 
 
@@ -23,6 +24,12 @@ def add_argparse(app, parser, subparsers):
     s.add_argument("--set-nvr",
                    help="Define the nvr of this build")
 
+    s = subparsers.add_parser("image-introspect",
+                              help="Informations around this image")
+    s.add_argument("--metadata",
+                   action="store_true",
+                   help="Print the metadata of this build (json)")
+
 
 def post_argparse(app, args):
     if args.command == "image-build":
@@ -30,6 +37,10 @@ def post_argparse(app, args):
             Postprocessor.postprocess(app)
         if args.set_nvr:
             BuildMetadata().set("nvr", args.set_nvr)
+    elif args.command == "image-introspect":
+        if args.metadata:
+            metadata = dict(BuildMetadata().items())
+            print(json.dumps(metadata, indent=2))
 
 
 def factorize(path):
