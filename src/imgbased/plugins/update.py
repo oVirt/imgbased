@@ -2,7 +2,8 @@
 import glob
 import logging
 import os
-from ..utils import size_of_fstree, mounted, Filesystem, Rsync
+from ..utils import size_of_fstree, mounted, Filesystem, Rsync, \
+    BuildMetadata
 
 log = logging.getLogger(__package__)
 
@@ -20,7 +21,6 @@ def add_argparse(app, parser, subparsers):
                               help="Update handling")
 
     s.add_argument("--format", default="liveimg")
-    s.add_argument("NVR", metavar="NAME-VERSION-RELEASE")
     s.add_argument("FILENAME")
 
 
@@ -35,8 +35,7 @@ def check_argparse(app, args):
 
     if args.format == "liveimg":
         LiveimgExtractor(app.imgbase)\
-            .extract(args.FILENAME,
-                     args.NVR)
+            .extract(args.FILENAME)
         log.info("Update was pulled successfully")
     else:
         log.error("Unknown update format %r" % args.format)
@@ -78,7 +77,7 @@ class LiveimgExtractor():
 
         return new_base_lv
 
-    def extract(self, liveimgfile, nvr):
+    def extract(self, liveimgfile, nvr=None):
         new_base = None
         log.info("Extracting image '%s'" % liveimgfile)
         with mounted(liveimgfile) as squashfs:
@@ -86,6 +85,8 @@ class LiveimgExtractor():
             liveimg = glob.glob(squashfs.target + "/*/*.img").pop()
             log.debug("Found fsimage at '%s'" % liveimg)
             with mounted(liveimg) as rootfs:
+                nvr = nvr or BuildMetadata(rootfs.target).get("nvr")
+                log.debug("Using nvr: %s" % nvr)
                 size = self._recommend_size_for_tree(rootfs.target, 3.0)
                 log.debug("Recommeneded base size: %s" % size)
                 log.info("Starting base creation")

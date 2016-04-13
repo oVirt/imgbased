@@ -135,6 +135,14 @@ class BaseVerbTestCase(CliTestCase):
         layers = self.cli("layout", "--layers").stdout
         assert "Image-42-0+2" in layers
 
+
+class UpdateVerbTestCase(CliTestCase):
+    def test_update(self):
+        with patch("imgbased.plugins.update.LiveimgExtractor.extract") as mock:
+            self.cli("--debug", "update", "/my/file")
+            mock.assert_called_with("/my/file")
+
+
 if __name__ == "__main__":
     unittest.main()
 

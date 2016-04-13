@@ -961,7 +961,8 @@ class BuildMetadata():
 
     allowed_keys = ["nvr"]
 
-    def __init__(self):
+    def __init__(self, root="/"):
+        self._meta_path = root + self._meta_path
         if not os.path.exists(self._meta_path):
             os.makedirs(self._meta_path)
 
