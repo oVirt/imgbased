@@ -1,5 +1,7 @@
 
 import logging
+from .. import bootloader
+from ..naming import Layer
 
 
 log = logging.getLogger(__package__)
@@ -16,13 +18,23 @@ def add_argparse(app, parser, subparsers):
 
     s = subparsers.add_parser("boot",
                               help="Manage the bootloader")
-    s.add_argument("--default",
-                   help="Make this image the default boot entry")
-    s.add_argument("IMAGE", help="Image to boot")
+    s.add_argument("--list", action="store_true",
+                   help="List all entries")
+    s.add_argument("--get-default", action="store_true",
+                   help="Get the default layer")
+    s.add_argument("--set-default", nargs=1, metavar="NVR",
+                   help="Set the default layer")
 
 
 def post_argparse(app, args):
     if args.command == "boot":
-        raise NotImplemented()
+        bootconfig = bootloader.BootConfiguration()
+        if args.list:
+            print(bootconfig.list())
+        elif args.get_default:
+            print(bootconfig.get_default())
+        elif args.set_default:
+            layer = Layer.from_nvr(args.set_default)
+            print(bootconfig.set_default(layer))
 
 # vim: sw=4 et sts=4

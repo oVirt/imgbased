@@ -23,6 +23,7 @@
 import logging
 import re
 from .utils import grubby
+from .naming import Layer
 
 
 log = logging.getLogger(__package__)
@@ -41,9 +42,19 @@ class NoKeyFoundError(BootloaderError):
 
 
 class Bootloader(object):
+    """Low-level object to access the bootloader
+    """
     dry = False
 
+    def list(self):
+        raise NotImplementedError()
+
     def set_default(self, key):
+        """
+        """
+        raise NotImplementedError()
+
+    def get_default(self):
         """
         """
         raise NotImplementedError()
@@ -212,5 +223,52 @@ class Grubby(Bootloader):
         entry = self._get_entries()[key]
         log.debug("Making default: %s" % entry.title)
         grubby("--set-default", entry.kernel)
+
+    def get_default(self):
+        log.debug("Getting default")
+        kernel = grubby("--default-kernel")
+        entry = [e for e in self._get_entries()
+                 if e.kernel == kernel][0]
+        log.debug("Default: %s" % entry)
+        return entry
+
+    def list(self):
+        return self._get_entries()
+
+
+class BootConfiguration():
+    """High-Level image centric boot configuration
+    """
+
+    bootloader = None
+
+    def __init__(self):
+        self.bootloader = Grubby()
+
+    def _key_from_layer(self, layer):
+        if not type(layer) is Layer:
+            raise BootloaderError("Boot entries can only be added for "
+                                  "layers, got %r" % layer)
+        key = layer.lv_name
+        assert " " not in layer
+        return key
+
+    def list(self):
+        return self.bootloader.list()
+
+    def add(self, layer, title,  vmlinuz, initrd, append):
+        key = self._key_from_layer(layer)
+        return self.bootloader.add_entry(key, title, vmlinuz, initrd, append)
+
+    def remove(self, layer):
+        key = self._key_from_layer(layer)
+        return self.bootloader.remove(key)
+
+    def set_default(self, layer):
+        key = self._key_from_layer(layer)
+        return self.bootloader.set_default(key)
+
+    def get_default(self):
+        return self.bootloader.get_default()
 
 # vim: sw=4 et sts=4:
