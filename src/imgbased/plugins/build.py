@@ -134,4 +134,15 @@ def check_etc_symlinks():
     for fn in fns:
         is_symlink(fn)
 
+
+@Postprocessor.add_step
+def clean_ifcfgs():
+    log.info("Removing all ifcfg files, except lo")
+    for fn in glob.glob("/etc/sysconfig/network-scripts/ifcfg-*"):
+        if fn.endswith("/ifcfg-lo"):
+            continue
+        else:
+            log.debug("Removing %s" % fn)
+            os.unlink(fn)
+
 # vim: sw=4 et sts=4
