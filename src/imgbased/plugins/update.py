@@ -2,6 +2,8 @@
 import glob
 import logging
 import os
+from ..bootloader import Grubby
+from ..naming import Image
 from ..utils import size_of_fstree, mounted, Filesystem, Rsync, \
     BuildMetadata
 
@@ -22,6 +24,48 @@ def add_argparse(app, parser, subparsers):
 
     s.add_argument("--format", default="liveimg")
     s.add_argument("FILENAME")
+    rollback_parser = subparsers.add_parser("rollback",
+                                            help="Rollback layer operation")
+    rollback_parser.add_argument("--to",
+                                 help="NVR")
+
+
+def rollback(app, specific_nvr):
+    """
+    The rollback operation will trigger the rollback from the
+    current layer to layer before (NVR-1). However, users might specific
+    the layer they want to rollback providing the NVR in rollback --to option.
+    """
+
+    if len(app.imgbase.naming.layers()) <= 1:
+        log.info("It's required to have at least two layers available to"
+                 " execute rollback operation!")
+        return
+
+    current_layer = app.imgbase.current_layer()
+    if specific_nvr is None:
+        rollbackto = app.imgbase.naming.layer_before(current_layer)
+    else:
+        rollbackto = Image.from_nvr(specific_nvr)
+
+    if current_layer == rollbackto:
+        log.info("Can't roll back to %s" % rollbackto)
+        log.info("You are on %s" % current_layer)
+        log.info("The current layer and the rollback layer are the same!")
+        log.info("The system layout is:")
+        log.info(app.imgbase.layout())
+        return
+
+    log.info("You are on %s.." % current_layer)
+    log.info("Rollback to %s.." % rollbackto)
+    # FIXME: Hide Grubby implementation
+    try:
+        Grubby().set_default(str(rollbackto))
+    except KeyError:
+        log.error("Unable to find grub entry for %s" % rollbackto)
+        raise
+
+    log.info("This change will take effect after a reboot!")
 
 
 def check_argparse(app, args):
@@ -30,10 +74,13 @@ def check_argparse(app, args):
     """
     log.debug("Operating on: %s" % app.imgbase)
 
-    if not args.command == "update":
+    if args.command not in ["update", "rollback"]:
         return
 
-    if args.format == "liveimg":
+    if args.command == "rollback":
+        rollback(app, args.to)
+
+    elif args.format == "liveimg":
         LiveimgExtractor(app.imgbase)\
             .extract(args.FILENAME)
         log.info("Update was pulled successfully")
