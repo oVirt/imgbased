@@ -3,7 +3,7 @@ import glob
 import logging
 import os
 from .. import local
-from ..bootloader import Grubby
+from ..bootloader import BootConfiguration
 from ..naming import Image
 from ..utils import size_of_fstree, mounted, Filesystem, Rsync, \
     BuildMetadata
@@ -130,12 +130,12 @@ def rollback(app, specific_nvr):
 
     current_layer = app.imgbase.current_layer()
     if specific_nvr is None:
-        rollbackto = app.imgbase.naming.layer_before(current_layer)
+        dst_layer = app.imgbase.naming.layer_before(current_layer)
     else:
-        rollbackto = Image.from_nvr(specific_nvr)
+        dst_layer = Image.from_nvr(specific_nvr)
 
-    if current_layer == rollbackto:
-        log.info("Can't roll back to %s" % rollbackto)
+    if current_layer == dst_layer:
+        log.info("Can't roll back to %s" % dst_layer)
         log.info("You are on %s" % current_layer)
         log.info("The current layer and the rollback layer are the same!")
         log.info("The system layout is:")
@@ -143,12 +143,12 @@ def rollback(app, specific_nvr):
         return
 
     log.info("You are on %s.." % current_layer)
-    log.info("Rollback to %s.." % rollbackto)
+    log.info("Rollback to %s.." % dst_layer)
     # FIXME: Hide Grubby implementation
     try:
-        Grubby().set_default(str(rollbackto))
+        BootConfiguration().set_default(dst_layer)
     except KeyError:
-        log.error("Unable to find grub entry for %s" % rollbackto)
+        log.error("Unable to find boot entry for %s" % dst_layer)
         raise
 
     log.info("This change will take effect after a reboot!")
