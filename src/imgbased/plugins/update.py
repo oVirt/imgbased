@@ -13,7 +13,7 @@ log = logging.getLogger(__package__)
 
 class UpdateConfigurationSection(local.Configuration.Section):
     _type = "update"
-    images_to_keep = 3
+    images_to_keep = 2
 
 
 def init(app):
@@ -27,53 +27,16 @@ def add_argparse(app, parser, subparsers):
     """Add our argparser bit's to the overall parser
     It will be called when the app is launched
     """
-    s = subparsers.add_parser("update",
+    u = subparsers.add_parser("update",
                               help="Update handling")
 
-    s.add_argument("--format", default="liveimg")
-    s.add_argument("FILENAME")
-    rollback_parser = subparsers.add_parser("rollback",
-                                            help="Rollback layer operation")
-    rollback_parser.add_argument("--to",
-                                 help="NVR")
+    u.add_argument("--format", default="liveimg")
+    u.add_argument("FILENAME")
 
-
-def rollback(app, specific_nvr):
-    """
-    The rollback operation will trigger the rollback from the
-    current layer to layer before (NVR-1). However, users might specific
-    the layer they want to rollback providing the NVR in rollback --to option.
-    """
-
-    if len(app.imgbase.naming.layers()) <= 1:
-        log.info("It's required to have at least two layers available to"
-                 " execute rollback operation!")
-        return
-
-    current_layer = app.imgbase.current_layer()
-    if specific_nvr is None:
-        rollbackto = app.imgbase.naming.layer_before(current_layer)
-    else:
-        rollbackto = Image.from_nvr(specific_nvr)
-
-    if current_layer == rollbackto:
-        log.info("Can't roll back to %s" % rollbackto)
-        log.info("You are on %s" % current_layer)
-        log.info("The current layer and the rollback layer are the same!")
-        log.info("The system layout is:")
-        log.info(app.imgbase.layout())
-        return
-
-    log.info("You are on %s.." % current_layer)
-    log.info("Rollback to %s.." % rollbackto)
-    # FIXME: Hide Grubby implementation
-    try:
-        Grubby().set_default(str(rollbackto))
-    except KeyError:
-        log.error("Unable to find grub entry for %s" % rollbackto)
-        raise
-
-    log.info("This change will take effect after a reboot!")
+    r = subparsers.add_parser("rollback",
+                              help="Rollback layer operation")
+    r.add_argument("--to", nargs="?",
+                   help="Explicitly define the NVR to roll back to")
 
 
 def check_argparse(app, args):
@@ -93,9 +56,9 @@ def check_argparse(app, args):
             .extract(args.FILENAME)
         log.info("Update was pulled successfully")
 
-        # FIXME we should read this value form the config file.
-        # app.imgbase.config.section("update").images_to_keep
-        GarbageCollector(app.imgbase).run(keep=2)
+        keep = app.imgbase.config.section("update").images_to_keep
+        GarbageCollector(app.imgbase).run(keep=keep)
+
     else:
         log.error("Unknown update format %r" % args.format)
 
@@ -155,6 +118,44 @@ class LiveimgExtractor():
                 log.info("Files extracted")
         log.debug("Extraction done")
         return new_base
+
+
+def rollback(app, specific_nvr):
+    """
+    The rollback operation will trigger the rollback from the
+    current layer to layer before (NVR-1). However, users might specific
+    the layer they want to rollback providing the NVR in rollback --to option.
+    """
+
+    if len(app.imgbase.naming.layers()) <= 1:
+        log.info("It's required to have at least two layers available to"
+                 " execute rollback operation!")
+        return
+
+    current_layer = app.imgbase.current_layer()
+    if specific_nvr is None:
+        rollbackto = app.imgbase.naming.layer_before(current_layer)
+    else:
+        rollbackto = Image.from_nvr(specific_nvr)
+
+    if current_layer == rollbackto:
+        log.info("Can't roll back to %s" % rollbackto)
+        log.info("You are on %s" % current_layer)
+        log.info("The current layer and the rollback layer are the same!")
+        log.info("The system layout is:")
+        log.info(app.imgbase.layout())
+        return
+
+    log.info("You are on %s.." % current_layer)
+    log.info("Rollback to %s.." % rollbackto)
+    # FIXME: Hide Grubby implementation
+    try:
+        Grubby().set_default(str(rollbackto))
+    except KeyError:
+        log.error("Unable to find grub entry for %s" % rollbackto)
+        raise
+
+    log.info("This change will take effect after a reboot!")
 
 
 class GarbageCollector():
