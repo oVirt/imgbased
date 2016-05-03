@@ -317,18 +317,29 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                      "was *not* created")
             return
 
-        log.debug("Checking OS release")
-        osrel = ShellVarFile("%s/etc/os-release" % newroot)
-        sysrel = File("%s/etc/system-release" % newroot)
-        if osrel.exists():
-            name = osrel.parse()["PRETTY_NAME"].strip()
-            title = "%s (%s)" % (new_lvm_name, name)
-        elif sysrel.exists():
-            title = "%s (%s)" % (new_lvm_name,
-                                 sysrel.contents.strip())
-        else:
-            log.info("No release files exists, can not create "
-                     "pretty name")
+        title = None
+        try:
+            title = utils.BuildMetadata(newroot).get("nvr")
+        except:
+            log.warn("Failed to retrieve metadata", exc_info=True)
+
+        if not title:
+            log.debug("Checking OS release")
+            osrel = ShellVarFile("%s/etc/os-release" % newroot)
+            if osrel.exists():
+                name = osrel.parse()["PRETTY_NAME"].strip()
+                title = "%s (%s)" % (new_lvm_name, name)
+
+        if not title:
+            log.debug("Checking system release")
+            sysrel = File("%s/etc/system-release" % newroot)
+            if sysrel.exists():
+                title = "%s (%s)" % (new_lvm_name,
+                                     sysrel.contents.strip())
+
+        if not title:
+            log.warn("Failed to create pretty name, falling back to "
+                     "volume name.")
             title = new_lvm_name
 
         log.info("Adding a boot entry")
