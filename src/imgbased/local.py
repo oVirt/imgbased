@@ -133,17 +133,20 @@ class Configuration():
 
         return p
 
-    def section(self, filter_type, name=None, default=None):
+    def section(self, filter_type, name=None):
         sections = [s for s in self.sections(filter_type)
                     if (name is None
                         or (hasattr(s, "name") and s.name == name))]
         if not sections:
-            if default:
-                sections = [default]
-            else:
-                raise RuntimeError("Failed to retrieve section: %s %s" %
-                                   (filter_type, name))
+            sections = [self.section_from_type(filter_type)]
+            log.info("Failed to retrieve section, using default: %s %s" %
+                     (filter_type, name))
         return sections[0]
+
+    def section_from_type(self, _type):
+        klasses = Configuration._known_section_types
+        sections = dict((k._type, k) for k in klasses)
+        return sections[_type]()
 
     def sections(self, filter_type=None):
         """A config parser which reads a string
@@ -198,9 +201,6 @@ class Configuration():
         """
         p = self._parser()
 
-        klasses = Configuration._known_section_types
-        createSection = dict((k._type, k) for k in klasses)
-
         log.debug("Parsing all sections: %s" % p.sections())
         for sectionname in p.sections():
             # Tokens should be:
@@ -216,7 +216,7 @@ class Configuration():
                 if filter_type != _type:
                     continue
 
-            section = createSection[_type]()
+            section = self.section_from_type(_type)
 
             if name:
                 section.name = name
@@ -233,7 +233,10 @@ class Configuration():
                 for k in unknown_keys:
                     del sectiondict[k]
 
-            # Try to parse types
+            # Load defaults
+            section.__dict__.update(dict(section.known_attributes(True)))
+
+            # Type-ify and set
             for k, v in sectiondict.items():
                 if v.lower() in ["y", "yes", "on", "true"]:
                     v = True
@@ -241,13 +244,7 @@ class Configuration():
                     v = False
                 elif v.isdigit():
                     v = int(v)
-                sectiondict[k] = v
-
-            # Load defaults
-            section.__dict__.update(dict(section.known_attributes(True)))
-            # Load cfg
-            section.__dict__.update(sectiondict)
-            log.info("%s" % section)
+                section.__dict__[k] = v
 
             yield section
 
