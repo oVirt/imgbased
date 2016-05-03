@@ -62,6 +62,11 @@ class Configuration():
             return "<%s (%s) %s />" % (self.__class__.__name__,
                                        self._type, vals)
 
+        def known_attributes(self, with_vals=False):
+            return set((k, v) if with_vals else k for (k, v) in
+                       self.__class__.__dict__.items()
+                       if not k.startswith("_"))
+
         def section_name(self):
             if hasattr(self, "name"):
                 n = "%s %s" % (self._type, self.name)
@@ -74,6 +79,8 @@ class Configuration():
 
     class CoreSection(Section):
         _type = "core"
+        experimental = False
+        debug = False
 
     _known_section_types = [
         # Add some default classes
@@ -143,7 +150,8 @@ class Configuration():
 
         >>> example = '''
         ... [core]
-        ... mode=1'''
+        ... debug=1
+        ... '''
 
         >>> rs = Configuration()
         >>> rs.cfgstr = example
@@ -157,21 +165,30 @@ class Configuration():
         >>> rs._write = writer
 
         >>> list(rs.sections())
-        [<CoreSection (core) [('mode', '1')] />]
+        [<CoreSection (core) [('debug', 1), ('experimental', False)] />]
 
         >>> list(rs.sections("core"))
-        [<CoreSection (core) [('mode', '1')] />]
+        [<CoreSection (core) [('debug', 1), ('experimental', False)] />]
 
         >>> list(rs.sections(Configuration.CoreSection))
-        [<CoreSection (core) [('mode', '1')] />]
+        [<CoreSection (core) [('debug', 1), ('experimental', False)] />]
 
         >>> core = rs.section(Configuration.CoreSection)
         >>> core
-        <CoreSection (core) [('mode', '1')] />
-        >>> core.mode = 11
+        <CoreSection (core) [('debug', 1), ('experimental', False)] />
+        >>> core.debug = 11
         >>> rs.save(core)
         [core]
-        mode = 11
+        debug = 11
+        experimental = False
+        <BLANKLINE>
+        <BLANKLINE>
+
+        >>> core.experimental = True
+        >>> rs.save(core)
+        [core]
+        debug = 11
+        experimental = True
         <BLANKLINE>
         <BLANKLINE>
 
@@ -189,7 +206,7 @@ class Configuration():
             # Tokens should be:
             # [<type>]
             # or
-            # [<type>, <name>]
+            # [<type> <name>]
             _type, sep, name = sectionname.partition(" ")
 
             if filter_type:
@@ -205,7 +222,32 @@ class Configuration():
                 section.name = name
 
             sectiondict = dict(p.items(sectionname))
+
+            # Check that we only parse known keys
+            known_keys = section.known_attributes()
+            unknown_keys = set(sectiondict.keys()) - set(known_keys)
+            if unknown_keys:
+                log.info("Known keys %s" % section)
+                log.warn("Ignoring unknown keys %s in %s" %
+                         (unknown_keys, sectionname))
+                for k in unknown_keys:
+                    del sectiondict[k]
+
+            # Try to parse types
+            for k, v in sectiondict.items():
+                if v.lower() in ["y", "yes", "on", "true"]:
+                    v = True
+                elif v.lower() in ["n", "no", "off", "false"]:
+                    v = False
+                elif v.isdigit():
+                    v = int(v)
+                sectiondict[k] = v
+
+            # Load defaults
+            section.__dict__.update(dict(section.known_attributes(True)))
+            # Load cfg
             section.__dict__.update(sectiondict)
+            log.info("%s" % section)
 
             yield section
 
