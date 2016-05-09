@@ -45,22 +45,19 @@ def check_argparse(app, args):
     """
     log.debug("Operating on: %s" % app.imgbase)
 
-    if args.command not in ["update", "rollback"]:
-        return
-
     if args.command == "rollback":
         rollback(app, args.to)
 
-    elif args.format == "liveimg":
-        LiveimgExtractor(app.imgbase)\
-            .extract(args.FILENAME)
-        log.info("Update was pulled successfully")
+    elif args.command == "update":
+        if args.format == "liveimg":
+            LiveimgExtractor(app.imgbase)\
+                .extract(args.FILENAME)
+            log.info("Update was pulled successfully")
 
-        keep = app.imgbase.config.section("update").images_to_keep
-        GarbageCollector(app.imgbase).run(keep=keep)
-
-    else:
-        log.error("Unknown update format %r" % args.format)
+            keep = app.imgbase.config.section("update").images_to_keep
+            GarbageCollector(app.imgbase).run(keep=keep)
+        else:
+            log.error("Unknown update format %r" % args.format)
 
 
 class LiveimgExtractor():
