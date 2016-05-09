@@ -124,7 +124,6 @@ def check_argparse(app, args):
                 raise RuntimeError("--size is required")
             app.imgbase.add_base(args.size, args.add)
         if args.remove:
-            print(args)
             app.imgbase.remove_base(args.remove)
         elif args.latest:
             print(app.imgbase.latest_base())
