@@ -133,7 +133,7 @@ def remount(target, opts=""):
     ExternalBinary().call(["mount", "-oremount" + opts, target])
 
 
-class mounted(object):
+class MountPoint(object):
     source = None
     options = None
     target = None
@@ -142,12 +142,11 @@ class mounted(object):
     tmpdir = None
 
     def __init__(self, source, options=None, target=None):
-        self.run = ExternalBinary()
         self.source = source
         self.options = options
         self.target = target
 
-    def __enter__(self):
+    def mount(self):
         options = "-o%s" % self.options if self.options else None
 
         if not self.target:
@@ -164,18 +163,33 @@ class mounted(object):
         cmd += [self.source, self.target]
         self.run.call(cmd)
 
-        return self
-
-    def __exit__(self, exc_type, exc_value, tb):
+    def umount(self):
         self.run.call(["umount", self.target])
         if self.tmpdir:
             self.run.call(["rmdir", self.tmpdir])
-        return exc_type is None
 
     def path(self, subpath):
         """Return the abs path to a path inside this mounted fs
         """
         return self.target + "/" + subpath
+
+
+class mounted(object):
+    mp = None
+
+    def __init__(self, source, options=None, target=None):
+        self.mp = MountPoint(source, options, target)
+
+    def __enter__(self):
+        self.mp.mount()
+        return self.mp
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self.mp.umount()
+        return exc_type is None
+
+    def path(self, subpath):
+        return self.mp.path(subpath)
 
 
 @contextmanager
