@@ -92,9 +92,9 @@ class LiveimgExtractor():
                 rsync.sync(sourcetree, dst)
                 log.debug("Trying to copy prev fstab")
 
-        self.imgbase.add_layer(new_base)
+        new_layer_lv = self.imgbase.add_layer(new_base)
 
-        return new_base_lv
+        return (new_base_lv, new_layer_lv)
 
     def extract(self, liveimgfile, nvr=None):
         new_base = None

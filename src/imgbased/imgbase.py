@@ -75,6 +75,8 @@ class ImageLayers(object):
                           ("lv_fullname",))
         self.hooks.create("layer-removed",
                           ("lv_fullname",))
+        self.hooks.create("post-init-layout",
+                          ("existing_lv", "new_base", "new_layer"))
 
         self.naming = naming.NvrNaming(datasource=self.list_our_lv_names)
 
@@ -164,6 +166,8 @@ class ImageLayers(object):
 
         self.hooks.emit("new-layer-added", prev_lv, new_lv)
 
+        return new_lv
+
     def _add_lvm_snapshot(self, prev_lv, new_lv_name):
         try:
             # If an error is raised here, then:
@@ -235,6 +239,9 @@ class ImageLayers(object):
 
         log.info("Creating initial layer %r for initial base" % new_layer)
         self.add_layer(initial_base, new_layer)
+
+        self.hooks.emit("post-init-layout",
+                        existing_lv, initial_base, new_layer)
 
     def add_base(self, size, nvr, lvs=None,
                  with_layer=False):

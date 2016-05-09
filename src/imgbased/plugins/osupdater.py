@@ -56,6 +56,7 @@ def init(app):
     app.hooks.connect("register-checks", on_register_checks)
     app.imgbase.hooks.connect("new-layer-added", on_new_layer)
     app.imgbase.hooks.connect("pre-layer-removed", on_remove_layer)
+    app.imgbase.hooks.connect("post-init-layout", on_post_init_layout)
 
 
 def on_register_checks(app, register):
@@ -77,7 +78,6 @@ def on_register_checks(app, register):
 
 
 def on_new_layer(imgbase, previous_lv, new_lv):
-
     log.debug("Got: %s and %s" % (new_lv, previous_lv))
 
     # FIXME this can be improved by providing a better methods in .naming
@@ -96,6 +96,23 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         # FIXME Handle and rollback
         log.exception("Failed to update OS")
         raise BootSetupError()
+
+
+def on_post_init_layout(imgbase, existing_lv, new_base, new_layer):
+    log.debug("Handling post-init-layout")
+
+    # We need to bind /etc, to ensure all later changes
+    # land in the new layer
+    # Get the LV of the new layer
+    new_lv = imgbase._lvm_from_layer(new_layer)
+    # Now mount the LV to a temporary target
+    new_fs = utils.MountPoint(new_lv.path)
+    new_fs.mount()
+    # Now bind mount /etc of the new LV over the existing /etc
+    new_etc = utils.MountPoint(new_fs.path("/etc"),
+                               target="/etc",
+                               options="bind")
+    new_etc.mount()
 
 
 def migrate_etc(imgbase, new_lv, previous_lv):
