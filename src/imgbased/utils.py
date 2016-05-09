@@ -147,19 +147,19 @@ class MountPoint(object):
         self.target = target
 
     def mount(self):
-        options = "-o%s" % self.options if self.options else None
-
+        # If no target, then create one
         if not self.target:
             self.tmpdir = \
                 self.run.call(["mktemp", "-d", "--tmpdir", "mnt.XXXXX"])
             self.target = self.tmpdir
 
+        # If a custom target, but doesn't exist, create
         if not os.path.exists(self.target):
             self.run.call(["mkdir", "-p", self.target])
 
         cmd = ["mount"]
-        if options:
-            cmd.append(options)
+        if self.options:
+            cmd += ["-o%s" % self.options]
         cmd += [self.source, self.target]
         self.run.call(cmd)
 
