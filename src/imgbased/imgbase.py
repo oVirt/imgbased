@@ -121,6 +121,9 @@ class ImageLayers(object):
                                    "and logical volumes, then retry" % tag)
         return True
 
+    def lv_from_layer(self, layer):
+        return self._lvm_from_layer(layer)
+
     def image_from_path(self, path):
         name = LVM.LV.from_path(path).lv_name
         log.debug("Found LV '%s' for path '%s'" % (name, path))

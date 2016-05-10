@@ -22,6 +22,7 @@
 #
 import logging
 from ..utils import augtool, BuildMetadata
+from ..naming import Image
 
 
 log = logging.getLogger(__package__)
@@ -71,6 +72,9 @@ def add_argparse(app, parser, subparsers):
                               help="Get the latest layer")
     layer_parser.add_argument("--current", action="store_true",
                               help="Get the current layer used to boot this")
+    layer_parser.add_argument("--volume-path", metavar="NVR",
+                              help="Get the path to the volume holding "
+                              "a layer")
     layer_parser.add_argument("IMAGE", nargs="?",
                               help="Optional to be used with --add")
 
@@ -141,6 +145,9 @@ def check_argparse(app, args):
             print(app.imgbase.current_layer())
         elif args.latest:
             print(app.imgbase.latest_layer())
+        elif args.volume_path:
+            layer = Image.from_nvr(args.volume_path)
+            print(app.imgbase.lv_from_nvr(layer).path)
 
     elif args.command == "w":
         msg = "You are on %s" % app.imgbase.current_layer()
