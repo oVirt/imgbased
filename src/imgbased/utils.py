@@ -138,10 +138,10 @@ class MountPoint(object):
     options = None
     target = None
 
-    run = ExternalBinary()
     tmpdir = None
 
     def __init__(self, source, options=None, target=None):
+        self.run = ExternalBinary()
         self.source = source
         self.options = options
         self.target = target
