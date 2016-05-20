@@ -37,6 +37,7 @@ BuildRequires:       rpm-python
 BuildRequires:       python-six
 %else
 BuildRequires:       python3-six
+BuildRequires:       python3-devel
 %endif
 
 Requires:       lvm2
