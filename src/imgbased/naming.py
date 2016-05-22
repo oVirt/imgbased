@@ -113,9 +113,8 @@ class NamingScheme():
         for base in tree:
             idx.append("%s" % base)
             for layer in base.layers:
-                c = u"└" if layer is base.layers[-1] else u"├"
-                idx.append(u" %s╼ %s" % (c, layer))
-        return u"\n".join(idx)
+                idx.append(" +- %s" % layer)
+        return "\n".join(idx)
 
 
 class NvrNaming(NamingScheme):
@@ -179,9 +178,11 @@ class NvrNaming(NamingScheme):
     RuntimeError: No valid layout found. Initialize if needed.
 
     >>> names = ["Image-2-0+1", "Image-2-0", "Image-2-0+2"]
+    >>> names += ["Image-3-0", "Image-3-0+1"]
     >>> layers = NvrNaming(names)
     >>> layers.layout()
-    u'Image-2-0\\n \u251c\u257c Image-2-0+1\\n \u2514\u257c Image-2-0+2'
+    'Image-2-0\\n +- Image-2-0+1\\n +- Image-2-0+2\\n\
+Image-3-0\\n +- Image-3-0+1'
     """
 
     def tree(self, datasource=None):
