@@ -7,6 +7,10 @@ if [[ -n "$(which python3 2>&-)" ]]; then
   PYTHON=python3
 fi
 
-[[ -d "src/imgbased" ]] && { echo "Enabling in-tree mode ($PYTHON)" >&2 ; export PYTHONPATH="$PWD/src" ;}
+if [[ -d "src/imgbased" ]]; then
+  echo "Enabling in-tree mode ($PYTHON)" >&2
+  export PYTHONPATH="$PWD/src"
+  export PYTHONDONTWRITEBYTECODE=x
+fi
 
 $PYTHON -m imgbased.__main__ $@
