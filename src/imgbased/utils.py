@@ -34,6 +34,10 @@ from contextlib import contextmanager
 log = logging.getLogger(__package__)
 
 
+class HumanReadableError(Exception):
+    pass
+
+
 def mkfs(device, fs="ext4"):
     return ExternalBinary().call(["mkfs.%s" % fs, device])
 

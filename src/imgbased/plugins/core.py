@@ -192,6 +192,33 @@ def run_check(app, try_fix):
     datap, metap = map(float, lvs.replace(",", ".").split())
 
     @register_func
+    def init_check(try_fix):
+        fail = False
+
+        checkers = [
+            ("VG", app.imgbase._vg),
+            ("thin pool", app.imgbase._thinpool),
+            ("LVs", app.imgbase.list_our_lv_names)
+        ]
+
+        for desc, checker in checkers:
+            log.info("Checking for an initialized %s" % desc)
+            try:
+                if not checker():
+                    fail = True
+                    log.error("Failed to find an initialized %s" % desc)
+            except:
+                fail = True
+                log.error("Failed to retrieve the initialized %s" % desc)
+                log.debug("TB", exc_info=True)
+
+        if fail:
+            log.error("It looks like the LVM layout is not correct.")
+            log.error("The reason could be an incorrect installation.")
+
+        return fail
+
+    @register_func
     def thin_check(try_fix):
         log.info("Checking available space in thinpool")
         fail = any(v > 80 for v in [datap, metap])
