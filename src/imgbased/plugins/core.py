@@ -21,8 +21,11 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 import logging
+import traceback
+import inspect
 from ..utils import augtool, BuildMetadata
 from ..naming import Image
+from ..lvm import LVM
 
 
 log = logging.getLogger(__package__)
@@ -118,6 +121,12 @@ def add_argparse(app, parser, subparsers):
     check_parser.add_argument("--fix", action="store_true",
                               help="Try to fix if a check fails")
 
+    #
+    # motd
+    #
+    check_parser = subparsers.add_parser("motd",
+                                         help="Get a high-level summary")
+
 
 def post_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
@@ -177,6 +186,9 @@ def post_argparse(app, args):
     elif args.command == "check":
         run_check(app, args.fix)
 
+    elif args.command == "motd":
+        run_motd(app)
+
 
 def run_check(app, try_fix):
     checks = []
@@ -186,62 +198,13 @@ def run_check(app, try_fix):
 
     app.hooks.emit("register-checks", register_func)
 
-    from ..lvm import LVM
-    lvs = LVM._lvs(["--noheadings", "-odata_percent,metadata_percent",
-                    app.imgbase._thinpool().lvm_name])
-    datap, metap = map(float, lvs.replace(",", ".").split())
-
     @register_func
-    def init_check(try_fix):
-        fail = False
-
-        checkers = [
-            ("VG", app.imgbase._vg),
-            ("thin pool", app.imgbase._thinpool),
-            ("LVs", app.imgbase.list_our_lv_names)
-        ]
-
-        for desc, checker in checkers:
-            log.info("Checking for an initialized %s" % desc)
-            try:
-                if not checker():
-                    fail = True
-                    log.error("Failed to find an initialized %s" % desc)
-            except:
-                fail = True
-                log.error("Failed to retrieve the initialized %s" % desc)
-                log.debug("TB", exc_info=True)
-
-        if fail:
-            log.error("It looks like the LVM layout is not correct.")
-            log.error("The reason could be an incorrect installation.")
-
-        return fail
-
-    @register_func
-    def thin_check(try_fix):
-        log.info("Checking available space in thinpool")
-        fail = any(v > 80 for v in [datap, metap])
-        if fail:
-            log.warning("Data or Metadata usage is above threshold:")
-            print(LVM._lvs([app.imgbase._thinpool().lvm_name]))
-        return fail
-
-    @register_func
-    def thin_extend_check(try_fix):
-        fail = False
-        ap = ("/files/etc/lvm/lvm.conf/activation/dict/"
-              "thin_pool_autoextend_threshold/int")
-
-        if augtool("get", ap).endswith("= 0"):
-            log.warn("Thinpool autoextend is disabled, must be enabled")
-            fail = True
-            if try_fix:
-                log.info("Thinpool autoextend is disabled, enabling")
-                augtool("set", "-s", ap, "80")
-        else:
-            log.debug("Thinpool autoextend is set")
-        return fail
+    def health(fix):
+        log.info(Health(app).status())
+        run = Health(app).check_storage().run()
+        log.info("%s" % run)
+        log.info("%s" % run.oneline())
+        log.info("%s" % run.details())
 
     log.debug("Running checks: %s" % checks)
 
@@ -254,6 +217,161 @@ def run_check(app, try_fix):
         log.warn("There were warnings")
     else:
         log.info("The check completed without warnings")
+
+    return any_fail
+
+
+class Health():
+    class Check():
+        def __init__(self, description=None, run=None, reason=lambda: None):
+            self.description = description
+            self.run = run
+            self.reason = reason
+
+    class CheckResult():
+        check = None
+        ok = None
+        traceback = None
+
+    class CheckGroup():
+        def __init__(self):
+            self.description = None
+            self.reason = None
+            self.checks = []
+
+        def run(self):
+            status = Health.Status()
+            status.group = self
+            for check in self.checks:
+                result = Health.CheckResult()
+                result.check = check
+                try:
+                    result.ok = True if check.run() else False
+                    if not result.ok:
+                        result.reason = check.reason()
+                except:
+                    result.ok = False
+                    result.traceback = traceback.format_exc()
+                status.results.append(result)
+            return status
+
+    class Status():
+        def __init__(self):
+            self.group = None
+            self.results = []
+
+        def __repr__(self):
+            return "<%s - %s />" % (self.group.description, self)
+
+        def __str__(self):
+            state = "OK"
+            if any(r.traceback for r in self.results):
+                state = "ERROR"
+            elif any(r.ok == False for r in self.results):
+                state = "FAILED"
+            return state
+
+        def oneline(self):
+            return "%s: %s" % (self.group.description, self)
+
+        def details(self):
+            txts = []
+            for r in self.results:
+                if r.traceback:
+                    state = "ERROR"
+                else:
+                    state = "OK" if r.ok else "FAILED"
+                txt = "%s ... %s" % (r.check.description,
+                                     state)
+                if r.traceback:
+                    txt += "\n" + r.traceback
+                txts.append(txt)
+            return "\n".join(txts)
+
+    def __init__(self, app):
+        self.app = app
+
+    def _run(self):
+        for m, group in inspect.getmembers(self):
+            if m.startswith("check_"):
+                yield group().run()
+
+    def status(self):
+        return list(self._run())
+
+    def check_storage(self):
+        group = Health.CheckGroup()
+        group.description = "Basic storage"
+        group.failure_reason = ("It looks like the LVM layout is not "
+                                "correct. The reason could be an "
+                                "incorrect installation.")
+        group.checks = [
+            Health.Check("Initialized VG",
+                         self.app.imgbase._vg),
+            Health.Check("Initialized Thin Pool",
+                         self.app.imgbase._thinpool),
+            Health.Check("Initialized LVs",
+                         self.app.imgbase.list_our_lv_names)
+        ]
+
+        return group
+
+    def check_thin(self):
+        group = Health.CheckGroup()
+        group.description = "Thin storage"
+        group.failure_reason = ("It looks like the LVM layout is not "
+                                "correct. The reason could be an "
+                                "incorrect installation.")
+
+        datap = None
+        try:
+            lvs = LVM._lvs(["--noheadings",
+                            "-odata_percent,metadata_percent",
+                            app.imgbase._thinpool().lvm_name])
+            datap, metap = map(float, lvs.replace(",", ".").split())
+        except:
+            log.debug("Failed to get thin data", exc_info=True)
+
+        if datap == None:
+            group.checks = [Health.Check("Checking from thin metadata",
+                                         lambda: False)
+                           ]
+        else:
+            def has_autoextend():
+                ap = ("/files/etc/lvm/lvm.conf/activation/dict/"
+                      "thin_pool_autoextend_threshold/int")
+
+                if augtool("get", ap).endswith("= 0"):
+                    log.warn("Thinpool autoextend is disabled, must be enabled")
+                    fail = True
+                    if try_fix:
+                        log.info("Thinpool autoextend is disabled, enabling")
+                        augtool("set", "-s", ap, "80")
+                else:
+                    log.debug("Thinpool autoextend is set")
+            group.checks = [
+                Health.Check("Checking available space in thinpool",
+                             lambda: any(v > 80 for v in [datap, metap]),
+                             lambda: ("Data or Metadata usage is above "
+                                      "threshold. Check teh output of `lvs`")),
+                Health.Check("Checking thinpool auto-extend",
+                             has_autoextend,
+                             "thin_pool_autoextend_threshold needs to be "
+                             "set in lvm.conf")
+            ]
+
+
+        return group
+
+
+def run_motd(app):
+    fail = run_check(app, False)
+    if fail:
+        log.error("Status: DEGRADED")
+        log.error("Please check the status manually using"
+                  " `imgbase check`")
+    else:
+        log.info("Status: OK")
 
 
 # vim: sw=4 et sts=4:
