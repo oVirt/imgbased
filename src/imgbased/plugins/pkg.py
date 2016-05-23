@@ -31,7 +31,6 @@ def add_argparse(app, parser, subparsers):
 
 
 def post_argparse(app, args):
-    log.debug("Operating on: %s" % app.imgbase)
     if args.command == "pkg":
         if args.IMAGE and args.diff:
             sys.stdout.writelines(diff(app.imgbase, args.diff, args.IMAGE))

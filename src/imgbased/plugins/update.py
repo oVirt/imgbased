@@ -43,7 +43,6 @@ def post_argparse(app, args):
     """Check if we were asked to do something
     It will be called when the user selects a sub-command
     """
-    log.debug("Operating on: %s" % app.imgbase)
 
     if args.command == "rollback":
         rollback(app, args.to)

@@ -28,7 +28,6 @@ def add_argparse(app, parser, subparsers):
 
 
 def post_argparse(app, args):
-    log.debug("Operating on: %s" % app.imgbase)
     if args.command == "nspawn":
         if args.IMAGE:
             systemd_nspawn(app.imgbase, args.IMAGE, args.NSPAWN_ARGS)

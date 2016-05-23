@@ -34,7 +34,6 @@ def add_argparse(app, parser, subparsers):
 
 
 def post_argparse(app, args):
-    log.debug("Operating on: %s" % app.imgbase)
     if args.command == "diff":
         imgs = None
         if len(args.image) == 0:
