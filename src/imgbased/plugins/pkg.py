@@ -12,7 +12,7 @@ log = logging.getLogger(__package__)
 
 def init(app):
     app.hooks.connect("pre-arg-parse", add_argparse)
-    app.hooks.connect("post-arg-parse", check_argparse)
+    app.hooks.connect("post-arg-parse", post_argparse)
 
 
 def add_argparse(app, parser, subparsers):
@@ -30,7 +30,7 @@ def add_argparse(app, parser, subparsers):
                    help="Base/Layer to compare")
 
 
-def check_argparse(app, args):
+def post_argparse(app, args):
     log.debug("Operating on: %s" % app.imgbase)
     if args.command == "pkg":
         if args.IMAGE and args.diff:

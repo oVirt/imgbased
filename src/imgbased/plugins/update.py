@@ -18,7 +18,7 @@ class UpdateConfigurationSection(local.Configuration.Section):
 
 def init(app):
     app.hooks.connect("pre-arg-parse", add_argparse)
-    app.hooks.connect("post-arg-parse", check_argparse)
+    app.hooks.connect("post-arg-parse", post_argparse)
 
     local.Configuration.register_section(UpdateConfigurationSection)
 
@@ -39,7 +39,7 @@ def add_argparse(app, parser, subparsers):
                    help="Explicitly define the NVR to roll back to")
 
 
-def check_argparse(app, args):
+def post_argparse(app, args):
     """Check if we were asked to do something
     It will be called when the user selects a sub-command
     """
