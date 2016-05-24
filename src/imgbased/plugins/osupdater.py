@@ -343,10 +343,11 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         loader.set_default(new_lv.lv_name)
 
     with mounted(new_lv.path) as newroot:
-        update_fstab(newroot.target)
-        update_grub_default(newroot.target)
-        copy_kernel(newroot.target)
-        add_bootentry(newroot.target)
+        with utils.bindmounted("/var", target=newroot + "/var"):
+            update_fstab(newroot.target)
+            update_grub_default(newroot.target)
+            copy_kernel(newroot.target)
+            add_bootentry(newroot.target)
 
     imgbase.hooks.emit("os-upgraded",
                        previous_lv.lv_name,
