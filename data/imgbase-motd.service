@@ -1,0 +1,7 @@
+[Unit]
+Description=Build motd based on imgbase analysis
+
+[Service]
+ExecStart=/usr/sbin/imgbase motd --update
+Type=oneshot
+RemainAfterExit=yes

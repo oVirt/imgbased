@@ -13,3 +13,4 @@ python-sh
 systemd-python
 pykickstart
 rpm-python
+systemd-units

@@ -24,6 +24,7 @@ BuildRequires:       automake autoconf
 BuildRequires:       rpm-build
 BuildRequires:       git
 BuildRequires:       asciidoc
+BuildRequires:       systemd-units
 
 BuildRequires:       python-devel python-six
 
@@ -71,6 +72,7 @@ install -Dm 0644 src/plugin-yum/imgbased-warning.py \
 install -Dm 0644 src/plugin-yum/imgbased-warning.conf \
                  %{buildroot}/%{_sysconfdir}/yum/pluginconf.d/imgbased-warning.conf
 %endif
+install -Dm 0644 data/imgbase-motd.service %{buildroot}%{_unitdir}/imgbase-motd.service
 %make_install
 
 
@@ -81,6 +83,7 @@ install -Dm 0644 src/plugin-yum/imgbased-warning.conf \
 %{python_sitelib}/%{name}/
 %{_mandir}/man8/imgbase.8*
 /%{_docdir}/%{name}/*.asc
+%{_unitdir}/imgbase-motd.service
 %if 0%{?fedora}
 %{python3_sitelib}/dnf-plugins/imgbased-warning.py*
 %{python3_sitelib}/dnf-plugins/__pycache__/imgbased*
