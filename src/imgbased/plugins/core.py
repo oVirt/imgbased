@@ -20,20 +20,16 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
+import os
 import logging
 import traceback
 import inspect
-from ..utils import augtool, BuildMetadata
+from ..utils import augtool, BuildMetadata, Fstab
 from ..naming import Image
 from ..lvm import LVM
 
 
 log = logging.getLogger(__package__)
-
-
-def pre_init(app):
-    app.hooks.create("register-checks",
-                     ("register_func",))
 
 
 def init(app):
@@ -118,14 +114,14 @@ def add_argparse(app, parser, subparsers):
     #
     check_parser = subparsers.add_parser("check",
                                          help="Perform some runtime checks")
-    check_parser.add_argument("--fix", action="store_true",
-                              help="Try to fix if a check fails")
 
     #
     # motd
     #
     check_parser = subparsers.add_parser("motd",
                                          help="Get a high-level summary")
+    check_parser.add_argument("--update", action="store_true",
+                              help="Update /etc/motd")
 
 
 def post_argparse(app, args):
@@ -183,134 +179,185 @@ def post_argparse(app, args):
             print(app.imgbase.layout())
 
     elif args.command == "check":
-        run_check(app, args.fix)
+        run_check(app)
 
     elif args.command == "motd":
-        run_motd(app)
+        run_motd(app, args.update)
 
 
-def run_check(app, try_fix):
-    checks = []
+def run_check(app):
+    status = Health(app).status()
+    print(status.details())
+    return status.is_ok()
 
-    def register_func(check):
-        checks.append(check)
 
-    app.hooks.emit("register-checks", register_func)
+def run_motd(app, do_update):
+    """FIXME this should be nicer
+    """
+    fn = "/etc/motd"
+    motd = motdgen(app)
+    if do_update:
+        with open(fn, "w") as f:
+            f.write(motd + "\n")
+    print(motd)
 
-    @register_func
-    def health(fix):
-        log.info(Health(app).status())
-        run = Health(app).check_storage().run()
-        log.info("%s" % run)
-        log.info("%s" % run.oneline())
-        log.info("%s" % run.details())
 
-    log.debug("Running checks: %s" % checks)
-
-    any_fail = False
-    for check in checks:
-        if not check(try_fix):
-            any_fail = True
-
-    if any_fail:
-        log.warn("There were warnings")
+def motdgen(app):
+    status = Health(app).status()
+    txts = [""]
+    if not status.is_ok():
+        txts += ["  System Status: DEGRADED"]
+        txts += ["  Please check the status manually using"
+                 " `imgbase check`"]
     else:
-        log.info("The check completed without warnings")
-
-    return any_fail
+        txts += ["  System Status: OK"]
+    txts += [""]
+    return "\n".join(txts)
 
 
 class Health():
     class Check():
+        class Result():
+            check = None
+            ok = None
+            traceback = None
+
         def __init__(self, description=None, run=None, reason=lambda: None):
             self.description = description
-            self.run = run
-            self.reason = reason
-
-    class CheckResult():
-        check = None
-        ok = None
-        traceback = None
-
-    class CheckGroup():
-        def __init__(self):
-            self.description = None
-            self.reason = None
-            self.checks = []
+            self.checker = run
+            self.find_reason = reason
 
         def run(self):
-            status = Health.Status()
-            status.group = self
+            result = Health.Check.Result()
+            result.check = self
+            try:
+                result.ok = self.checker()
+                assert result.ok in [True, False]
+                if not result.ok:
+                    result.reason = self.find_reason()
+            except:
+                result.ok = False
+                result.traceback = traceback.format_exc()
+            return result
+
+    class CheckGroup():
+        class Result():
+            def __init__(self):
+                self.checkgroup = None
+                self.results = []
+
+            def is_failed(self):
+                return any(r.ok is not True for r in self.results)
+
+            def is_error(self):
+                return any(r.traceback for r in self.results)
+
+            def is_ok(self):
+                return not self.is_failed() and not self.is_error()
+
+            def __str__(self):
+                state = "OK"
+                if self.is_error():
+                    state = "ERROR"
+                elif self.is_failed():
+                    state = "FAILED"
+                return state
+
+            def oneline(self):
+                return "%s ... %s" % (self.checkgroup.description,
+                                      self)
+
+            def details(self):
+                txts = [self.oneline()]
+                if not self.is_ok():
+                    txts[0] += " - %s" % self.checkgroup.reason
+                for r in self.results:
+                    if r.traceback:
+                        state = "ERROR"
+                    elif not r.ok:
+                        state = "FAILED"
+                        reason = r.reason
+                        if reason:
+                            state += " - %s" % reason
+                    else:
+                        state = "OK"
+                    txt = "  %s ... %s" % (r.check.description,
+                                           state)
+                    if r.traceback:
+                        txt += "\n" + r.traceback
+                    txts.append(txt)
+                return "\n".join(txts)
+
+        def __init__(self):
+            self.description = None
+            self.checks = []
+            self.reason = None
+
+        def run(self):
+            result = Health.CheckGroup.Result()
+            result.checkgroup = self
             for check in self.checks:
-                result = Health.CheckResult()
-                result.check = check
-                try:
-                    result.ok = True if check.run() else False
-                    if not result.ok:
-                        result.reason = check.reason()
-                except:
-                    result.ok = False
-                    result.traceback = traceback.format_exc()
-                status.results.append(result)
-            return status
+                result.results.append(check.run())
+            return result
 
     class Status():
         def __init__(self):
-            self.group = None
             self.results = []
-
-        def __repr__(self):
-            return "<%s - %s />" % (self.group.description, self)
 
         def __str__(self):
             state = "OK"
-            if any(r.traceback for r in self.results):
+            if self.is_error():
                 state = "ERROR"
-            elif any(r.ok == False for r in self.results):
+            elif self.is_failed():
                 state = "FAILED"
             return state
 
-        def oneline(self):
-            return "%s: %s" % (self.group.description, self)
+        def is_failed(self):
+            return any(r.is_failed() for r in self.results)
+
+        def is_error(self):
+            return any(r.is_error() for r in self.results)
+
+        def is_ok(self):
+            return not self.is_failed() and not self.is_error()
+
+        def summary(self):
+            txts = ["Status: %s" % self]
+            for r in self.results:
+                txts.append(r.oneline())
+            return "\n".join(txts)
 
         def details(self):
-            txts = []
+            txts = ["Status: %s" % self]
             for r in self.results:
-                if r.traceback:
-                    state = "ERROR"
-                else:
-                    state = "OK" if r.ok else "FAILED"
-                txt = "%s ... %s" % (r.check.description,
-                                     state)
-                if r.traceback:
-                    txt += "\n" + r.traceback
-                txts.append(txt)
+                txts.append(r.details())
             return "\n".join(txts)
 
     def __init__(self, app):
         self.app = app
 
-    def _run(self):
+    def status(self):
+        status = Health.Status()
+
         for m, group in inspect.getmembers(self):
             if m.startswith("check_"):
-                yield group().run()
+                status.results.append(group().run())
 
-    def status(self):
-        return list(self._run())
+        return status
 
     def check_storage(self):
         group = Health.CheckGroup()
         group.description = "Basic storage"
-        group.failure_reason = ("It looks like the LVM layout is not "
-                                "correct. The reason could be an "
-                                "incorrect installation.")
+        group.reason = ("It looks like the LVM layout is not "
+                        "correct. The reason could be an "
+                        "incorrect installation.")
         group.checks = [
             Health.Check("Initialized VG",
-                         self.app.imgbase._vg),
+                         lambda: bool(self.app.imgbase._vg)),
             Health.Check("Initialized Thin Pool",
-                         self.app.imgbase._thinpool),
+                         lambda: bool(self.app.imgbase._thinpool)),
             Health.Check("Initialized LVs",
-                         self.app.imgbase.list_our_lv_names)
+                         lambda: bool(self.app.imgbase.list_our_lv_names))
         ]
 
         return group
@@ -318,59 +365,68 @@ class Health():
     def check_thin(self):
         group = Health.CheckGroup()
         group.description = "Thin storage"
-        group.failure_reason = ("It looks like the LVM layout is not "
-                                "correct. The reason could be an "
-                                "incorrect installation.")
+        group.reason = ("It looks like the LVM layout is not "
+                        "correct. The reason could be an "
+                        "incorrect installation.")
 
         datap = None
         try:
             lvs = LVM._lvs(["--noheadings",
                             "-odata_percent,metadata_percent",
-                            app.imgbase._thinpool().lvm_name])
+                            self.app.imgbase._thinpool().lvm_name])
             datap, metap = map(float, lvs.replace(",", ".").split())
         except:
             log.debug("Failed to get thin data", exc_info=True)
 
-        if datap == None:
+        if datap is None:
+            # Failed to retrieve LVM data
             group.checks = [Health.Check("Checking from thin metadata",
-                                         lambda: False)
-                           ]
-        else:
-            def has_autoextend():
-                ap = ("/files/etc/lvm/lvm.conf/activation/dict/"
-                      "thin_pool_autoextend_threshold/int")
+                                         lambda: RuntimeError())]
+            return group
 
-                if augtool("get", ap).endswith("= 0"):
-                    log.warn("Thinpool autoextend is disabled, must be enabled")
-                    fail = True
-                    if try_fix:
-                        log.info("Thinpool autoextend is disabled, enabling")
-                        augtool("set", "-s", ap, "80")
-                else:
-                    log.debug("Thinpool autoextend is set")
-            group.checks = [
-                Health.Check("Checking available space in thinpool",
-                             lambda: any(v > 80 for v in [datap, metap]),
-                             lambda: ("Data or Metadata usage is above "
-                                      "threshold. Check teh output of `lvs`")),
-                Health.Check("Checking thinpool auto-extend",
-                             has_autoextend,
-                             "thin_pool_autoextend_threshold needs to be "
-                             "set in lvm.conf")
-            ]
+        def has_autoextend():
+            ap = ("/files/etc/lvm/lvm.conf/activation/dict/"
+                  "thin_pool_autoextend_threshold/int")
+            return not augtool("get", ap).endswith("= 0")
 
-
+        group.checks = [
+            Health.Check("Checking available space in thinpool",
+                         lambda: all(v < 80 for v in [datap, metap]),
+                         lambda: ("Data or Metadata usage is above "
+                                  "threshold. Check the output of `lvs`")),
+            Health.Check("Checking thinpool auto-extend",
+                         has_autoextend,
+                         lambda: ("thin_pool_autoextend_threshold "
+                                  "needs to be set above 0 in lvm.conf"))
+        ]
         return group
 
+    def check_mounts(self):
+        group = Health.CheckGroup()
+        group.description = "Mount points"
+        group.reason = ("This can happen if the installation was "
+                        "performed incorrectly")
 
-def run_motd(app):
-    fail = run_check(app, False)
-    if fail:
-        log.error("Status: DEGRADED")
-        log.error("Please check the status manually using"
-                  " `imgbase check`")
-    else:
-        log.info("Status: OK")
+        def check_discard():
+            if not os.path.ismount("/var"):
+                return False
+            fstab = Fstab("/etc/fstab")
+            is_ok = all("discard" in e.options for e in
+                        [fstab.by_target("/"),
+                         fstab.by_target("/var")])
+            return is_ok
 
+        group.checks = [
+            Health.Check("Separate /var",
+                         lambda: os.path.ismount("/var"),
+                         lambda: ("/var got unmounted, or was not setup "
+                                  "to use a separate volume")),
+            Health.Check("Discard is used",
+                         check_discard,
+                         lambda: ("'discard' mount option was not "
+                                  "added or got removed"))
+            ]
+
+        return group
 
 # vim: sw=4 et sts=4:

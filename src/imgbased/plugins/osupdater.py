@@ -53,28 +53,9 @@ def pre_init(app):
 
 
 def init(app):
-    app.hooks.connect("register-checks", on_register_checks)
     app.imgbase.hooks.connect("new-layer-added", on_new_layer)
     app.imgbase.hooks.connect("pre-layer-removed", on_remove_layer)
     app.imgbase.hooks.connect("post-init-layout", on_post_init_layout)
-
-
-def on_register_checks(app, register):
-    @register
-    def mount_check(try_fix):
-        log.info("Checking if 'discard' is used")
-        # FIXME we need to check mopts of correct path
-        fstab = Fstab("/etc/fstab")
-        entry = fstab.by_target("/")
-        fail = "discard" not in entry.options
-        if fail:
-            log.warning("/ is not mounted with discard")
-            if try_fix:
-                log.info("Adding 'discard' mount option and remounting")
-                entry.options.append("discard")
-                fstab.update(entry)
-                utils.remount("/")
-        return fail
 
 
 def on_new_layer(imgbase, previous_lv, new_lv):

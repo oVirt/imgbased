@@ -95,7 +95,7 @@ def empty_machineid():
 
 
 @Postprocessor.add_step
-def handle_rpm_and_yum_dbs():
+def relocate_rpm_and_yum_dbs():
     log.info("Relocating rpmdb")
     # Move out of /var
     shutil.move("/var/lib/rpm", "/usr/share/rpm")
