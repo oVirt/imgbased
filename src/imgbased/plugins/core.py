@@ -205,11 +205,11 @@ def motdgen(app):
     status = Health(app).status()
     txts = [""]
     if not status.is_ok():
-        txts += ["  System Status: " + bcolors.fail("DEGRADED")]
+        txts += ["  imgbase status: " + bcolors.fail("DEGRADED")]
         txts += ["  Please check the status manually using"
                  " `imgbase check`"]
     else:
-        txts += ["  System Status: " + bcolors.ok("OK")]
+        txts += ["  imgbase status: " + bcolors.ok("OK")]
     txts += [""]
     return "\n".join(txts)
 
