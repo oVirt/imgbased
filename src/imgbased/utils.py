@@ -1020,6 +1020,10 @@ class bcolors:
 
     @classmethod
     def ok(cls, txt):
-        return cls.OKGREE + txt + cls.ENDC
+        return cls.OKGREEN + txt + cls.ENDC
+
+    @classmethod
+    def bold(cls, txt):
+        return cls.BOLD + txt + cls.ENDC
 
 # vim: sw=4 et sts=4

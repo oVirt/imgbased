@@ -22,9 +22,8 @@
 #
 import os
 import logging
-import traceback
 import inspect
-from ..utils import augtool, BuildMetadata, Fstab
+from ..utils import augtool, BuildMetadata, Fstab, bcolors
 from ..naming import Image
 from ..lvm import LVM
 
@@ -206,11 +205,11 @@ def motdgen(app):
     status = Health(app).status()
     txts = [""]
     if not status.is_ok():
-        txts += ["  System Status: DEGRADED"]
+        txts += ["  System Status: " + bcolors.fail("DEGRADED")]
         txts += ["  Please check the status manually using"
                  " `imgbase check`"]
     else:
-        txts += ["  System Status: OK"]
+        txts += ["  System Status: " + bcolors.ok("OK")]
     txts += [""]
     return "\n".join(txts)
 
@@ -221,6 +220,7 @@ class Health():
             check = None
             ok = None
             traceback = None
+            reason = None
 
         def __init__(self, description=None, run=None, reason=lambda: None):
             self.description = description
@@ -235,9 +235,10 @@ class Health():
                 assert result.ok in [True, False]
                 if not result.ok:
                     result.reason = self.find_reason()
-            except:
+            except Exception as e:
                 result.ok = False
-                result.traceback = traceback.format_exc()
+                result.traceback = ("Exception in '%s': %s" %
+                                    (self.checker, e))
             return result
 
     class CheckGroup():
@@ -256,11 +257,11 @@ class Health():
                 return not self.is_failed() and not self.is_error()
 
             def __str__(self):
-                state = "OK"
-                if self.is_error():
-                    state = "ERROR"
-                elif self.is_failed():
-                    state = "FAILED"
+                state = bcolors.ok("OK")
+                if self.is_failed():
+                    state = bcolors.fail("FAILED")
+                elif self.is_error():
+                    state = bcolors.warn("ERROR")
                 return state
 
             def oneline(self):
@@ -273,18 +274,18 @@ class Health():
                     txts[0] += " - %s" % self.checkgroup.reason
                 for r in self.results:
                     if r.traceback:
-                        state = "ERROR"
+                        state = bcolors.warn("ERROR")
                     elif not r.ok:
-                        state = "FAILED"
+                        state = bcolors.fail("FAILED")
                         reason = r.reason
                         if reason:
                             state += " - %s" % reason
                     else:
-                        state = "OK"
+                        state = bcolors.ok("OK")
                     txt = "  %s ... %s" % (r.check.description,
                                            state)
                     if r.traceback:
-                        txt += "\n" + r.traceback
+                        txt += "\n    " + r.traceback
                     txts.append(txt)
                 return "\n".join(txts)
 
@@ -305,11 +306,11 @@ class Health():
             self.results = []
 
         def __str__(self):
-            state = "OK"
-            if self.is_error():
-                state = "ERROR"
-            elif self.is_failed():
-                state = "FAILED"
+            state = bcolors.ok("OK")
+            if self.is_failed():
+                state = bcolors.fail("FAILED")
+            elif self.is_error():
+                state = bcolors.warn("ERROR")
             return state
 
         def is_failed(self):
@@ -322,13 +323,13 @@ class Health():
             return not self.is_failed() and not self.is_error()
 
         def summary(self):
-            txts = ["Status: %s" % self]
+            txts = [bcolors.bold("Status: %s" % self)]
             for r in self.results:
                 txts.append(r.oneline())
             return "\n".join(txts)
 
         def details(self):
-            txts = ["Status: %s" % self]
+            txts = [bcolors.bold("Status: %s" % self)]
             for r in self.results:
                 txts.append(r.details())
             return "\n".join(txts)
