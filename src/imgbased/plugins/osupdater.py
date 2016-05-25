@@ -343,7 +343,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         loader.set_default(new_lv.lv_name)
 
     with mounted(new_lv.path) as newroot:
-        with utils.bindmounted("/var", target=newroot + "/var"):
+        with utils.bindmounted("/var", target=newroot.target + "/var"):
             update_fstab(newroot.target)
             update_grub_default(newroot.target)
             copy_kernel(newroot.target)
