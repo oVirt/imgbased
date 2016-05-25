@@ -997,4 +997,29 @@ class BuildMetadata():
     def delete(self, key):
         self._metafile(key).remove()
 
+
+# From: https://svn.blender.org/svnroot/bf-blender/trunk/blender/
+# build_files/scons/tools/bcolors.py
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+    @classmethod
+    def warn(cls, txt):
+        return cls.WARNING + txt + cls.ENDC
+
+    @classmethod
+    def fail(cls, txt):
+        return cls.FAIL + cls.BOLD + txt + cls.ENDC
+
+    @classmethod
+    def ok(cls, txt):
+        return cls.OKGREE + txt + cls.ENDC
+
 # vim: sw=4 et sts=4
