@@ -998,14 +998,14 @@ class BuildMetadata():
         self._metafile(key).remove()
 
 
-# From: https://svn.blender.org/svnroot/bf-blender/trunk/blender/
+# Based on: https://svn.blender.org/svnroot/bf-blender/trunk/blender/
 # build_files/scons/tools/bcolors.py
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
+class bcolors():
+    HEADER = '\033[35m'
+    OKBLUE = '\033[34m'
+    OKGREEN = '\033[32m'
+    WARNING = '\033[33m'
+    FAIL = '\033[31m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
@@ -1025,5 +1025,17 @@ class bcolors:
     @classmethod
     def bold(cls, txt):
         return cls.BOLD + txt + cls.ENDC
+
+
+class bcolors256(bcolors):
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 
 # vim: sw=4 et sts=4
