@@ -135,9 +135,15 @@ def check_etc_symlinks():
 
 
 @Postprocessor.add_step
-def clean_ifcfgs():
-    log.info("Removing all ifcfg files, except lo")
-    for fn in glob.glob("/etc/sysconfig/network-scripts/ifcfg-*"):
+def clean_ifcfgs_and_nmcons():
+    log.info("Removing all ifcfg files and system connections, except lo")
+    ifcfgs = glob.glob("/etc/sysconfig/network-scripts/ifcfg-*")
+    nmcons = glob.glob("/etc/NetworkManager/system-connections/*")
+
+    log.debug("ifcfgs: %s" % ifcfgs)
+    log.debug("nmcons: %s" % nmcons)
+
+    for fn in ifcfgs + nmcons:
         if fn.endswith("/ifcfg-lo"):
             continue
         else:
