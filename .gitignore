@@ -11,6 +11,7 @@ missing
 *.gz
 *~
 *.swp
+packaging/rpm/imgbased.spec
 tests/*.trs
 tests/*.log
 test-suite.log

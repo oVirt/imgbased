@@ -1,4 +1,12 @@
-AC_INIT([imgbased], [0.7], [fabiand@fedoraproject.org])
+define([VERSION_MAJOR], [0])
+define([VERSION_MINOR], [7])
+define([VERSION_FIX], [0])
+define([VERSION_NUMBER], VERSION_MAJOR[.]VERSION_MINOR[.]VERSION_FIX)
+
+AC_INIT([imgbased], VERSION_NUMBER, [fabiand@fedoraproject.org])
+
+PACKAGE_RPM_VERSION="VERSION_NUMBER"
+AC_SUBST([PACKAGE_RPM_VERSION])
 
 AC_PREFIX_DEFAULT([/usr])
 AC_PROG_AWK
@@ -39,6 +47,7 @@ fi
 AM_PATH_PYTHON
 
 AC_CONFIG_FILES([Makefile
+                 packaging/rpm/imgbased.spec
                  src/imgbased/config.py])
 
 AC_OUTPUT
