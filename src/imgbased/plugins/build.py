@@ -144,4 +144,18 @@ def clean_ifcfgs():
             log.debug("Removing %s" % fn)
             os.unlink(fn)
 
+
+@Postprocessor.add_step
+def clean_network_configs():
+    """Remove files with network characteristics from the build. Anaconda
+    will not overwrite them if they're present, and new ones will be written
+    on the installed system
+    """
+
+    files = ["/etc/resolv.conf", "/etc/hostname"]
+    for fn in files:
+        log.debug("Removing {0}".format(fn))
+        os.unlink(fn)
+
+
 # vim: sw=4 et sts=4
