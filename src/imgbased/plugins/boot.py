@@ -30,15 +30,32 @@ def add_argparse(app, parser, subparsers):
 
 def post_argparse(app, args):
     if args.command == "boot":
-        bootconfig = bootloader.BootConfiguration()
+        boot = BootConfig()
         if args.list:
-            print(bootconfig.list())
+            print(boot.list())
         elif args.get_default:
-            print(bootconfig.get_default())
+            print(boot.get_default())
         elif args.set_default:
             layer = Layer.from_nvr(args.set_default)
-            print(bootconfig.set_default(layer))
+            print(boot.set_default(layer))
         elif args.remove_other_boot_entries:
-            bootconfig.remove_other_entries()
+            boot.remove_other_entries()
+
+
+class BootConfig():
+    bootconfig = bootloader.BootConfiguration()
+
+    def list(self):
+        return self.bootconfig.list()
+
+    def get_default(self):
+        return self.bootconfig.get_default()
+
+    def set_default(self, nvr):
+        layer = Layer.from_nvr(nvr)
+        return self.bootconfig.set_default(layer)
+
+    def remove_other_entries(self):
+        return self.bootconfig.remove_other_entries()
 
 # vim: sw=4 et sts=4
