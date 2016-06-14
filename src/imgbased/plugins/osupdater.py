@@ -198,6 +198,13 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         rootentry.source = new_lv.path
         newfstab.update(rootentry)
 
+        # Ensure that discard is used
+        # This can also be done in anaconda once it is fixed
+        for tgt in ["/", "/var"]:
+            e = newfstab.by_target(tgt)
+            if "discard" not in e.options:
+                e.options += ["discard"]
+
     def update_grub_default(newroot):
         defgrub = ShellVarFile("%s/etc/default/grub" % newroot)
 
