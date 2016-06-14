@@ -5,3 +5,6 @@ Description=Build motd based on imgbase analysis
 ExecStart=/usr/sbin/imgbase motd --update
 Type=oneshot
 RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
