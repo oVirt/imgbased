@@ -204,6 +204,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             e = newfstab.by_target(tgt)
             if "discard" not in e.options:
                 e.options += ["discard"]
+                newfstab.update(e)
 
     def update_grub_default(newroot):
         defgrub = ShellVarFile("%s/etc/default/grub" % newroot)
