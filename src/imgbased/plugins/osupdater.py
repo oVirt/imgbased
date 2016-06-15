@@ -95,6 +95,9 @@ def on_post_init_layout(imgbase, existing_lv, new_base, new_layer):
                                options="bind")
     new_etc.mount()
 
+    loader = bootloader.Grubby()
+    loader.remove_other_entries()
+
 
 def migrate_etc(imgbase, new_lv, previous_lv):
     log.debug("Migrating etc (%s -> %s)" % (previous_lv, new_lv))

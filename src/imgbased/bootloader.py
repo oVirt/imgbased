@@ -128,7 +128,7 @@ class Grubby(Bootloader):
         ... non linux entry'''
 
         There will be only one entry, because only one has a key
-        >>> len(Grubby()._parse_valid_entries(entries))
+        >>> len(Grubby()._parse_valid_entries(entries, others=False))
         1
         """
 
@@ -174,14 +174,15 @@ class Grubby(Bootloader):
             raise NoKeyFoundError()
         return matches[0]
 
-    def _get_entries(self):
-        return self._parse_valid_entries(grubby("--info=ALL"))
+    def _get_entries(self, others=False):
+        return self._parse_valid_entries(grubby("--info=ALL"), others)
 
-    def _parse_valid_entries(self, data):
+    def _parse_valid_entries(self, data, others):
         r = re.compile(r'(index.*?)(?=index)', re.DOTALL)
         stanzas = filter(None, r.split(data))
 
         entrymap = {}
+        other_entries = []
         for stanza in stanzas:
             try:
                 entry = self.GrubbyEntry.parse(stanza)
@@ -191,13 +192,14 @@ class Grubby(Bootloader):
                 continue
             except NoKeyFoundError:
                 log.debug("No key found in entry: %s" % entry.args)
+                other_entries.append(entry)
                 continue
 
             entrymap[key] = entry
 
         log.debug("Found valid entries: %s" % entrymap)
 
-        return entrymap
+        return entrymap if not others else other_entries
 
     def add_entry(self, key, title, linux, initramfs, append):
         log.debug("Adding entry: %s" % key)
@@ -215,8 +217,9 @@ class Grubby(Bootloader):
         return key
 
     def remove_entry(self, key):
-        entry = self._get_entries()[key]
+        entry = self._get_entries()[key] if isinstance(key, str) else key
         log.debug("Removing boot entry: %s" % entry.title)
+        log.info("Removing boot entry: %s" % entry.title)
         grubby("--remove-kernel", entry.kernel)
 
     def set_default(self, key):
@@ -232,8 +235,13 @@ class Grubby(Bootloader):
         log.debug("Default: %s" % entry)
         return entry
 
-    def list(self):
-        return self._get_entries()
+    def list(self, others=False):
+        return self._get_entries(others)
+
+    def remove_other_entries(self):
+        entries = self.list(others=True)
+        for e in entries:
+            self.remove_entry(e)
 
 
 class BootConfiguration():
