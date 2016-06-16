@@ -108,11 +108,20 @@ def relocate_rpm_and_yum_dbs():
 
 @Postprocessor.add_step
 def disable_and_clean_yum_repos():
-    log.info("Disabling all yum repositories")
+    log.info("Conditionally disabling all yum repositories")
     repofiles = glob.glob("/etc/yum.repos.d/*")
-    log.debug("Disabling repositories in files: %s" % repofiles)
-    subprocess.call(["sed", "-i",
-                     "/enabled=/ d ; /^\[/ a enabled=0"] + repofiles)
+    log.debug("Conditionally disabling repositories in files: %s" %
+              repofiles)
+    for fn in repofiles:
+        # Ensure that enabled=0 is set everywhere
+        subprocess.call(["sed", "-i", "-e",
+                         "/enabled=/ d ; /^\[/ a enabled=0"] + fn)
+        # Now re-enable for files wich have the marker
+        subprocess.call(["sed", "-i", "-e",
+                         "/# imgbased: set-enabled/,$ "
+                         "{ s/enabled=.*/enabled=1/ }"] + fn)
+
+    log.info("Clean all yum data")
     subprocess.call(["yum", "clean", "all"])
 
 
