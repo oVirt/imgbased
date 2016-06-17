@@ -115,11 +115,11 @@ def disable_and_clean_yum_repos():
     for fn in repofiles:
         # Ensure that enabled=0 is set everywhere
         subprocess.call(["sed", "-i", "-e",
-                         "/enabled=/ d ; /^\[/ a enabled=0"] + fn)
+                         "/enabled=/ d ; /^\[/ a enabled=0", fn])
         # Now re-enable for files wich have the marker
         subprocess.call(["sed", "-i", "-e",
                          "/# imgbased: set-enabled/,$ "
-                         "{ s/enabled=.*/enabled=1/ }"] + fn)
+                         "{ s/enabled=.*/enabled=1/ }", fn])
 
     log.info("Clean all yum data")
     subprocess.call(["yum", "clean", "all"])
