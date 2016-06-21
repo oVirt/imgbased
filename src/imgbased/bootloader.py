@@ -227,8 +227,8 @@ class Grubby(Bootloader):
     def get_default(self):
         log.debug("Getting default")
         kernel = grubby("--default-kernel")
-        entry = [e for e in self._get_entries()
-                 if e.kernel == kernel][0]
+        entries = self._get_entries()
+        entry = [e for e in entries if entries[e].kernel == kernel][0]
         log.debug("Default: %s" % entry)
         return entry
 
