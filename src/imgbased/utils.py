@@ -66,6 +66,9 @@ def size_of_fstree(path):
 
 
 def grubby(*args, **kwargs):
+    # FIXME: hack to work around rhbz#1323842
+    args = list(args) + ["--bad-image-okay"]
+
     return ExternalBinary().grubby(list(args), **kwargs)
 
 
