@@ -2,6 +2,7 @@
 import glob
 import logging
 import os
+import sys
 from .. import local
 from ..bootloader import BootConfiguration
 from ..naming import Image
@@ -45,7 +46,8 @@ def post_argparse(app, args):
     """
 
     if args.command == "rollback":
-        rollback(app, args.to)
+        success, layer = rollback(app, args.to)
+        sys.exit(0) if success else sys.exit(1)
 
     elif args.command == "update":
         if args.format == "liveimg":
@@ -123,10 +125,12 @@ def rollback(app, specific_nvr):
     the layer they want to rollback providing the NVR in rollback --to option.
     """
 
+    dst_layer = None
+
     if len(app.imgbase.naming.layers()) <= 1:
         log.info("It's required to have at least two layers available to"
                  " execute rollback operation!")
-        return
+        return False, dst_layer
 
     current_layer = app.imgbase.current_layer()
     if specific_nvr is None:
@@ -140,7 +144,7 @@ def rollback(app, specific_nvr):
         log.info("The current layer and the rollback layer are the same!")
         log.info("The system layout is:")
         log.info(app.imgbase.layout())
-        return
+        return False, dst_layer
 
     log.info("You are on %s.." % current_layer)
     log.info("Rollback to %s.." % dst_layer)
@@ -152,6 +156,7 @@ def rollback(app, specific_nvr):
         raise
 
     log.info("This change will take effect after a reboot!")
+    return True, dst_layer
 
 
 class GarbageCollector():
