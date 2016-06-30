@@ -258,7 +258,7 @@ class BootConfiguration():
             raise BootloaderError("Boot entries can only be added for "
                                   "layers, got %r" % layer)
         key = layer.lv_name
-        assert " " not in layer
+        assert " " not in key
         return key
 
     def list(self):
