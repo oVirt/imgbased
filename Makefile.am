@@ -49,7 +49,7 @@ doc: $(man8_MANS)
 
 docs/imgbase.8: docs/imgbase.8.asc
 
-rpm:DEF_RELEASE=--define "_release 0.$$(date +%Y%m%d%H%M)git$$(git log -n1 --format=%h)"
+rpm:DEF_RELEASE=--define "_release @RELEASE@@REVISION@"
 rpm: dist
 	rpmbuild $(DEF_RELEASE) -ta $(DIST_ARCHIVES)
 
