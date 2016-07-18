@@ -237,8 +237,8 @@ class Health():
                     result.reason = self.find_reason()
             except Exception as e:
                 result.ok = False
-                result.traceback = ("Exception in '%s': %s" %
-                                    (self.checker, e))
+                result.traceback = ("Exception in '%s': %r %s" %
+                                    (self.checker, e, e))
             return result
 
     class CheckGroup():
