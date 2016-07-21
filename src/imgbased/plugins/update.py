@@ -2,7 +2,6 @@
 import glob
 import logging
 import os
-import sys
 from .. import local
 from ..bootloader import BootConfiguration
 from ..naming import Image
@@ -15,6 +14,10 @@ log = logging.getLogger(__package__)
 class UpdateConfigurationSection(local.Configuration.Section):
     _type = "update"
     images_to_keep = 2
+
+
+class RollbackFailedError(Exception):
+    pass
 
 
 def init(app):
@@ -46,8 +49,7 @@ def post_argparse(app, args):
     """
 
     if args.command == "rollback":
-        success, layer = rollback(app, args.to)
-        sys.exit(0) if success else sys.exit(1)
+        rollback(app, args.to)
 
     elif args.command == "update":
         if args.format == "liveimg":
@@ -128,9 +130,9 @@ def rollback(app, specific_nvr):
     dst_layer = None
 
     if len(app.imgbase.naming.layers()) <= 1:
-        log.info("It's required to have at least two layers available to"
-                 " execute rollback operation!")
-        return False, dst_layer
+        log.err("It's required to have at least two layers available to"
+                " execute rollback operation!")
+        raise RollbackFailedError()
 
     current_layer = app.imgbase.current_layer()
     if specific_nvr is None:
@@ -139,12 +141,12 @@ def rollback(app, specific_nvr):
         dst_layer = Image.from_nvr(specific_nvr)
 
     if current_layer == dst_layer:
-        log.info("Can't roll back to %s" % dst_layer)
+        log.err("Can't roll back to %s" % dst_layer)
         log.info("You are on %s" % current_layer)
         log.info("The current layer and the rollback layer are the same!")
         log.info("The system layout is:")
         log.info(app.imgbase.layout())
-        return False, dst_layer
+        raise RollbackFailedError()
 
     log.info("You are on %s.." % current_layer)
     log.info("Rollback to %s.." % dst_layer)
@@ -155,8 +157,10 @@ def rollback(app, specific_nvr):
         log.error("Unable to find boot entry for %s" % dst_layer)
         raise
 
+    log.info("Rollback was successful")
     log.info("This change will take effect after a reboot!")
-    return True, dst_layer
+
+    return dst_layer
 
 
 class GarbageCollector():
