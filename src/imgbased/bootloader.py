@@ -128,7 +128,10 @@ class Grubby(Bootloader):
         ... non linux entry'''
 
         There will be only one entry, because only one has a key
-        >>> len(Grubby()._parse_valid_entries(entries, others=False))
+        >>> valid, other = Grubby()._parse_entries(entries)
+        >>> len(valid)
+        1
+        >>> len(other)
         1
         """
 
@@ -174,10 +177,15 @@ class Grubby(Bootloader):
             raise NoKeyFoundError()
         return matches[0]
 
-    def _get_entries(self, others=False):
-        return self._parse_valid_entries(grubby("--info=ALL"), others)
+    def _get_valid_entries(self):
+        return self._parse_entries(grubby("--info=ALL"))[0]
 
-    def _parse_valid_entries(self, data, others):
+    def _get_other_entries(self):
+        return self._parse_entries(grubby("--info=ALL"))[1]
+
+    def _parse_entries(self, data):
+        """Returns (valid_entries_map, other_entires_list)
+        """
         r = re.compile(r'(index.*?)(?=index)', re.DOTALL)
         stanzas = filter(None, r.split(data))
 
@@ -199,7 +207,7 @@ class Grubby(Bootloader):
 
         log.debug("Found valid entries: %s" % entrymap)
 
-        return entrymap if not others else other_entries
+        return (entrymap, other_entries)
 
     def add_entry(self, key, title, linux, initramfs, append):
         log.debug("Adding entry: %s" % key)
@@ -217,31 +225,33 @@ class Grubby(Bootloader):
         return key
 
     def remove_entry(self, key):
-        entry = self._get_entries()[key] if isinstance(key, str) else key
+        entry = self._get_valid_entries()[key]
         log.debug("Removing boot entry: %s" % entry.title)
         log.info("Removing boot entry: %s" % entry.title)
         grubby("--remove-kernel", entry.kernel)
 
     def set_default(self, key):
-        entry = self._get_entries()[key]
+        entry = self._get_valid_entries()[key]
         log.debug("Making default: %s" % entry.title)
         grubby("--set-default", entry.kernel)
 
     def get_default(self):
         log.debug("Getting default")
         kernel = grubby("--default-kernel")
-        entries = self._get_entries()
+        entries = self._get_valid_entries()
         entry = [e for e in entries if entries[e].kernel == kernel][0]
         log.debug("Default: %s" % entry)
         return entry
 
-    def list(self, others=False):
-        return self._get_entries(others)
+    def list(self):
+        return self._get_valid_entries()
 
     def remove_other_entries(self):
-        entries = self.list(others=True)
+        log.info("Removing other boot entries")
+        entries = self._get_other_entries()
         for e in entries:
-            self.remove_entry(e)
+            log.debug("Removing other boot entry: %s" % e.title)
+            grubby("--remove-kernel", e.kernel)
 
 
 class BootConfiguration():
