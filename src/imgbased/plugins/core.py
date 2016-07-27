@@ -157,17 +157,18 @@ def post_argparse(app, args):
         log.info(msg)
 
     if args.command == "layout":
+        layout = Layout(app)
         if args.init or args.init_nvr:
-            Layout(app).initialize(args.source, args.init_nvr)
+            layout.initialize(args.source, args.init_nvr)
 
         elif args.free_space:
             print(app.imgbase.free_space(args.units))
         elif args.bases:
-            print("\n".join(str(b) for b in app.imgbase.naming.bases()))
+            print("\n".join(str(b) for b in layout.list_bases()))
         elif args.layers:
-            print("\n".join(str(l) for l in app.imgbase.naming.layers()))
+            print("\n".join(str(l) for l in layout.list_layers()))
         else:
-            print(app.imgbase.layout())
+            print(layout.dumps())
 
     elif args.command == "check":
         run_check(app)
@@ -187,6 +188,15 @@ class Layout():
 
     def __init__(self, app):
         self.app = app
+
+    def list_bases(self):
+        return self.app.imgbase.naming.bases()
+
+    def list_layers(self):
+        return self.app.imgbase.naming.layers()
+
+    def dumps(self):
+        return self.app.imgbase.layout()
 
     def initialize(self, source, init_nvr=None):
         try:
