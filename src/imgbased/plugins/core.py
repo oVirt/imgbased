@@ -158,16 +158,8 @@ def post_argparse(app, args):
 
     if args.command == "layout":
         if args.init or args.init_nvr:
-            try:
-                init_nvr = args.init_nvr or BuildMetadata().get("nvr")
-            except:
-                log.error("There is no NVR set for this build, in this "
-                          "case you need to initialize with --init-nvr")
-            try:
-                app.imgbase.init_layout_from(args.source, init_nvr)
-            except RuntimeError:
-                log.exception("Failed to initialized layout from %r" %
-                              args.source)
+            Layout(app).initialize(args.source, args.init_nvr)
+
         elif args.free_space:
             print(app.imgbase.free_space(args.units))
         elif args.bases:
@@ -182,6 +174,34 @@ def post_argparse(app, args):
 
     elif args.command == "motd":
         run_motd(app, args.update)
+
+
+class Layout():
+    """High-Level functionality of the layuot verb
+    """
+    class NVRRequiredError(Exception):
+        pass
+
+    class InitializationFailedError(Exception):
+        pass
+
+    def __init__(self, app):
+        self.app = app
+
+    def initialize(self, source, init_nvr=None):
+        try:
+            init_nvr = init_nvr or BuildMetadata().get("nvr")
+        except:
+            raise Layout.NVRMissingError("There is no NVR set for "
+                                         "this build, in this "
+                                         "case you need to initialize "
+                                         "with --init-nvr")
+        try:
+            self.app.imgbase.init_layout_from(source, init_nvr)
+        except RuntimeError:
+            raise Layout.InitializationFailedError("Failed to initialized "
+                                                   "layout from %r" %
+                                                   source)
 
 
 def run_check(app):
