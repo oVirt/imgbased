@@ -130,8 +130,8 @@ def rollback(app, specific_nvr):
     dst_layer = None
 
     if len(app.imgbase.naming.layers()) <= 1:
-        log.err("It's required to have at least two layers available to"
-                " execute rollback operation!")
+        log.error("It's required to have at least two layers available to"
+                  " execute rollback operation!")
         raise RollbackFailedError()
 
     current_layer = app.imgbase.current_layer()
