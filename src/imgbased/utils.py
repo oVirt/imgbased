@@ -222,12 +222,12 @@ def kernel_versions_in_path(path):
 
 
 def nsenter(args, root=None, wd="/"):
+    def _add_arg(k, v, a):
+        return a.append("--%s=%s" % (k, v))
     _args = ["nsenter"]
 
-    add_arg = lambda k, v: _args.append("--%s=%s" % (k, v))
-
-    add_arg("root", root)
-    add_arg("wd", wd)
+    _args = _add_arg("root", root, _args)
+    _args = _add_arg("wd", wd, _args)
 
     args = _args + list(args)
 
@@ -704,7 +704,8 @@ class PackageDb():
 
 
 class RpmPackageDb(PackageDb):
-    _rpm_cmd = lambda s, a: ExternalBinary().rpm(a)
+    def _rpm_cmd(self, s, a):
+        return ExternalBinary().rpm(a)
 
     def _rpm(self, *args, **kwargs):
         if self.root:

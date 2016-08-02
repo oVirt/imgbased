@@ -11,9 +11,11 @@ log = logging.info
 @unittest.skip("Needs refactoring")
 class TestDiff(unittest.TestCase):
     def test_basic(self):
+        def _fake(*args):
+            return None
 
         # All subsequent imgbase calls include the debug arg
-        imgbase = lambda *a: None
+        imgbase = _fake
 
         assert "Image-0.0" in imgbase.layout()
         assert "Image-0.1" in imgbase.layout()

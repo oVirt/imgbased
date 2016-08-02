@@ -295,6 +295,9 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         return kfiles
 
     def add_bootentry(newroot):
+        def _find_kfile(entry, kfiles):
+            return [f for f in kfiles if entry in f].pop()\
+                .replace("/boot", "").lstrip("/")
         if not File("%s/boot" % newroot).exists():
             log.info("New root does not contain a /boot, skipping.")
             return
@@ -335,10 +338,8 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         kfiles = glob.glob(bootdir + "/*")
         # For the loader we are relative to /boot and need to
         # strip this part from the paths
-        bfile = lambda n: [f for f in kfiles if n in f].pop()\
-            .replace("/boot", "").lstrip("/")
-        vmlinuz = bfile("vmlinuz")
-        initrd = bfile("initramfs")
+        vmlinuz = _find_kfile("vmlinuz", kfiles)
+        initrd = _find_kfile("initramfs", kfiles)
         # FIXME default/grub cmdine and /etc/kernel… /var/kernel…
         grub_append = ShellVarFile("%s/etc/default/grub" % newroot)\
             .get("GRUB_CMDLINE_LINUX", "").strip('"').split()
