@@ -32,7 +32,12 @@ if __name__ == '__main__':
     lvl = logging.DEBUG if "--debug" in sys.argv else logging.INFO
     fmt = "[%(levelname)s] %(message)s"
 
-    h = logging.StreamHandler()
+    try:
+        from systemd import journal
+        h = journal.JournalHandler(SYSLOG_IDENTIFIER=config.PACKAGE_NAME)
+    except:
+        h = logging.StreamHandler()
+
     h.setLevel(lvl)
     h.setFormatter(logging.Formatter(fmt))
 
