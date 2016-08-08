@@ -121,6 +121,8 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             log.error("New: %s" % new_rel)
 
         if is_same_product:
+            # The IDMap check must be run before etc was copied!
+            # The check relies on the fact that the old etc and new etc differ
             idmaps = IDMap(old_etc, new_etc)
             if idmaps.has_drift():
                 log.info("UID/GID drift was detected")
