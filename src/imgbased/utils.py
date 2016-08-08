@@ -276,12 +276,12 @@ class Ext4(Filesystem):
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
-        subprocess.check_call(cmd)
+        call(cmd, stderr=subprocess.STDOUT)
 
     def randomize_uuid(self):
         cmd = ["tune2fs", "-U", "random", self.path]
         log.debug("Running: %s" % cmd)
-        subprocess.check_call(cmd)
+        call(cmd, stderr=subprocess.STDOUT)
 
 
 class XFS(Filesystem):
@@ -291,7 +291,7 @@ class XFS(Filesystem):
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
-        subprocess.check_call(cmd)
+        call(cmd, stderr=subprocess.STDOUT)
 
     def randomize_uuid(self):
         with mounted(self.path, options="nouuid"):
@@ -300,7 +300,7 @@ class XFS(Filesystem):
             pass
         cmd = ["xfs_admin", "-U", "generate", self.path]
         log.debug("Running: %s" % cmd)
-        subprocess.check_call(cmd)
+        call(cmd, stderr=subprocess.STDOUT)
 
 
 def findls(path):
@@ -755,7 +755,7 @@ class Rsync():
 
     def _run(self, cmd):
         log.debug("Running: %s" % cmd)
-        subprocess.check_call(cmd)
+        call(cmd)
 
     def sync(self, sourcetree, dst):
         assert os.path.isdir(sourcetree)
