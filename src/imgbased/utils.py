@@ -972,7 +972,7 @@ class IDMap():
                 log.debug("Chowning %r to %s" % (fn, old_ids))
                 os.chown(fn, *old_ids)
                 yield fn
-            except os.OSError as e:
+            except OSError as e:
                 log.debug("Failed to chown %s: %r" % (fn, e))
 
 
