@@ -25,6 +25,7 @@ import logging
 import glob
 import os
 import shutil
+import subprocess
 from .. import bootloader, utils
 from ..lvm import LVM
 from ..naming import Image
@@ -137,6 +138,30 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             else:
                 log.debug("No drift detected")
 
+            # FIXME changing the uid/gid is dropping the setuid.
+            # The following "solution" will use rpm to restore the
+            # correct permissions:
+            # rpm --setperms $(rpm --verify -qa | grep "^\.M\."
+            #                  | cut -d "/" -f2- | while read p ;
+            #                  do rpm -qf /$p ; done )
+            def just_do(arg, **kwargs):
+                proc = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        **kwargs).communicate()
+                log.debug("Erros on just do: %s" % proc[1])
+                return proc[0]
+            incorrect_paths = []
+            for line in just_do(["rpm", "--verify", "-qa"]).splitlines():
+                _mode, _path = (line[0:13], line[13:])
+                if _mode[1] == "M":
+                    incorrect_paths.append(_path)
+            log.debug("Incorrect paths according to rpm: %s" %
+                      str(incorrect_paths))
+            pkgs_req_update = just_do(["rpm", "-qf"] +
+                                      incorrect_paths).splitlines()
+            just_do(["rpm", "--setperms"] + pkgs_req_update)
+
+            # Now migrate /etc
             log.info("Migrating /etc (from %r)" % previous_lv)
             rsync = Rsync()
             # Don't copy release files to have up to date release infos
