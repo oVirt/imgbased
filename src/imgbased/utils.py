@@ -108,12 +108,7 @@ def uuid():
 def call(*args, **kwargs):
     kwargs["close_fds"] = True
     log.debug("Calling: %s %s" % (args, kwargs))
-    proc = subprocess.check_output(*args,
-                                   stderr=subprocess.STDOUT,
-                                   **kwargs)
-
-    output = proc.strip()
-    return output
+    return subprocess.check_output(*args, **kwargs).strip()
 
 
 def format_to_pattern(fmt):
@@ -281,12 +276,12 @@ class Ext4(Filesystem):
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        subprocess.check_call(cmd)
 
     def randomize_uuid(self):
         cmd = ["tune2fs", "-U", "random", self.path]
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        subprocess.check_call(cmd)
 
 
 class XFS(Filesystem):
@@ -296,7 +291,7 @@ class XFS(Filesystem):
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        subprocess.check_call(cmd)
 
     def randomize_uuid(self):
         with mounted(self.path, options="nouuid"):
@@ -305,7 +300,7 @@ class XFS(Filesystem):
             pass
         cmd = ["xfs_admin", "-U", "generate", self.path]
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        subprocess.check_call(cmd)
 
 
 def findls(path):
@@ -760,7 +755,7 @@ class Rsync():
 
     def _run(self, cmd):
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        subprocess.check_call(cmd)
 
     def sync(self, sourcetree, dst):
         assert os.path.isdir(sourcetree)
