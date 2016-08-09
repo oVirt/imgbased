@@ -699,7 +699,7 @@ class PackageDb():
 
 
 class RpmPackageDb(PackageDb):
-    def _rpm_cmd(self, s, a):
+    def _rpm_cmd(self, a):
         return ExternalBinary().rpm(a)
 
     def _rpm(self, *args, **kwargs):
