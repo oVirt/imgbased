@@ -110,8 +110,9 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         log.info("Verifying stream compatability")
         log.debug("%s vs %s" % (old_rel, new_rel))
 
-        if new_rel.PRODUCT not in ["fedora", "centos"]:
-            log.error("Unsupported üproduct: %s" % new_rel)
+        if new_rel.PRODUCT not in ["fedora", "centos",
+                                   "enterprise_linux"]:
+            log.error("Unsupported product: %s" % new_rel)
 
         is_same_product = old_rel.PRODUCT == new_rel.PRODUCT
 
