@@ -48,6 +48,8 @@ class Application(object):
 
 
 def CliApplication(args=None):
+    log.debug("Version: %s" % config.version())
+
     app = Application()
     app.experimental = "--experimental" in sys.argv
 
