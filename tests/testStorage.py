@@ -18,8 +18,10 @@ def dd(N, count=100):
 def trial(num_bins=1, size_bin=500, after_rm=None, max_delta=0.05):
     from sh import imgbase, rm, ls
 
+    def img_free():
+        return float(imgbase("layout", "--free-space"))
+
     imgbase = imgbase.bake("--debug")
-    img_free = lambda: float(imgbase("layout", "--free-space"))
 
     a = img_free()
 

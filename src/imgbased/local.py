@@ -135,8 +135,8 @@ class Configuration():
 
     def section(self, filter_type, name=None):
         sections = [s for s in self.sections(filter_type)
-                    if (name is None
-                        or (hasattr(s, "name") and s.name == name))]
+                    if (name is None or
+                        (hasattr(s, "name") and s.name == name))]
         if not sections:
             sections = [self.section_from_type(filter_type)]
             log.info("Failed to retrieve section, using default: %s %s" %

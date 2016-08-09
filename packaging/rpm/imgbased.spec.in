@@ -8,7 +8,7 @@ Summary:        Tools to work with an image based rootfs
 
 License:        GPLv2+
 URL:            https://www.github.com/fabiand/imgbased
-Source0:        %{name}-%{version}.tar.xz
+Source0:        http://resources.ovirt.org/pub/src/%{name}/%{name}-%{version}.tar.xz
 
 BuildArch:      noarch
 
@@ -37,6 +37,7 @@ BuildRequires:       rpm-python
 %if 0%{?is_el7}
 BuildRequires:       python-six
 %else
+Recommends:          systemd-python3
 BuildRequires:       python3-six
 BuildRequires:       python3-devel
 %endif
@@ -77,7 +78,8 @@ install -Dm 0644 data/imgbase-motd.service %{buildroot}%{_unitdir}/imgbase-motd.
 
 
 %files
-%doc README.md LICENSE
+%doc README.md
+%license LICENSE
 %{_sbindir}/imgbase
 %{_datadir}/%{name}/hooks.d/
 %{python_sitelib}/%{name}/

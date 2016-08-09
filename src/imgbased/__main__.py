@@ -32,11 +32,20 @@ if __name__ == '__main__':
     lvl = logging.DEBUG if "--debug" in sys.argv else logging.INFO
     fmt = "[%(levelname)s] %(message)s"
 
-    h = logging.StreamHandler()
-    h.setLevel(lvl)
-    h.setFormatter(logging.Formatter(fmt))
+    handlers = [logging.StreamHandler()]
+    try:
+        from systemd import journal
+        import config
+        h = journal.JournalHandler(SYSLOG_IDENTIFIER=config.PACKAGE_NAME)
+        handlers.append(h)
+    except:
+        log.debug("Failed to add journal handler")
 
-    log.addHandler(h)
+    for h in handlers:
+        h.setLevel(lvl)
+        h.setFormatter(logging.Formatter(fmt))
+        log.addHandler(h)
+
     log.setLevel(lvl)
 
     CliApplication()

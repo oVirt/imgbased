@@ -108,12 +108,7 @@ def uuid():
 def call(*args, **kwargs):
     kwargs["close_fds"] = True
     log.debug("Calling: %s %s" % (args, kwargs))
-    proc = subprocess.check_output(*args,
-                                   stderr=subprocess.STDOUT,
-                                   **kwargs)
-
-    output = proc.strip()
-    return output
+    return subprocess.check_output(*args, **kwargs).strip()
 
 
 def format_to_pattern(fmt):
@@ -222,12 +217,12 @@ def kernel_versions_in_path(path):
 
 
 def nsenter(args, root=None, wd="/"):
+    def _add_arg(k, v, a):
+        return a.append("--%s=%s" % (k, v))
     _args = ["nsenter"]
 
-    add_arg = lambda k, v: _args.append("--%s=%s" % (k, v))
-
-    add_arg("root", root)
-    add_arg("wd", wd)
+    _args = _add_arg("root", root, _args)
+    _args = _add_arg("wd", wd, _args)
 
     args = _args + list(args)
 
@@ -281,12 +276,12 @@ class Ext4(Filesystem):
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        call(cmd, stderr=subprocess.STDOUT)
 
     def randomize_uuid(self):
         cmd = ["tune2fs", "-U", "random", self.path]
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        call(cmd, stderr=subprocess.STDOUT)
 
 
 class XFS(Filesystem):
@@ -296,7 +291,7 @@ class XFS(Filesystem):
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        call(cmd, stderr=subprocess.STDOUT)
 
     def randomize_uuid(self):
         with mounted(self.path, options="nouuid"):
@@ -305,7 +300,7 @@ class XFS(Filesystem):
             pass
         cmd = ["xfs_admin", "-U", "generate", self.path]
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        call(cmd, stderr=subprocess.STDOUT)
 
 
 def findls(path):
@@ -704,7 +699,8 @@ class PackageDb():
 
 
 class RpmPackageDb(PackageDb):
-    _rpm_cmd = lambda s, a: ExternalBinary().rpm(a)
+    def _rpm_cmd(self, s, a):
+        return ExternalBinary().rpm(a)
 
     def _rpm(self, *args, **kwargs):
         if self.root:
@@ -779,6 +775,28 @@ class Rsync():
 
 
 class IDMap():
+    """This class can help to detect uid/gid drift an get it fixed
+
+    uid/gid drift appears in server side generated images/trees, because
+    the user and group ids are re-allocated for each build.
+    In traditional setups where updates are performed on the client side
+    the user/group files are only getting updated, and not written
+    from scratch. Thus those systems don't suffer drifts.
+
+    The approach of this class is to
+
+    * detect a drift
+    * identify the drift
+    * fix the drift on a path
+
+    The class looks at the old and new etc contents, to find how
+    the uid/gid for names changed.
+    Once a drift is detected, a map is created, mapping the change
+    from the old uid/gid to the new uid/gid.
+    Then there is a function which will finally fix the drift on a path
+    in the new fs to change the uid/gid to map to the names how they are
+    in the old user/group file.
+    """
     from_etc = None
     to_etc = None
 
@@ -786,7 +804,7 @@ class IDMap():
         self.from_etc = from_etc
         self.to_etc = to_etc
 
-    def _parse_ids(self, fstab_data):
+    def _parse_ids(self, id_data):
         """foo
 
         >>> data = '''
@@ -799,15 +817,15 @@ class IDMap():
 
         >>> ids = IDMap(None, None)._parse_ids(data)
         >>> sorted(ids.items())
-        [('bin', '1'), ('daemon', '2'), ('root', '0'), ('shutdown', '6'), \
-('sync', '5')]
+        [('bin', 1), ('daemon', 2), ('root', 0), ('shutdown', 6), \
+('sync', 5)]
         """
         idmap = {}
-        for line in fstab_data.splitlines():
+        for line in id_data.splitlines():
             if not line:
                 continue
-            name, _, uid, gid = line.split(":")[:4]
-            idmap[name] = uid
+            name, _, _id = line.split(":")[:3]
+            idmap[name] = int(_id)
         return idmap
 
     def _create_idmap(self, from_idmap, to_idmap):
@@ -816,7 +834,7 @@ class IDMap():
         >>> from_map = {"root": "0", "bin": "1", "adm": "2"}
         >>> to_map = {"root": "0", "bin": "2", "adm": "3"}
         >>> IDMap(None, None)._create_idmap(from_map, to_map)
-        [('1', '2'), ('2', '3')]
+        [(1, 2), (2, 3)]
         """
         unknown_names = []
         xmap = []
@@ -826,7 +844,7 @@ class IDMap():
                 continue
             tid = to_idmap[fname]
             if fid != tid:
-                xmap.append((fid, tid))
+                xmap.append((int(fid), int(tid)))
         return sorted(xmap)
 
     def _create_idmaps(self, from_uids, from_gids, to_uids, to_gids):
@@ -840,7 +858,7 @@ class IDMap():
 
         >>> IDMap(None, None)._create_idmaps(from_uids, from_gids,
         ... to_uids, to_gids)
-        ([('1', '2')], [('1', '2'), ('2', '3')])
+        ([(1, 2)], [(1, 2), (2, 3)])
         """
 
         uidmap = self._create_idmap(from_uids, to_uids)
@@ -849,7 +867,7 @@ class IDMap():
         return (uidmap, gidmap)
 
     def get_drift(self):
-        """Returns the uid and gid dirft from the old to the net etc
+        """Returns the uid and gid dirft from the old to the new etc
         """
         from_uids = self._parse_ids(File(self.from_etc + "/passwd").contents)
         from_gids = self._parse_ids(File(self.from_etc + "/group").contents)
@@ -867,65 +885,90 @@ class IDMap():
         """
         return sum(len(m) for m in self.get_drift()) > 0
 
-    def _map_id_change(self, paths, _fake_drift=None):
+    def _map_new_ids_to_old_ids(self, paths_and_ids, _fake_drift=None):
         """Translate all uids/gids in path
 
-        Imagine tehse paths with the owners:
+        Imagine these paths with their owners:
 
-        >>> paths = [("/foo", 11, 2),
-        ...          ("/bar", 1, 22)]
+        >>> old_paths = [("/foo", 40, 2),
+        ...              ("/bar", 1, 50),
+        ...              ("/nochange", 40, 50),
+        ...              ("/allchange", 1, 2)]
 
-        And a drift, weher uid 1 changed to 11, and gid 2 changed to 22:
+        And in the new tree, the uid 1 changed to 11,
+        and gid 2 changed to 22:
+
+        >>> new_paths = [("/foo", 40, 22),
+        ...              ("/bar", 11, 50),
+        ...              ("/nochange", 40, 50),
+        ...              ("/allchange", 11, 22)]
+
+        This is described in the drift:
 
         >>> drift = ([(1, 11)], [(2, 22)])
 
-        Then IDMap will change the ids in the given path to the old ids.
+        Then IDMap will change the ids in the given new path to the old ids.
         This ensures, that the owner does logically not change.
 
         >>> m = IDMap(None, None)
-        >>> changes = m._map_id_change(paths, drift)
+        >>> changes = m._map_new_ids_to_old_ids(new_paths, drift)
         >>> list(changes)
-        [('/foo', (-1, 22)), ('/bar', (11, -1))]
+        [('/foo', (-1, 2)), ('/bar', (1, -1)), ('/allchange', (1, 2))]
         """
 
         drift = _fake_drift or self.get_drift()
         assert drift
 
         uidmap, gidmap = map(dict, drift)
+
+        # *map maps from old to new
+
         rev_uidmap = dict(map(reversed, uidmap.items()))
         rev_gidmap = dict(map(reversed, gidmap.items()))
+
+        # rev*map maps from new to old
 
         assert len(uidmap) == len(rev_uidmap)
         assert len(gidmap) == len(rev_gidmap)
 
-        for (fn, uid, gid) in paths:
-            new_ids = (uidmap.get(uid, -1),
-                       gidmap.get(gid, -1))
-            yield (fn, new_ids)
+        for (fn, new_uid, new_gid) in paths_and_ids:
+            # Check if for a given id, an old - different - id
+            # is known - essentially: if it has changed
+            old_uid = rev_uidmap.get(new_uid, -1)
+            old_gid = rev_gidmap.get(new_gid, -1)
 
-    def fix_drift(self, path):
+            if any(v != -1 for v in [old_uid, old_gid]):
+                # If there is a change, emit it
+                yield (fn, (old_uid, old_gid))
+
+    def fix_drift(self, new_path):
         """This function will walk a tree and adjust all UID/GIDs which drifted
-        """
-        def paths_w_ids():
-            for (dirpath, dirnames, filenames) in os.walk(path):
-                for fn in dirnames + filenames:
-                    fullfn = dirpath + "/" + fn
-                    if not os.path.exists(fullfn):
-                        log.debug("File does not exist: %s" % fn)
-                        continue
-                    st = os.stat(fullfn)
-                    uid = st.st_uid
-                    gid = st.st_gid
-                    yield (fullfn, uid, gid)
 
-        for (fn, new_ids) in self._map_id_change(paths_w_ids()):
-            if any(v != -1 for v in new_ids):
-                if os.path.exists(fn):
-                    log.debug("Chowning %r to %s" % (fn, new_ids))
-                    os.chown(fn, *new_ids)
-                    yield fn
-                else:
-                    log.debug("Can't chown, file does not exist: %s" % fn)
+        path is expected to be a path with the new uid/gid.
+        """
+        # Go through all paths and find their uid/gid
+        changed_new_ids = []
+        for (dirpath, dirnames, filenames) in os.walk(new_path):
+            for fn in dirnames + filenames:
+                fullfn = dirpath + "/" + fn
+                if not os.path.exists(fullfn):
+                    log.debug("File does not exist: %s" % fn)
+                    continue
+                st = os.stat(fullfn)
+                uid = st.st_uid
+                gid = st.st_gid
+                changed_new_ids.append((fullfn, uid, gid))
+
+        # For each new path, see if the uid/gid changed
+        new_ids_xlated_to_old = self._map_new_ids_to_old_ids(changed_new_ids)
+        for (fn, old_ids) in new_ids_xlated_to_old:
+            # The uid/gid has changed, so change it to the old uid/gid
+            try:
+                log.debug("Chowning %r to %s" % (fn, old_ids))
+                os.chown(fn, *old_ids)
+                yield fn
+            except OSError as e:
+                log.debug("Failed to chown %s: %r" % (fn, e))
 
 
 class SystemRelease(File):
