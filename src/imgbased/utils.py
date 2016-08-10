@@ -218,7 +218,7 @@ def kernel_versions_in_path(path):
 
 def nsenter(args, root=None, wd="/"):
     def _add_arg(k, v, a):
-        return a.append("--%s=%s" % (k, v))
+        return a + ["--%s=%s" % (k, v)]
     _args = ["nsenter"]
 
     _args = _add_arg("root", root, _args)
