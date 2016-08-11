@@ -139,30 +139,6 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             else:
                 log.debug("No drift detected")
 
-            # FIXME changing the uid/gid is dropping the setuid.
-            # The following "solution" will use rpm to restore the
-            # correct permissions:
-            # rpm --setperms $(rpm --verify -qa | grep "^\.M\."
-            #                  | cut -d "/" -f2- | while read p ;
-            #                  do rpm -qf /$p ; done )
-            def just_do(arg, **kwargs):
-                proc = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE,
-                                        **kwargs).communicate()
-                log.debug("Erros on just do: %s" % proc[1])
-                return proc[0]
-            incorrect_paths = []
-            for line in just_do(["rpm", "--verify", "-qa"]).splitlines():
-                _mode, _path = (line[0:13], line[13:])
-                if _mode[1] == "M":
-                    incorrect_paths.append(_path)
-            log.debug("Incorrect paths according to rpm: %s" %
-                      str(incorrect_paths))
-            pkgs_req_update = just_do(["rpm", "-qf"] +
-                                      incorrect_paths).splitlines()
-            just_do(["rpm", "--setperms"] + pkgs_req_update)
-
-            # Now migrate /etc
             log.info("Migrating /etc (from %r)" % previous_lv)
             rsync = Rsync()
             # Don't copy release files to have up to date release infos
@@ -179,6 +155,49 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         log.info("Migrating /root")
         rsync = Rsync()
         rsync.sync(old_fs.path("/root/"), new_fs.path("/root"))
+
+        hack_rpm_permissions(new_fs)
+
+
+def hack_rpm_permissions(new_fs):
+    # FIXME changing the uid/gid is dropping the setuid.
+    # The following "solution" will use rpm to restore the
+    # correct permissions:
+    # rpm --setperms $(rpm --verify -qa | grep "^\.M\."
+    #                  | cut -d "/" -f2- | while read p ;
+    #                  do rpm -qf /$p ; done )
+    def just_do(arg, **kwargs):
+        DEVNULL = open(os.devnull, "w")
+        arg = ["nsenter", "--root=" + new_fs.path("/"), "--wd=/"] + arg
+        log.debug("Running %s" % arg)
+        proc = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                                stderr=DEVNULL,
+                                **kwargs).communicate()
+        return proc[0]
+
+    incorrect_groups = {"paths": [],
+                        "verb": "--setugids"
+                        }
+    incorrect_paths = {"paths": [],
+                       "verb": "--setperms"
+                       }
+    for line in just_do(["rpm", "--verify", "-qa"]).splitlines():
+        _mode, _path = (line[0:13], line[13:])
+        if _mode[1] == "M":
+            incorrect_paths["paths"].append(_path)
+        if _mode[6] == "G":
+            incorrect_groups["paths"].append(_path)
+    log.debug("Incorrect groups according to rpm: %s" %
+              str(incorrect_groups["paths"]))
+    log.debug("Incorrect paths according to rpm: %s" %
+              str(incorrect_paths["paths"]))
+
+    for pgroup in [incorrect_groups, incorrect_paths]:
+        pkgs_req_update = just_do(["rpm", "-qf", "--queryformat",
+                                   "%{NAME}\n"] +
+                                  pgroup["paths"]).splitlines()
+        pkgs_req_update = list(set(pkgs_req_update))
+        just_do(["rpm", pgroup["verb"]] + pkgs_req_update)
 
 
 def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
