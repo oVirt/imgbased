@@ -21,7 +21,9 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 import logging
+import os
 import re
+import shutil
 from .utils import grubby
 from .naming import Layer
 
@@ -246,8 +248,28 @@ class Grubby(Bootloader):
     def list(self):
         return self._get_valid_entries()
 
+    def list_other(self):
+        return self._get_other_entries()
+
+    def _backup(self):
+        # The links in /etc are relative for some reason...
+        os.chdir("/")
+
+        path = None
+        paths = ["/etc/grub2.cfg", "/etc/grub2-efi.cfg"]
+
+        for p in paths:
+            if os.path.exists(p):
+                path = os.path.abspath(os.readlink(p))
+                break
+
+        log.info("Backing up the grub configuration")
+        log.debug("Copying %s to %s" % (path, path+".bak"))
+        shutil.copy2(path, path + ".bak")
+
     def remove_other_entries(self):
         log.info("Removing other boot entries")
+        self._backup()
         entries = self._get_other_entries()
         for e in entries:
             log.debug("Removing other boot entry: %s" % e.title)
@@ -274,6 +296,9 @@ class BootConfiguration():
     def list(self):
         return self.bootloader.list()
 
+    def list_other(self):
+        return self.bootloader.list_other()
+
     def add(self, layer, title,  vmlinuz, initrd, append):
         key = self._key_from_layer(layer)
         return self.bootloader.add_entry(key, title, vmlinuz, initrd, append)
@@ -281,6 +306,9 @@ class BootConfiguration():
     def remove(self, layer):
         key = self._key_from_layer(layer)
         return self.bootloader.remove(key)
+
+    def remove_other_entries(self):
+        return self.bootloader.remove_other_entries()
 
     def set_default(self, layer):
         key = self._key_from_layer(layer)
