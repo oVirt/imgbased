@@ -20,6 +20,8 @@ def add_argparse(app, parser, subparsers):
                               help="Manage the bootloader")
     s.add_argument("--list", action="store_true",
                    help="List all entries")
+    s.add_argument("--remove-other-boot-entries", action="store_true",
+                   help="Remove non-layer entries from the bootloader")
     s.add_argument("--get-default", action="store_true",
                    help="Get the default layer")
     s.add_argument("--set-default", nargs=1, metavar="NVR",
@@ -36,5 +38,7 @@ def post_argparse(app, args):
         elif args.set_default:
             layer = Layer.from_nvr(args.set_default)
             print(bootconfig.set_default(layer))
+        elif args.remove_other_boot_entries:
+            bootconfig.remove_other_entries()
 
 # vim: sw=4 et sts=4

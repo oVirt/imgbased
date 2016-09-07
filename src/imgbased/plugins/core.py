@@ -26,6 +26,7 @@ import inspect
 from ..utils import augtool, BuildMetadata, Fstab, bcolors
 from ..naming import Image
 from ..lvm import LVM
+from ..bootloader import BootConfiguration
 
 
 log = logging.getLogger(__package__)
@@ -456,6 +457,37 @@ class Health():
                          check_discard,
                          lambda: ("'discard' mount option was not "
                                   "added or got removed"))
+            ]
+
+        return group
+
+    def check_bootloader(self):
+        group = Health.CheckGroup()
+        b = BootConfiguration()
+        group.description = "Bootloader"
+        group.reason = ("It looks like there are no valid bootloader "
+                        "entries. Please ensure this is fixed before "
+                        "rebooting.")
+
+        def check_node():
+            if not b.list():
+                return False
+            return True
+
+        def check_other():
+            if not b.list_other():
+                return False
+            return True
+
+        group.checks = [
+            Health.Check("Layer boot entries",
+                         check_node,
+                         lambda: ("No bootloader entries which point to "
+                                  "imgbased layers")),
+            Health.Check("Valid boot entries",
+                         lambda: check_node() or check_other(),
+                         lambda: ("No valid boot entries for imgbased layers "
+                                  "or non-imgbased layers"))
             ]
 
         return group
