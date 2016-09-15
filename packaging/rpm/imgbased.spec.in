@@ -97,5 +97,8 @@ install -Dm 0644 data/imgbase-motd.service %{buildroot}%{_unitdir}/imgbase-motd.
 %endif
 
 %changelog
+* Thu Sep 15 2016 Ryan Barry <rbarry@fedoraproject.org> - 0.8.5-1
+- Remove non-imgbased entries at boot
+
 * Wed Apr 02 2014 Fabian Deutsch <fabiand@fedoraproject.org> - 0.1-0.1
 - Initial package
