@@ -16,9 +16,6 @@ def init(app):
 
 
 def add_argparse(app, parser, subparsers):
-    if not app.experimental:
-        return
-
     s = subparsers.add_parser("image-build",
                               help="Image build related tooling")
     s.add_argument("--postprocess", action="store_true",
