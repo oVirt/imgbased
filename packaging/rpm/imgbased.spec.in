@@ -65,6 +65,10 @@ make %{?_smp_mflags}
 
 %install
 %if 0%{?fedora}
+install -Dm 0644 src/plugin-dnf/imgbased-persist.conf \
+                 %{buildroot}/%{_sysconfdir}/dnf/pluginconf.d/imgbased-persist.conf
+install -Dm 0644 src/plugin-dnf/imgbased-persist.py \
+                 %{buildroot}/%{python3_sitelib}/dnf-plugins/imgbased-persist.py
 install -Dm 0644 src/plugin-dnf/imgbased-warning.py \
                  %{buildroot}/%{python3_sitelib}/dnf-plugins/imgbased-warning.py
 %else
@@ -93,6 +97,8 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 /%{_docdir}/%{name}/*.asc
 %{_unitdir}/imgbase-*.service
 %if 0%{?fedora}
+%{_sysconfdir}/dnf/pluginconf.d/imgbased-persist.conf
+%{python3_sitelib}/dnf-plugins/imgbased-persist.py*
 %{python3_sitelib}/dnf-plugins/imgbased-warning.py*
 %{python3_sitelib}/dnf-plugins/__pycache__/imgbased*
 %else
