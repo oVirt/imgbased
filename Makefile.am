@@ -32,6 +32,8 @@ EXTRA_DIST = \
   src/plugin-dnf/imgbased-warning.py \
   src/plugin-yum/imgbased-warning.py \
   src/plugin-yum/imgbased-warning.conf \
+  src/plugin-yum/imgbased-persist.py \
+  src/plugin-yum/imgbased-persist.conf \
   data/imgbase-clean-grub.service \
   data/imgbase-motd.service \
   data/imgbase-generate-iqn.service \
