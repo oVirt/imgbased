@@ -29,6 +29,8 @@ EXTRA_DIST = \
   README.md \
   LICENSE \
   packaging/rpm/imgbased.spec \
+  src/plugin-dnf/imgbased-persist.conf \
+  src/plugin-dnf/imgbased-persist.py \
   src/plugin-dnf/imgbased-warning.py \
   src/plugin-yum/imgbased-warning.py \
   src/plugin-yum/imgbased-warning.conf \
