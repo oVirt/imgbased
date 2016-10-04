@@ -1038,6 +1038,9 @@ class SystemRelease(File):
                                self.CPE_FILE)
         self.VENDOR, self.PRODUCT, self.VERSION = cpe_parts[2:5]
 
+    def is_supported_product(self):
+        return self.product in ["fedora", "centos", "enterprise_linux"]
+
 
 class OSRelease(ShellVarFile):
     """Information about the OS based on /etc/os-release
