@@ -24,13 +24,17 @@
 import logging
 import glob
 import os
+import re
 import shutil
 import subprocess
+
+from filecmp import dircmp
+
 from .. import bootloader, utils
 from ..lvm import LVM
 from ..naming import Image
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File, SystemRelease, Rsync, kernel_versions_in_path, IDMap
+    File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file
 
 
 log = logging.getLogger(__package__)
@@ -156,7 +160,40 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         rsync = Rsync()
         rsync.sync(old_fs.path("/root/"), new_fs.path("/root"))
 
+        log.info("Syncing systemd levels")
+        fix_systemd_services(old_fs, new_fs)
+
         hack_rpm_permissions(new_fs)
+
+
+def fix_systemd_services(old_fs, new_fs):
+    # Enabled systemd services are preserved with rsync, but services
+    # which were disabled will be spuriously re-enabled after an
+    # upgrade unless we do this. Check vs the factory in /usr/share/factory
+    # so we can tell what changed
+    diffs = []
+
+    def strip(path):
+        return strip_factory(re.sub(r'/tmp/.*?/', '/', path))
+
+    def strip_factory(path):
+        return re.sub(r'/usr/share/factory', '', path)
+
+    def diff(dc):
+        if dc.right_only:
+            diffs.extend(["{}/{}".format(strip(dc.right), f)
+                          for f in dc.right_only])
+        if dc.subdirs:
+            for d in dc.subdirs.values():
+                diff(d)
+
+    diff(dircmp(old_fs.target + "/etc/systemd",
+                old_fs.target + "/usr/share/factory/etc/systemd")
+         )
+
+    for d in diffs:
+        log.debug("Removing %s" % d)
+        remove_file(new_fs.path("/") + d)
 
 
 def hack_rpm_permissions(new_fs):

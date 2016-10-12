@@ -46,6 +46,12 @@ def augtool(*args):
     return ExternalBinary().augtool(list(args))
 
 
+def remove_file(path, *args):
+    args = list(args) + [path]
+    rm = ExternalBinary().rm
+    return rm(args)
+
+
 def copy_files(dst, srcs, *args):
     """Copy files
 
@@ -347,6 +353,9 @@ class ExternalBinary(object):
 
     def du(self, args, **kwargs):
         return self.call(["du"] + args, **kwargs)
+
+    def rm(self, args, **kwargs):
+        return self.call(["rm"] + args, **kwargs)
 
     def cp(self, args, **kwargs):
         return self.call(["cp"] + args, **kwargs)
