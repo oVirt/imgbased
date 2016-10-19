@@ -97,6 +97,9 @@ install -Dm 0644 data/imgbase-motd.service %{buildroot}%{_unitdir}/imgbase-motd.
 %endif
 
 %changelog
+* Wed Oct 19 2016 Ryan Barry <rbarry@redhat.com> - 0.8.6-1
+- Ensure disabled services stay disabled after upgrade
+
 * Thu Sep 15 2016 Ryan Barry <rbarry@fedoraproject.org> - 0.8.5-1
 - Remove non-imgbased entries at boot
 
