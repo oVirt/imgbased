@@ -23,7 +23,7 @@
 import os
 import logging
 import inspect
-from ..utils import augtool, BuildMetadata, Fstab, bcolors
+from ..utils import BuildMetadata, File, Fstab, bcolors
 from ..naming import Image
 from ..lvm import LVM
 from ..bootloader import BootConfiguration
@@ -412,9 +412,10 @@ class Health():
             return group
 
         def has_autoextend():
-            ap = ("/files/etc/lvm/lvm.conf/activation/dict/"
-                  "thin_pool_autoextend_threshold/int")
-            return not augtool("get", ap).endswith("= 0")
+            if File("/etc/lvm/lvm.conf").findall(
+                    'thin_pool_autoextend_threshold\s?=s?0\s*$'):
+                return False
+            return True
 
         group.checks = [
             Health.Check("Checking available space in thinpool",
