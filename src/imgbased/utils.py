@@ -46,8 +46,9 @@ def augtool(*args):
     return ExternalBinary().augtool(list(args))
 
 
-def remove_file(path, *args):
-    args = list(args) + [path]
+def remove_file(path, dir=False, *args):
+    args = list(args) + ["-f", path]
+    args = args + ["-r"] if dir else args
     rm = ExternalBinary().rm
     return rm(args)
 
