@@ -193,7 +193,14 @@ def fix_systemd_services(old_fs, new_fs):
 
     for d in diffs:
         log.debug("Removing %s" % d)
-        remove_file(new_fs.path("/") + d)
+        try:
+            if os.path.exists(new_fs.path("/") + d):
+                if os.path.isdir(new_fs.path("/") + d):
+                    remove_file(new_fs.path("/") + d, dir=True)
+                elif os.path.isfile(new_fs.path("/") + d):
+                    remove_file(new_fs.path("/") + d)
+        except:
+            log.exception("Could not remove %s. Is it a read-only layer?")
 
 
 def hack_rpm_permissions(new_fs):
