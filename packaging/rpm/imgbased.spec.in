@@ -97,6 +97,9 @@ install -Dm 0644 data/imgbase-motd.service %{buildroot}%{_unitdir}/imgbase-motd.
 %endif
 
 %changelog
+* Fri Nov 4 2016 Ryan Barry <rbarry@redhat.com> - 0.8.7-1
+- Fix a regression with the last patch in interactive installs
+
 * Wed Oct 19 2016 Ryan Barry <rbarry@redhat.com> - 0.8.6-1
 - Ensure disabled services stay disabled after upgrade
 
