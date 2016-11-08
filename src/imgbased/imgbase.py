@@ -24,7 +24,7 @@ import re
 from .hooks import Hooks
 from . import naming, utils, local
 from .naming import Image
-from .lvm import LVM
+from .lvm import LVM, MissingLvmThinPool
 
 import logging
 
@@ -212,7 +212,17 @@ class ImageLayers(object):
         log.debug("Tagging VG: %s" % vg)
         vg.addtag(self.vg_tag)
 
-        pool = lv.thinpool()
+        try:
+            pool = lv.thinpool()
+        except MissingLvmThinPool:
+            log.error(
+                "LVM Thin Provisioning partitioning scheme is required.\n"
+                "For autoinstall via Kickstart with LVM Thin Provisioning"
+                " check options: --thinpool and --grow"
+                "Please consult documentation for details\n"
+            )
+            raise
+
         log.debug("Tagging pool: %s" % pool)
         pool.addtag(self.thinpool_tag)
 

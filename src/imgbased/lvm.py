@@ -30,6 +30,10 @@ from .utils import find_mount_source, LvmCLI
 log = logging.getLogger(__package__)
 
 
+class MissingLvmThinPool(Exception):
+    pass
+
+
 class LVM(object):
     _lvs = LvmCLI.lvs
     _vgs = LvmCLI.vgs
@@ -229,6 +233,10 @@ class LVM(object):
             lv = None
             if pool_lv:
                 lv = LVM.LV.from_lv_name(self.vg_name, pool_lv)
+
+            if lv is None:
+                raise MissingLvmThinPool()
+
             return lv
 
         def addtag(self, tag):
