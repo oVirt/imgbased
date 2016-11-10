@@ -1,6 +1,6 @@
 define([VERSION_MAJOR], [0])
 define([VERSION_MINOR], [8])
-define([VERSION_FIX], [7])
+define([VERSION_FIX], [8])
 define([VERSION_NUMBER], VERSION_MAJOR[.]VERSION_MINOR[.]VERSION_FIX)
 
 AC_INIT([imgbased], VERSION_NUMBER, [fabiand@fedoraproject.org])
