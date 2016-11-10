@@ -102,8 +102,16 @@ def relocate_rpm_and_yum_dbs():
     # Make the /var entry a symlink to the moved db
     os.symlink("../../usr/share/rpm", "/var/lib/rpm")
 
-    log.info("Cleaning yum")
+    log.info("Relocating and cleaning yum")
+    # Delete everything under yum
     shutil.rmtree("/var/lib/yum")
+
+    # Then recreate it as a symlink
+    os.mkdir("/var/lib/yum")
+
+    shutil.move("/var/lib/yum", "/usr/share/yum")
+    # Make the /var entry a symlink to the moved path
+    os.symlink("../../usr/share/yum", "/var/lib/yum")
 
 
 @Postprocessor.add_step
