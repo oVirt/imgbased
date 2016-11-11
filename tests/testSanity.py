@@ -2,6 +2,7 @@
 # vim: et ts=4 sw=4 sts=4
 
 import unittest
+import subprocess
 import sys
 import logging
 from logging import debug
@@ -10,6 +11,7 @@ from StringIO import StringIO
 from collections import namedtuple
 
 from fakelvm import FakeLVM
+from imgbased import utils
 
 from imgbased import CliApplication
 import imgbased
@@ -76,6 +78,31 @@ class CliTestCase(ImgbaseTestCase):
                  "layout",
                  "--init-nvr", "Image-1.0-0",
                  "--from", "hostvg/root")
+
+
+class FilesystemTestCase(CliTestCase):
+    def test_supported_filesystem(self):
+        supported_fs = ['ext4', 'xfs']
+        fs = utils.Filesystem.supported_filesystem()
+        CliTestCase.assertEqual(self, supported_fs, fs)
+
+    def test_get_type(self):
+        with self.assertRaises(subprocess.CalledProcessError):
+            # Command will fail because there is no _fake_vg_ to check
+            CliTestCase.assertTrue(self, utils.Filesystem.get_type(
+                                   "/dev/mapper/_fake_vg_"))
+
+    def test_from_device(self):
+        # Command will fail because there is no _fake_vg_ to check
+        with self.assertRaises(subprocess.CalledProcessError):
+            CliTestCase.assertTrue(self, utils.Filesystem.from_device(
+                                   "/dev/mapper/_fake_vg_"))
+
+    def test_from_mountpoint(self):
+        with self.assertRaises(subprocess.CalledProcessError):
+            # Command will fail because there is no _fake_mountpoint__ to check
+            CliTestCase.assertTrue(self, utils.Filesystem.from_mountpoint(
+                                   "/_fake_mountpoint_"))
 
 
 class LayoutVerbTestCase(CliTestCase):

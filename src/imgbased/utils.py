@@ -34,6 +34,10 @@ from contextlib import contextmanager
 log = logging.getLogger(__package__)
 
 
+class FilesystemNotSupported(Exception):
+    pass
+
+
 class HumanReadableError(Exception):
     pass
 
@@ -241,6 +245,11 @@ def source_of_mountpoint(path):
 
 
 class Filesystem():
+
+    @classmethod
+    def supported_filesystem(cls):
+        return ['ext4', 'xfs']
+
     @staticmethod
     def get_type(path):
         cmd = ["blkid", "-o", "value", "-s", "TYPE", path]
@@ -248,13 +257,17 @@ class Filesystem():
 
     @classmethod
     def from_device(cls, path):
-        typ = cls.get_type(path)
-        if typ == "ext4":
+        fs_type = cls.get_type(path)
+
+        if fs_type not in cls.supported_filesystem():
+            raise FilesystemNotSupported
+
+        if fs_type == 'ext4':
             cls = Ext4
-        elif typ == "xfs":
+
+        elif fs_type == 'xfs':
             cls = XFS
-        else:
-            raise RuntimeError("Unknown filesystem %s on %s" % (typ, path))
+
         return cls(path)
 
     @classmethod
