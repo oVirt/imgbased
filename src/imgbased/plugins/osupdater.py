@@ -162,6 +162,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
 
         log.info("Syncing systemd levels")
         fix_systemd_services(old_fs, new_fs)
+        relocate_var_lib_yum(new_fs)
 
         hack_rpm_permissions(new_fs)
 
@@ -201,6 +202,19 @@ def fix_systemd_services(old_fs, new_fs):
                     remove_file(new_fs.path("/") + d)
         except:
             log.exception("Could not remove %s. Is it a read-only layer?")
+
+
+def relocate_var_lib_yum(new_fs):
+    path = "/var/lib/yum"
+    # Check whether /var is a symlink to /usr/share, and move it if it is not
+    # We could directly check this in new_fs, but this gets tricky with
+    # symlinks, and it will already be present on new builds
+    if not os.path.islink(path):
+        log.debug("/var/lib/yum is not a link -- moving it")
+        shutil.rmtree(path)
+        os.mkdir(path)
+        shutil.move(path, "/usr/share/yum")
+        os.symlink("/usr/share/yum", "/var/lib/yum")
 
 
 def hack_rpm_permissions(new_fs):

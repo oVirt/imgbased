@@ -97,6 +97,9 @@ install -Dm 0644 data/imgbase-motd.service %{buildroot}%{_unitdir}/imgbase-motd.
 %endif
 
 %changelog
+* Fri Nov 11 2016 Ryan Barry <rbarry@redhat.com> - 0.8.9-1
+- Also relocate on updates
+
 * Thu Nov 10 2016 Ryan Barry <rbarry@redhat.com> - 0.8.8-1
 - Relocate /var/lib/yum to /usr
 
