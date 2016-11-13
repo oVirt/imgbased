@@ -34,6 +34,7 @@ EXTRA_DIST = \
   src/plugin-yum/imgbased-warning.conf \
   data/imgbase-clean-grub.service \
   data/imgbase-motd.service \
+  data/imgbase-generate-iqn.service \
   tests/*.py
   $(NULL)
 
