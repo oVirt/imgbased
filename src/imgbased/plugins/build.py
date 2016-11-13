@@ -181,4 +181,12 @@ def clean_network_configs():
         os.unlink(fn)
 
 
+@Postprocessor.add_step
+def remove_iscsi_initiator_iqn():
+    """Remove the iSCSI initiator IQN, to ensure that none is set
+    A service is responsible for generating a new and uniqe name
+    FIXME https://bugzilla.redhat.com/show_bug.cgi?id=1393833
+    """
+    File("/etc/iscsi/initiatorname.iscsi").remove()
+
 # vim: sw=4 et sts=4
