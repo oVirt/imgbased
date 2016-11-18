@@ -34,10 +34,15 @@ from .. import bootloader, utils
 from ..lvm import LVM
 from ..naming import Image
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file
+    File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
+    find_mount_target
 
 
 log = logging.getLogger(__package__)
+
+
+class BootPartitionRequires1G(Exception):
+    pass
 
 
 class ConfigMigrationError(Exception):
@@ -99,6 +104,33 @@ def on_post_init_layout(imgbase, existing_lv, new_base, new_layer):
                                target="/etc",
                                options="bind")
     new_etc.mount()
+
+
+def boot_partition_validation():
+    """
+    Function to validate all requirements for /boot partition
+    """
+    boot_dir = None
+    bytes_in_1G = 1024 * 1024 * 1024
+
+    for target in find_mount_target():
+        if "boot" in target:
+            boot_dir = target
+            break
+
+    if boot_dir is None:
+        raise RuntimeError("findmnt: error, unable to find boot partition"
+                           " in target!")
+
+    st = os.statvfs(boot_dir)
+    bytes_in_boot_partition = st.f_blocks * st.f_frsize
+
+    if bytes_in_boot_partition < bytes_in_1G:
+        # 1G is 1073741824 bytes. However, if users use size=1000
+        # in anaconda kickstart won't work. Based on that, let's
+        # inform to users it's required 1.1G (size=1100).
+        log.error("New /boot must have at least 1.1G size")
+        raise BootPartitionRequires1G
 
 
 def migrate_etc(imgbase, new_lv, previous_lv):
@@ -462,6 +494,11 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             update_grub_default(newroot.target)
             copy_kernel(newroot.target)
             add_bootentry(newroot.target)
+
+            try:
+                boot_partition_validation()
+            except:
+                raise
 
     imgbase.hooks.emit("os-upgraded",
                        previous_lv.lv_name,

@@ -80,6 +80,19 @@ class CliTestCase(ImgbaseTestCase):
                  "--from", "hostvg/root")
 
 
+class FindmntTestCase(CliTestCase):
+    def test_findmnt(self):
+        CliTestCase.assertIsNone(self,
+                                 utils.findmnt(["SOURCE", "/tmp/_fake_dir_"]))
+
+    def test_find_mount_target(self):
+        CliTestCase.assertTrue(self, utils.find_mount_target())
+
+    def test_find_mount_source(self):
+        CliTestCase.assertIsNone(self,
+                                 utils.find_mount_source("/tmp/_fake_dir_"))
+
+
 class FilesystemTestCase(CliTestCase):
     def test_supported_filesystem(self):
         supported_fs = ['ext4', 'xfs']

@@ -87,16 +87,32 @@ def grub2_set_default(key):
     ExternalBinary().grub2_set_default([key])
 
 
-def findmnt(options, path):
+def findmnt(options, path=None):
     findmnt = ExternalBinary().findmnt
+
+    opts_cmd = ["-n", "-o"]
+    opts_cmd.extend(options)
+
+    if path is not None:
+        opts_cmd.extend(path)
+
     try:
-        return str(findmnt(["-n", "-o", options, path])).strip()
+        return findmnt(opts_cmd)
     except:
         return None
 
 
+def find_mount_target():
+    return findmnt(["TARGET", "-l"]).split()
+
+
 def find_mount_source(path):
-    return findmnt("SOURCE", path)
+    mnt_source = findmnt(["SOURCE", path])
+
+    if mnt_source is not None:
+        return mnt_source.strip()
+
+    return mnt_source
 
 
 def memoize(obj):
