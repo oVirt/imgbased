@@ -207,12 +207,7 @@ class Layout():
                                          "this build, in this "
                                          "case you need to initialize "
                                          "with --init-nvr")
-        try:
-            self.app.imgbase.init_layout_from(source, init_nvr)
-        except RuntimeError:
-            raise Layout.InitializationFailedError("Failed to initialized "
-                                                   "layout from %r" %
-                                                   source)
+        self.app.imgbase.init_layout_from(source, init_nvr)
 
 
 def run_check(app):

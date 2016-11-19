@@ -33,6 +33,14 @@ from utils import FilesystemNotSupported
 log = logging.getLogger(__package__)
 
 
+class VgTaggedLvNotTagged(Exception):
+    pass
+
+
+class ExistingImgbaseWithTags(Exception):
+    pass
+
+
 class LayerOutOfOrderError(Exception):
     pass
 
@@ -116,10 +124,11 @@ class ImageLayers(object):
             try:
                 LVM.LV.from_tag(tag)
             except AssertionError:
-                raise RuntimeError("A tagged volume group was found, but no "
-                                   "logical volumes were tagged with %s. "
-                                   "Please remove tags from volume groups "
-                                   "and logical volumes, then retry" % tag)
+                raise VgTaggedLvNotTagged(
+                    "\nA tagged volume group was found, but no "
+                    "logical volumes were tagged with: %s\n"
+                    "Please remove tags from volume groups "
+                    "and logical volumes, then retry" % tag)
         return True
 
     def lv_from_layer(self, layer):
@@ -241,12 +250,16 @@ class ImageLayers(object):
         """Create a snapshot from an existing thin LV to make it suitable
         """
         if self.has_tags():
-            raise RuntimeError("An existing imgbase was found with tags, but "
-                               "imgbase was called with --init. If this was"
-                               "intentional, please untag the existing "
-                               "volumes and try again.")
+            raise ExistingImgbaseWithTags(
+                "Looks like the system already has imgbase working properly.\n"
+                "However, imgbase was called with --init. If this was"
+                "intentional, please untag the existing "
+                "volumes and try again."
+            )
+
         log.info("Trying to create a manageable base from '%s'" %
                  lvm_name_or_mount_target)
+
         existing_lv = LVM.LV.try_find(lvm_name_or_mount_target)
         self.init_tags_on(existing_lv)
 
