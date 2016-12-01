@@ -151,7 +151,7 @@ def post_argparse(app, args):
             print(app.imgbase.latest_layer())
         elif args.volume_path:
             layer = Image.from_nvr(args.volume_path)
-            print(app.imgbase.lv_from_nvr(layer).path)
+            print(app.imgbase.lv_from_layer(layer).path)
 
     elif args.command == "w":
         msg = "You are on %s" % app.imgbase.current_layer()
