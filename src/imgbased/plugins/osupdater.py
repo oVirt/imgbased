@@ -41,6 +41,10 @@ from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
 log = logging.getLogger(__package__)
 
 
+class SeparateVarPartition(Exception):
+    pass
+
+
 class BootPartitionRequires1G(Exception):
     pass
 
@@ -80,6 +84,12 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     except:
         log.exception("Failed to migrate etc")
         raise ConfigMigrationError()
+
+    if not os.path.ismount("/var"):
+        raise SeparateVarPartition(
+            "\nIt's required /var as separate mountpoint!"
+            "\nPlease check documentation for more details!"
+        )
 
     try:
         adjust_mounts_and_boot(imgbase, new_lv, previous_layer_lv)
