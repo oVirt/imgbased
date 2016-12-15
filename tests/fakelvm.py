@@ -194,7 +194,6 @@ class FakeLVM(imgbased.lvm.LVM):
             lv = FakeLVM.LV()
             lv.vg_name = self.vg_name
             lv.lv_name = vol_name
-            lv.size = volsize
             lv._virtualsize = volsize
             lv._thin = True
             lv._pool_lv = self
