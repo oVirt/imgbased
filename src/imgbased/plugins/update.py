@@ -2,11 +2,11 @@
 import glob
 import logging
 import os
+
 from .. import local
 from ..bootloader import BootConfiguration
 from ..naming import Image
-from ..utils import size_of_fstree, mounted, Filesystem, Rsync, \
-    BuildMetadata
+from ..utils import mounted, Filesystem, Rsync, BuildMetadata
 
 log = logging.getLogger(__package__)
 
@@ -70,10 +70,12 @@ class LiveimgExtractor():
     def __init__(self, imgbase):
         self.imgbase = imgbase
 
-    def _recommend_size_for_tree(self, path, scale=2.0):
-        scaled = size_of_fstree(path) * scale
-        remainder = scaled % 512
-        return int(scaled + (512 - remainder))
+    def _recommend_size_for_tree(self):
+        # Get the size of the current layer and use that
+        # so each new layer is the size of the last one
+        size = self.imgbase.lv_from_layer(
+                self.imgbase.current_layer()).size_bytes
+        return size
 
     def add_base_with_tree(self, sourcetree, size, nvr, lvs=None):
         if not os.path.exists(sourcetree):
@@ -109,12 +111,12 @@ class LiveimgExtractor():
             with mounted(liveimg) as rootfs:
                 nvr = nvr or BuildMetadata(rootfs.target).get("nvr")
                 log.debug("Using nvr: %s" % nvr)
-                size = self._recommend_size_for_tree(rootfs.target, 3.0)
+                size = self._recommend_size_for_tree()
                 log.debug("Recommeneded base size: %s" % size)
                 log.info("Starting base creation")
                 add_tree = self.add_base_with_tree
                 new_base = add_tree(rootfs.target,
-                                    "%sB" % size, nvr)
+                                    "%s" % size, nvr)
                 log.info("Files extracted")
         log.debug("Extraction done")
         return new_base

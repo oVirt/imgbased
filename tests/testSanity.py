@@ -27,7 +27,6 @@ class ImgbaseTestCase(unittest.TestCase):
         pool = FakeLVM.Thinpool()
         pool.vg_name = vg.vg_name
         pool.lv_name = "pool0"
-        pool.size = 10*1024
         vg._lvs.add(pool)
 
         pool.create_thinvol("root", 10)

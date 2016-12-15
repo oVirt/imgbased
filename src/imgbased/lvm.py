@@ -135,6 +135,11 @@ class LVM(object):
         def path(self):
             return LVM._lvs(["--noheadings", "-olv_path", self.lvm_name])
 
+        @property
+        def size_bytes(self):
+            return LVM._lvs(["--noheadings", "-osize", "--units", "B",
+                             self.lvm_name])
+
         @classmethod
         def from_lv_name(cls, vg_name, lv_name):
             lv = cls()
