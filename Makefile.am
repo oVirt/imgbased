@@ -34,7 +34,6 @@ EXTRA_DIST = \
   src/plugin-yum/imgbased-persist.py \
   src/plugin-yum/imgbased-persist.conf \
   data/imgbase-clean-grub.service \
-  data/imgbase-motd.service \
   data/imgbase-generate-iqn.service \
   tests/*.py
   $(NULL)
