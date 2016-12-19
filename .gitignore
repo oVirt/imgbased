@@ -21,7 +21,7 @@ test-suite.log
 tap-driver.sh
 py-compile
 *.log
-*.8
+imgbase.8
 *.trs
 data/kickstarts/*.ks
 *.qcow2
