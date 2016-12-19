@@ -1,0 +1,12 @@
+[Unit]
+Description=Remove non-imgbased entries from grub
+Before=imgbased-motd.service
+
+[Service]
+ExecStart=/usr/sbin/imgbase-copy-bootfiles startup
+ExecStop=/usr/sbin/imgbase-copy-bootfiles shutdown
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
