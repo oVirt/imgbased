@@ -13,7 +13,8 @@ pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
 vpath $(srcdir)
 
 dist_sbin_SCRIPTS = \
-  scripts/imgbase
+  scripts/imgbase \
+  scripts/imgbase-copy-bootfiles
 
 dist_pyimagebased_PYTHON = \
   src/imgbased/*.py
@@ -34,7 +35,9 @@ EXTRA_DIST = \
   src/plugin-yum/imgbased-warning.conf \
   data/imgbase-clean-grub.service \
   data/imgbase-motd.service \
+  data/imgbase-copy-bootfiles.service \
   data/imgbase-generate-iqn.service \
+  docs/imgbase-copy-bootfiles.8 \
   tests/*.py
   $(NULL)
 
@@ -42,7 +45,9 @@ dist_doc_DATA = \
   docs/imgbase.asc \
   docs/imgbase.8.asc
 
-man8_MANS = docs/imgbase.8
+man8_MANS = \
+  docs/imgbase.8 \
+  docs/imgbase-copy-bootfiles.8
 
 doc: $(doc_DATA) $(dist_doc_DATA) $(man8-MANS)
 

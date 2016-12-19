@@ -1,0 +1,36 @@
+#!/usr/bin/bash
+
+initrd=
+kernel=
+
+get_files() {
+  set -- $(cat /proc/cmdline)
+  for arg in "$@"; do
+    case "$arg" in
+      BOOT_IMAGE=*)
+      kernel="/boot${arg#BOOT_IMAGE=}"
+      ;;
+    esac
+  done
+  initrd=$(ls $(dirname $kernel)/init*)
+}
+
+copy_files_to_boot() {
+  cp $kernel /boot
+  cp $initrd /boot
+}
+
+copy_files_from_boot() {
+  cp /boot/$(basename $kernel) $(dirname $kernel)
+  cp /boot/$(basename $initrd) $(dirname $kernel)
+}
+
+get_files
+
+if [[ $1 == "startup" ]]; then
+  copy_files_to_boot
+fi
+
+if [[ $1 == "shutdown" ]]; then
+  copy_files_from_boot
+fi

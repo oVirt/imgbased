@@ -75,6 +75,7 @@ install -Dm 0644 src/plugin-yum/imgbased-warning.conf \
 %endif
 install -Dm 0644 data/imgbase-clean-grub.service %{buildroot}%{_unitdir}/imgbase-clean-grub.service
 install -Dm 0644 data/imgbase-motd.service %{buildroot}%{_unitdir}/imgbase-motd.service
+install -Dm 0644 data/imgbase-copy-bootfiles.service %{buildroot}%{_unitdir}/imgbase-copy-bootfiles.service
 install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgbase-generate-iqn.service
 %make_install
 
@@ -83,9 +84,11 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 %doc README.md
 %license LICENSE
 %{_sbindir}/imgbase
+%{_sbindir}/imgbase-copy-bootfiles
 %{_datadir}/%{name}/hooks.d/
 %{python_sitelib}/%{name}/
 %{_mandir}/man8/imgbase.8*
+%{_mandir}/man8/imgbase-copy-bootfiles.8*
 /%{_docdir}/%{name}/*.asc
 %{_unitdir}/imgbase-*.service
 %if 0%{?fedora}
