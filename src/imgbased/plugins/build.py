@@ -96,6 +96,14 @@ def factorize_paths():
 
 
 @Postprocessor.add_step
+def move_build_logs():
+    log.info("Moving build logs")
+    dst = "/var/log/anaconda-install"
+    shutil.move("/var/log/anaconda", dst)
+    shutil.move("/root/anaconda-ks.cfg", dst)
+
+
+@Postprocessor.add_step
 def empty_machineid():
     """Empty the machine-id file, systemd will populate it
     """
