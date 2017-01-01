@@ -1039,7 +1039,7 @@ class SystemRelease(File):
         self.VENDOR, self.PRODUCT, self.VERSION = cpe_parts[2:5]
 
     def is_supported_product(self):
-        return self.product in ["fedora", "centos", "enterprise_linux"]
+        return self.PRODUCT in ["fedora", "centos", "enterprise_linux"]
 
 
 class OSRelease(ShellVarFile):
