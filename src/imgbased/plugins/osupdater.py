@@ -121,7 +121,7 @@ def boot_partition_validation():
     Function to validate all requirements for /boot partition
     """
     boot_dir = None
-    bytes_in_1G = 1024 * 1024 * 1024
+    bytes_in_1G = 1000**3
 
     for target in find_mount_target():
         if "boot" in target:
