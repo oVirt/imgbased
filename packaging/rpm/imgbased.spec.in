@@ -99,6 +99,9 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 %endif
 
 %changelog
+* Wed Jan 04 2017 Ryan Barry <rbarry@redhat.com> - 0.9.2-1
+- Use GB instead of GiB in osupdater /boot validation
+
 * Tue Jan 03 2017 Ryan Barry <rbarry@redhat.com> - 0.9.1-1
 - Fix a typo in utils.SystemRelease which blocks installs
 
