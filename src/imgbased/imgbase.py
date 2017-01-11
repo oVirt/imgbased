@@ -238,7 +238,7 @@ class ImageLayers(object):
             log.error(
                 "LVM Thin Provisioning partitioning scheme is required.\n"
                 "For autoinstall via Kickstart with LVM Thin Provisioning"
-                " check options: --thinpool and --grow"
+                " check options: --thinpool and --grow. "
                 "Please consult documentation for details\n"
             )
             raise
