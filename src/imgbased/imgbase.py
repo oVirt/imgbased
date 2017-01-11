@@ -252,7 +252,7 @@ class ImageLayers(object):
         if self.has_tags():
             raise ExistingImgbaseWithTags(
                 "Looks like the system already has imgbase working properly.\n"
-                "However, imgbase was called with --init. If this was"
+                "However, imgbase was called with --init. If this was "
                 "intentional, please untag the existing "
                 "volumes and try again."
             )
