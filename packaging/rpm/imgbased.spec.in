@@ -102,6 +102,9 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 %endif
 
 %changelog
+* Wed Jan 04 2017 Ryan Barry <rbarry@redhat.com> - 0.9.4-1
+- Also keep depinstalled and depupdated for persistence
+
 * Wed Jan 04 2017 Ryan Barry <rbarry@redhat.com> - 0.9.3-1
 - Ensure new layers have enough space for hosted engine
 - Copy the kernel and initrd to /boot so grub2-mkconfig and virt-v2v work
