@@ -23,6 +23,8 @@ import logging
 import os
 import shutil
 
+from pprint import pprint
+
 from yum.plugins import TYPE_CORE, TYPE_INTERACTIVE
 
 requires_api_version = '2.3'
@@ -49,7 +51,7 @@ def pretrans_hook(conduit):
         if not os.path.isdir(persist_path):
             os.makedirs(persist_path)
 
-        for pkg in ts.installed:
+        for pkg in ts.installed + ts.depinstalled + ts.depupdated:
             if check_excluded(conduit, pkg):
                 continue
             rpm = pkg.po.localPkg()
