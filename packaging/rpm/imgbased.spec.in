@@ -102,6 +102,9 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 %endif
 
 %changelog
+* Wed Jan 18 2017 Ryan Barry <rbarry@redhat.com> - 0.9.5-1
+- Revert selinux relabeling on upgrades
+
 * Wed Jan 04 2017 Ryan Barry <rbarry@redhat.com> - 0.9.4-1
 - Also keep depinstalled and depupdated for persistence
 
