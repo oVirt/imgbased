@@ -205,7 +205,6 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         fix_systemd_services(old_fs, new_fs)
         relocate_var_lib_yum(new_fs)
 
-        fix_selinux(new_fs)
         hack_rpm_permissions(new_fs)
 
 
@@ -257,14 +256,6 @@ def relocate_var_lib_yum(new_fs):
         os.mkdir(path)
         shutil.move(path, "/usr/share/yum")
         os.symlink("/usr/share/yum", "/var/lib/yum")
-
-
-def fix_selinux(new_fs):
-    def chroot(*args):
-        log.debug("Running: %s" % str(args))
-        return utils.nsenter(args, root=new_fs.path("/"))
-
-    chroot("touch", "/.autorelabel")
 
 
 def hack_rpm_permissions(new_fs):
