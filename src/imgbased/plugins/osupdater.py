@@ -415,6 +415,18 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         initrd = "/boot/initramfs-%s.img" % kver
         chroot("dracut", "-f", initrd, "--kver", kver)
 
+        # Copy the .hmac file for FIPS until rhbz#1415032 is resolved
+        # Since .hmac is a plain checksum pointing at a bare path in /boot,
+        # we need to copy everything
+        with utils.bindmounted("/boot", newroot + "/boot"):
+            log.debug("Copying FIPS files")
+            files = glob.glob("/boot/%s/*" % new_lv.lv_name) + \
+                    glob.glob("/boot/%s/.*" % new_lv.lv_name)
+            log.debug(files)
+            for f in files:
+                log.debug("Copying %s to /boot" % f)
+                shutil.copy2(f, "/boot")
+
     def __check_kernel_files(pkgfiles, newroot):
         kfiles = ["%s/%s" % (newroot, f)
                   for f in pkgfiles
