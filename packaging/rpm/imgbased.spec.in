@@ -102,6 +102,9 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 %endif
 
 %changelog
+* Fri Jan 20 2017 Ryan Barry <rbarry@redhat.com> - 0.9.6-1
+- Copy kernel FIPS signatures into /boot
+
 * Wed Jan 18 2017 Ryan Barry <rbarry@redhat.com> - 0.9.5-1
 - Revert selinux relabeling on upgrades
 
