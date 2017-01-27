@@ -23,8 +23,6 @@ import logging
 import os
 import shutil
 
-from pprint import pprint
-
 from yum.plugins import TYPE_CORE, TYPE_INTERACTIVE
 
 requires_api_version = '2.3'

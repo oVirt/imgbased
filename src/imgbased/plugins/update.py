@@ -74,7 +74,7 @@ class LiveimgExtractor():
         # Get the size of the current layer and use that
         # so each new layer is the size of the last one
         size = self.imgbase.lv_from_layer(
-                self.imgbase.current_layer()).size_bytes
+            self.imgbase.current_layer()).size_bytes
         return size
 
     def add_base_with_tree(self, sourcetree, size, nvr, lvs=None):
