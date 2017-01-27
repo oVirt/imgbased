@@ -121,7 +121,7 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 * Tue Jan 03 2017 Ryan Barry <rbarry@redhat.com> - 0.9.1-1
 - Fix a typo in utils.SystemRelease which blocks installs
 
-* Tue Dec 22 2016 Ryan Barry <rbarry@redhat.com> - 0.9.0-1
+* Tue Dec 20 2016 Ryan Barry <rbarry@redhat.com> - 0.9.0-1
 - Add a yum plugin to persist RPMs through upgrades
 - Remove existing yum/dnf plugins
 
