@@ -421,7 +421,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         with utils.bindmounted("/boot", newroot + "/boot"):
             log.debug("Copying FIPS files")
             files = glob.glob("/boot/%s/*" % new_lv.lv_name) + \
-                    glob.glob("/boot/%s/.*" % new_lv.lv_name)
+                glob.glob("/boot/%s/.*" % new_lv.lv_name)
             log.debug(files)
             for f in files:
                 log.debug("Copying %s to /boot" % f)
