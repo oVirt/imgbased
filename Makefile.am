@@ -1,13 +1,16 @@
-
+AUTOMAKE_OPTIONS=-Wno-override
 CLEANFILES=
 
 SHELL := /bin/bash
 
+TMPDIR = tmp
+TMPREPOS = tmp.repos
+
 hooksdir = $(pkgdatadir)/hooks.d/
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
 
-.PHONY: check check-code check-build
-.SILENT: check check-pyflakes check-pep8 check-nosetests check-build
+.PHONY: check check-code check-build distcheck
+.SILENT: check check-pyflakes check-pep8 check-nosetests check-build distcheck
 
 vpath $(srcdir)
 
@@ -26,6 +29,7 @@ dist_hooks_SCRIPTS = \
   data/hooks/rebase
 
 EXTRA_DIST = \
+  autogen.sh \
   README.md \
   LICENSE \
   packaging/rpm/imgbased.spec \
@@ -57,7 +61,7 @@ docs/imgbase.8: docs/imgbase.8.asc
 
 rpm:DEF_RELEASE=--define "_release @RELEASE@@REVISION@"
 rpm: dist
-	rpmbuild $(DEF_RELEASE) -ta $(DIST_ARCHIVES)
+	rpmbuild $(RPMBUILD_ARGS) $(DEF_RELEASE) -ta $(DIST_ARCHIVES)
 
 rpm-build-deps:
 	grep "Require" packaging/rpm/imgbased.spec | cut -d: -f2-
@@ -101,3 +105,14 @@ check-code: check-pyflakes check-pep8 check-nosetests
 
 check: check-code check-build
 	@echo "PASS"
+
+distcheck: export RPMBUILD_ARGS=--define="_topdir `pwd`/$(TMPDIR)/$(TMPREPOS)"
+distcheck:
+	$(MAKE) dist
+	rm -rf $(TMPDIR) && \
+	mkdir $(TMPDIR) && \
+	cd $(TMPDIR) && \
+	tar xf ../imgbased-@PACKAGE_VERSION@.tar.xz -C . --strip 1 && \
+	./autogen.sh && \
+	$(MAKE) check
+	rm -rf $(TMPDIR)
