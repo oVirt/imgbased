@@ -208,6 +208,7 @@ class Layout():
                                          "case you need to initialize "
                                          "with --init-nvr")
         self.app.imgbase.init_layout_from(source, init_nvr)
+        LVM.stop_monitoring()
 
 
 def run_check(app):

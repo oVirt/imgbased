@@ -24,7 +24,7 @@ import os
 import shlex
 import logging
 import re
-from .utils import find_mount_source, LvmCLI
+from .utils import find_mount_source, LvmCLI, ExternalBinary
 
 
 log = logging.getLogger(__package__)
@@ -81,6 +81,11 @@ class LVM(object):
             return False
 
         return True
+
+    @staticmethod
+    def stop_monitoring():
+        LVM._vgchange(["--monitor", "n"])
+        ExternalBinary().pkill(["dmeventd"])
 
     class VG(object):
         vg_name = None

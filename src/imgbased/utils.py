@@ -405,6 +405,9 @@ class ExternalBinary(object):
     def systemctl(self, args, **kwargs):
         return self.call(["systemctl"] + args, **kwargs)
 
+    def pkill(self, args, **kwargs):
+        return self.call(["pkill"] + args, **kwargs)
+
 
 class LvmCLI():
     lvs = ExternalBinary().lvs
