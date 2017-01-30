@@ -99,7 +99,7 @@ check-nosetests: $(SRCFILES)
 	nosetests --no-byte-compile --with-xunit \
 		--with-coverage --cover-erase --cover-tests \
 		--cover-branches --cover-inclusive \
-		--cover-package=imgbased --cover-xml --cover-min-percentage=50 \
+		--cover-package=imgbased --cover-xml --cover-min-percentage=48 \
 		--with-doctest --doctest-tests
 
 
