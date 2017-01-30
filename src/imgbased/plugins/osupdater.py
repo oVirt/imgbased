@@ -23,6 +23,7 @@
 
 import logging
 import glob
+import hashlib
 import os
 import re
 import shutil
@@ -71,6 +72,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     previous_layer_lv = \
         imgbase._lvm_from_layer(imgbase.naming.layer_before(new_layer))
     try:
+        remediate_etc(imgbase)
         migrate_etc(imgbase, new_lv, previous_layer_lv)
     except:
         log.exception("Failed to migrate etc")
@@ -101,7 +103,114 @@ def on_post_init_layout(imgbase, existing_lv, new_base, new_layer):
     new_etc.mount()
 
 
+def remediate_etc(imgbase):
+    # Find a list of files which have been erroneously copied and
+    # look through old layers to find them
+    layers = []
+
+    def strip(s):
+        s = re.sub(r'^/tmp/mnt.*?/', '', s)
+        return re.sub(r'/+', '/', s)
+
+    def md5sum(a, b):
+        return hashlib.md5(open(a, 'rb').read()).hexdigest() == hashlib.md5(
+            open(b, 'rb').read()).hexdigest()
+
+    def diff_candidates(dc, problems, candidates=None):
+        if candidates is None:
+            candidates = set()
+        if dc.same_files:
+            for l in sorted(dc.same_files):
+                f = "{}/{}".format(dc.left, l)
+                if not os.path.islink(f):
+                    if strip(f) in problems and strip(f) not in candidates:
+                        if md5sum(f, "{}/{}".format(dc.right, l)):
+                            candidates.add(strip(f))
+                            log.debug("Updating %s from the next "
+                                      "layer" % ("{}".format(strip(f))))
+        if dc.subdirs:
+            for d in sorted(dc.subdirs.values()):
+                diff_candidates(d, problems, candidates)
+
+        return candidates
+
+    def diff_problems(dc, problems=None):
+        if problems is None:
+            problems = []
+        if dc.diff_files:
+            for l in sorted(dc.diff_files):
+                # This is annoying, but handle initiatorname.iscsi
+                # specially, since it's generated on-the-fly and will
+                # always match what's in the first factory, but we
+                # actually don't want to copy it
+                if not os.path.islink("{}/{}".format(dc.left, l)) and \
+                        "initiatorname.iscsi" not in l:
+                    problems.append("{}/{}".format(strip(dc.left), l))
+        if dc.subdirs:
+            for d in sorted(dc.subdirs.values()):
+                diff_problems(d, problems)
+
+        return problems
+
+    def find_candidates(m, n, problems):
+        return diff_candidates(dircmp("{}/etc".format(m),
+                                      "{}/usr/share/factory/etc".format(m)),
+                               problems)
+
+    def find_problems(m, n):
+        problems = diff_problems(dircmp("{}/etc".format(m),
+                                        "{}/usr/share/factory/etc".format(n)))
+        candidates = find_candidates(m, n, problems)
+        return candidates
+
+    def check_layers(m, n):
+        candidates = find_problems(m.path("/"), n.path("/"))
+        for c in sorted(candidates):
+            copy_from = n.path("/usr/share/factory") + c
+            copy_to = n.path("/") + c
+
+            log.debug("Copying %s to %s" % (copy_from, copy_to))
+            shutil.copy2(copy_from, copy_to)
+
+    tree = imgbase.naming.tree()
+
+    # Ignore the first base, since it will contain the same
+    # values for IQN and passwd as /etc should, and we don't
+    # want to grab /usr/share/factory values from it
+    for t in tree:
+        for l in t.layers:
+            layers.append(l)
+
+    for idx in range(len(layers[:-1])):
+        log.debug("Checking %s" % layers[idx])
+        with mounted(imgbase._lvm_from_layer(layers[idx]).path) as m, \
+                mounted(imgbase._lvm_from_layer(layers[idx+1]).path) as n:
+                    # Resync since we updated
+                    r = Rsync()
+                    r.sync(m.path("/etc"), n.path("/etc"))
+
+                    check_layers(m, n)
+
+
 def migrate_etc(imgbase, new_lv, previous_lv):
+    # Build a list of files in /etc which have been modified,
+    # or which don't exist in the new filesystem, and only copy those
+    changed = []
+
+    def strip(s):
+        return re.sub(r'^/tmp/mnt.*?/', '', s)
+
+    def changed_and_new(dc):
+        if dc.left_only:
+            changed.extend(["{}/{}".format(strip(dc.left), f)
+                            for f in dc.left_only])
+        if dc.diff_files:
+            changed.extend(["{}/{}".format(strip(dc.left), f)
+                            for f in dc.diff_files])
+        if dc.subdirs:
+            for d in dc.subdirs.values():
+                changed_and_new(d)
+
     log.debug("Migrating etc (%s -> %s)" % (previous_lv, new_lv))
     with mounted(new_lv.path) as new_fs,\
             mounted(previous_lv.path) as old_fs:
@@ -144,10 +253,14 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                 log.debug("No drift detected")
 
             log.info("Migrating /etc (from %r)" % previous_lv)
-            rsync = Rsync()
-            # Don't copy release files to have up to date release infos
-            rsync.exclude = ["etc/fedora-release*", "/etc/redhat-release*"]
-            rsync.sync(old_etc + "/", new_etc)
+
+            changed_and_new(dircmp(old_etc,
+                            old_fs.path("/") + "/usr/share/factory/etc/")
+                            )
+            for c in changed:
+                copy_files(new_fs.path("/") + c, [old_fs.path("/") + c],
+                           "-a", "-r")
+
         else:
             log.info("Just copying important files")
             copy_files(new_etc,
