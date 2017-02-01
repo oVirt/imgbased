@@ -35,7 +35,7 @@ from ..lvm import LVM
 from ..naming import Image
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
-    find_mount_target
+    find_mount_target, Motd
 
 
 log = logging.getLogger(__package__)
@@ -206,6 +206,8 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         relocate_var_lib_yum(new_fs)
 
         hack_rpm_permissions(new_fs)
+
+        Motd(new_etc + "/motd").clear_motd()
 
 
 def fix_systemd_services(old_fs, new_fs):

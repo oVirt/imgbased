@@ -23,7 +23,7 @@
 import os
 import logging
 import inspect
-from ..utils import BuildMetadata, File, Fstab, bcolors
+from ..utils import BuildMetadata, File, Fstab, Motd, bcolors
 from ..naming import Image
 from ..lvm import LVM
 from ..bootloader import BootConfiguration
@@ -175,7 +175,7 @@ def post_argparse(app, args):
         run_check(app)
 
     elif args.command == "motd":
-        run_motd(app, args.update)
+        Motd("/etc/motd").run_motd(Health(app).status().is_ok(), args.update)
 
 
 class Layout():
@@ -214,30 +214,6 @@ def run_check(app):
     status = Health(app).status()
     print(status.details())
     return status.is_ok()
-
-
-def run_motd(app, do_update):
-    """FIXME this should be nicer
-    """
-    fn = "/etc/motd"
-    motd = motdgen(app)
-    if do_update:
-        with open(fn, "w") as f:
-            f.write(motd + "\n")
-    print(motd)
-
-
-def motdgen(app):
-    status = Health(app).status()
-    txts = [""]
-    if not status.is_ok():
-        txts += ["  imgbase status: " + bcolors.fail("DEGRADED")]
-        txts += ["  Please check the status manually using"
-                 " `imgbase check`"]
-    else:
-        txts += ["  imgbase status: " + bcolors.ok("OK")]
-    txts += [""]
-    return "\n".join(txts)
 
 
 class Health():
