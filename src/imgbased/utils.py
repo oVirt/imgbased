@@ -676,6 +676,30 @@ class ShellVarFile(File):
         self.sub(r"%s=.*" % key, "%s=%r" % (key, str(val)))
 
 
+class Motd(File):
+    def run_motd(self, is_ok, do_update):
+        motd = self._motdgen(is_ok)
+        if do_update:
+            self.write(motd + "\n")
+        print(motd)
+
+    def clear_motd(self):
+        if self.exists():
+            self.replace(self._motdgen(True)+"\n", "")
+            self.replace(self._motdgen(False)+"\n", "")
+
+    def _motdgen(self, is_ok):
+        txts = [""]
+        if not is_ok:
+            txts += ["  imgbase status: " + bcolors.fail("DEGRADED")]
+            txts += ["  Please check the status manually using"
+                     " `imgbase check`"]
+        else:
+            txts += ["  imgbase status: " + bcolors.ok("OK")]
+        txts += [""]
+        return "\n".join(txts)
+
+
 def fileMappedPropperty(key, default=None):
     """Can be used to create "mapped" properties
 
