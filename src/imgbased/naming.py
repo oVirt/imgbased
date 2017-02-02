@@ -318,7 +318,7 @@ class Image(object):
 
     @classmethod
     def from_nvr(cls, nvr):
-        if cls._sep in nvr:
+        if cls._sep in str(nvr):
             return Layer(nvr)
         return Base(nvr)
 
