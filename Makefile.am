@@ -4,7 +4,6 @@ CLEANFILES=
 SHELL := /bin/bash
 
 hooksdir = $(pkgdatadir)/hooks.d/
-pyimagebaseddir = $(pythondir)/$(PACKAGE_NAME)
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
 
 .PHONY: check check-code check-build

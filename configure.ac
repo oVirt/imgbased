@@ -1,6 +1,23 @@
+dnl
+dnl
+dnl Copyright (C) 2014-2017  Red Hat, Inc.
+dnl
+dnl This program is free software; you can redistribute it and/or modify
+dnl it under the terms of the GNU General Public License as published by
+dnl the Free Software Foundation; either version 2 of the License, or
+dnl (at your option) any later version.
+dnl
+dnl This program is distributed in the hope that it will be useful,
+dnl but WITHOUT ANY WARRANTY; without even the implied warranty of
+dnl MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+dnl GNU General Public License for more details.
+dnl
+dnl You should have received a copy of the GNU General Public License
+dnl along with this program.  If not, see <http://www.gnu.org/licenses/>.
+dnl
 define([VERSION_MAJOR], [0])
 define([VERSION_MINOR], [9])
-define([VERSION_FIX], [6])
+define([VERSION_FIX], [7])
 define([VERSION_NUMBER], VERSION_MAJOR[.]VERSION_MINOR[.]VERSION_FIX)
 
 AC_INIT([imgbased], VERSION_NUMBER, [fabiand@fedoraproject.org])
@@ -45,7 +62,26 @@ if test "x$ASCIIDOC" = "x"; then
         AC_MSG_ERROR([asciidoc not found - cannot create man pages without it])
 fi
 
-AM_PATH_PYTHON
+AC_PATH_PROG([PYTHON3], [python3], [no])
+[if test "$PYTHON3" == "no"]
+[then]
+    AM_PATH_PYTHON([2])
+    AC_SUBST([pyimagebaseddir], ["\$(pythondir)/imgbased"])
+[else]
+    AC_SUBST([PYTHON3_PREFIX], ['${prefix}'])
+    AC_SUBST([PYTHON3_EXEC_PREFIX], ['${exec_prefix}'])
+
+    PYTHON3_DIR=`$PYTHON3 -c "import distutils.sysconfig; \
+        print(distutils.sysconfig.get_python_lib(0,0,prefix='$PYTHON3_PREFIX'))"`
+    PYTHON3_EXECDIR=`$PYTHON3 -c "import distutils.sysconfig; \
+        print(distutils.sysconfig.get_python_lib(1,0,prefix='$PYTHON3_EXEC_PREFIX'))"`
+
+    AC_SUBST(PYTHON3_CFLAGS)
+    AC_SUBST(PYTHON3_LIBS)
+    AC_SUBST(python3dir, $PYTHON3_DIR)
+    AC_SUBST(py3execdir, $PYTHON3_EXECDIR)
+    AC_SUBST([pyimagebaseddir], ["\$(python3dir)/imgbased"])
+[fi]
 
 AC_CONFIG_FILES([Makefile
                  packaging/rpm/imgbased.spec
