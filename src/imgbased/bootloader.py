@@ -48,6 +48,13 @@ class Bootloader(object):
     """
     dry = False
 
+    def __init__(self):
+        # hack for MBR environment, see: bz#1366785, bz#1323842, bz#1366549
+        grubenv_path = "/boot/grub2/grubenv"
+        if not os.path.ismount("/boot/efi") and os.path.islink(grubenv_path):
+            os.unlink(grubenv_path)
+        # hack for MBR environment, see: bz#1366785, bz#1323842, bz#1366549
+
     def list(self):
         raise NotImplementedError()
 
