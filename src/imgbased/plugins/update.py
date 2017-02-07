@@ -186,7 +186,7 @@ class GarbageCollector():
             return
 
         current_layer = self.imgbase.current_layer()
-        remove_bases = self._filter_candidates(bases, current_layer.base, keep)
+        remove_bases = self._filter_overflow(bases, current_layer.base, keep)
 
         for base in remove_bases:
             log.info("Freeing %s" % base)

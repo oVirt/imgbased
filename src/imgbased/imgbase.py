@@ -320,7 +320,7 @@ class ImageLayers(object):
         assert base.is_base()
 
         if with_children:
-            for layer in self.naming.layers(for_base=base):
+            for layer in base.layers:
                 self.remove_layer(layer.nvr)
 
         base_lv.activate(False)
@@ -333,7 +333,7 @@ class ImageLayers(object):
         lv = self._lvm_from_layer(layer)
         log.debug("Removal candidate layer: %r" % layer)
 
-        self.hooks.emit("pre-layer-removed", lv.lvm_name)
+        self.hooks.emit("pre-layer-removed", lv)
 
         assert layer.is_layer()
         assert layer != self.current_layer()
