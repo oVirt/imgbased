@@ -42,6 +42,7 @@ EXTRA_DIST = \
   data/imgbase-copy-bootfiles.service \
   data/imgbase-generate-iqn.service \
   docs/imgbase-copy-bootfiles.8 \
+  scripts/grub/09_node \
   tests/*.py
   $(NULL)
 
