@@ -101,6 +101,7 @@ install -Dm 0644 src/plugin-yum/imgbased-persist.conf \
 install -Dm 0644 data/imgbase-clean-grub.service %{buildroot}%{_unitdir}/imgbase-clean-grub.service
 install -Dm 0644 data/imgbase-copy-bootfiles.service %{buildroot}%{_unitdir}/imgbase-copy-bootfiles.service
 install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgbase-generate-iqn.service
+install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %make_install DESTDIR="%{buildroot}"
 
 
@@ -114,6 +115,7 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 %{_mandir}/man8/imgbase-copy-bootfiles.8*
 /%{_docdir}/%{name}/*.asc
 %{_unitdir}/imgbase-*.service
+%{_sysconfdir}/grub.d/09_node
 %if 0%{?fedora}
 %{_sysconfdir}/dnf/pluginconf.d/imgbased-persist.conf
 %{python3_sitelib}/dnf-plugins/imgbased-persist.py*
