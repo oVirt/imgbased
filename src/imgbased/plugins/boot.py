@@ -1,6 +1,6 @@
 
 import logging
-from .. import bootloader
+from ..bootloader import BootConfiguration
 from ..naming import Layer
 
 
@@ -43,7 +43,10 @@ def post_argparse(app, args):
 
 
 class BootConfig():
-    bootconfig = bootloader.BootConfiguration()
+    bootconfig = None
+
+    def __init__(self):
+        self.bootconfig = BootConfiguration()
 
     def list(self):
         return self.bootconfig.list()
