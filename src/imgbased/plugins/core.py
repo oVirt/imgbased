@@ -27,6 +27,7 @@ from ..utils import BuildMetadata, File, Fstab, Motd, bcolors
 from ..naming import Image
 from ..lvm import LVM
 from ..bootloader import BootConfiguration
+from ..imgbase import LayerNotFoundError
 
 
 log = logging.getLogger(__package__)
@@ -136,7 +137,12 @@ def post_argparse(app, args):
         elif args.latest:
             print(app.imgbase.latest_base())
         elif args.of_layer:
-            print(str(app.imgbase.base_of_layer(args.of_layer)))
+            try:
+                print(str(app.imgbase.base_of_layer(args.of_layer)))
+            except LayerNotFoundError:
+                print("Layer {} was not found, please use imgbase layout "
+                      "--layers for a list of available "
+                      "layers".format(args.of_layer))
 
     elif args.command == "layer":
         if args.add:

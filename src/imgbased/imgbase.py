@@ -45,6 +45,10 @@ class LayerOutOfOrderError(Exception):
     pass
 
 
+class LayerNotFoundError(Exception):
+    pass
+
+
 class ImageLayers(object):
     config = local.Configuration()
 
@@ -377,6 +381,12 @@ class ImageLayers(object):
             raise
 
     def base_of_layer(self, layer):
-        return Image.from_nvr(layer).base
+        img = Image.from_nvr(layer)
+        if not img.is_layer():
+            log.debug("Layer {} was not found, "
+                      "run imgbase layout --layers "
+                      "for a complete list of layers".format(layer))
+            raise LayerNotFoundError("Layer was not found")
+        return img.base
 
 # vim: sw=4 et sts=4
