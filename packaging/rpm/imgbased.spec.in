@@ -100,6 +100,10 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 %endif
 
 %changelog
+* Mon Feb 20 2017 Ryan Barry <rbarry@redhat.com> - 0.8.12-1
+- Copy unmodified configuration files on update
+- Copy vmlinuz and initrd into /boot
+
 * Mon Nov 14 2016 Ryan Barry <rbarry@redhat.com> - 0.8.10-1
 - Enable IQN randomization
 
