@@ -140,6 +140,10 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Mon Feb 20 2017 Douglas Schilling Landgraf <dougsland@redhat.com> - 0.9.10-0
+- Keep unmodified configuration files
+- Switch to a NIST partition layout on upgrades
+
 * Thu Feb 02 2017 Douglas Schilling Landgraf <dougsland@redhat.com> - 0.9.7-0
 - split the imgbase in two packages for python3 support
 
