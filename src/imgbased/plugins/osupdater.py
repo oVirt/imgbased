@@ -257,9 +257,13 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             changed_and_new(dircmp(old_etc,
                             old_fs.path("/") + "/usr/share/factory/etc/")
                             )
-            for c in changed:
-                copy_files(new_fs.path("/") + c, [old_fs.path("/") + c],
-                           "-a", "-r")
+
+            # imgbase layout --init double-dips here. Make sure that it's
+            # not actually the same filesystem
+            if old_fs.source != new_fs.source:
+                for c in changed:
+                    copy_files(new_fs.path("/") + c, [old_fs.path("/") + c],
+                               "-a", "-r")
 
         else:
             log.info("Just copying important files")
