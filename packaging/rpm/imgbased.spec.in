@@ -100,7 +100,10 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 %endif
 
 %changelog
-* Wed Feb 22  2017 Ryan Barry <rbarry@redhat.com> - 0.8.13-1
+* Thu Feb 23 2017 Ryan Barry <rbarry@redhat.com> - 0.8.143-1
+- Make sure we only copy files on upgrades, not --init
+
+* Wed Feb 22 2017 Ryan Barry <rbarry@redhat.com> - 0.8.13-1
 - Make sure we only copy files on upgrades, not --init
 
 * Mon Feb 20 2017 Ryan Barry <rbarry@redhat.com> - 0.8.12-1
