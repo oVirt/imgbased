@@ -35,7 +35,8 @@ from .. import bootloader, utils
 from ..lvm import LVM
 from ..naming import Image
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file
+    File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
+    LvmCLI
 
 
 log = logging.getLogger(__package__)
@@ -72,6 +73,9 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     previous_layer_lv = \
         imgbase._lvm_from_layer(imgbase.naming.layer_before(new_layer))
     try:
+        # Some change in managed nodes is blapping /dev/mapper. Add it back
+        # so LVM and /dev/mapper agree
+        LvmCLI.vgchange(["-ay"])
         remediate_etc(imgbase)
         migrate_etc(imgbase, new_lv, previous_layer_lv)
     except:
