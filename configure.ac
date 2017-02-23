@@ -17,7 +17,7 @@ dnl along with this program.  If not, see <http://www.gnu.org/licenses/>.
 dnl
 define([VERSION_MAJOR], [0])
 define([VERSION_MINOR], [9])
-define([VERSION_FIX], [13])
+define([VERSION_FIX], [14])
 define([VERSION_NUMBER], VERSION_MAJOR[.]VERSION_MINOR[.]VERSION_FIX)
 
 AC_INIT([imgbased], VERSION_NUMBER, [fabiand@fedoraproject.org])
