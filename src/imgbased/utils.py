@@ -136,7 +136,8 @@ def uuid():
 
 def call(*args, **kwargs):
     kwargs["close_fds"] = True
-    kwargs["stderr"] = subprocess.STDOUT
+    if "stderr" not in kwargs:
+        kwargs["stderr"] = subprocess.STDOUT
     log.debug("Calling: %s %s" % (args, kwargs))
     try:
         return subprocess.check_output(*args, **kwargs).strip()
@@ -417,15 +418,19 @@ class ExternalBinary(object):
     def pkill(self, args, **kwargs):
         return self.call(["pkill"] + args, **kwargs)
 
+class LvmBinary(ExternalBinary):
+    def call(self, *args, **kwargs):
+        with open(os.devnull, "w") as DEVNULL:
+            return super(LvmBinary, self).call(*args, stderr=DEVNULL, **kwargs)
 
 class LvmCLI():
-    lvs = ExternalBinary().lvs
-    vgs = ExternalBinary().vgs
-    lvcreate = ExternalBinary().lvcreate
-    lvchange = ExternalBinary().lvchange
-    lvremove = ExternalBinary().lvremove
-    vgcreate = ExternalBinary().vgcreate
-    vgchange = ExternalBinary().vgchange
+    lvs = LvmBinary().lvs
+    vgs = LvmBinary().vgs
+    lvcreate = LvmBinary().lvcreate
+    lvchange = LvmBinary().lvchange
+    lvremove = LvmBinary().lvremove
+    vgcreate = LvmBinary().vgcreate
+    vgchange = LvmBinary().vgchange
 
 
 class File(object):
