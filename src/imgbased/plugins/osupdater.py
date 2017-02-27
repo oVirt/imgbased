@@ -178,9 +178,6 @@ def remediate_etc(imgbase):
 
     tree = imgbase.naming.tree()
 
-    # Ignore the first base, since it will contain the same
-    # values for IQN and passwd as /etc should, and we don't
-    # want to grab /usr/share/factory values from it
     for t in tree:
         for l in t.layers:
             layers.append(l)
@@ -189,8 +186,8 @@ def remediate_etc(imgbase):
         log.debug("Checking %s" % layers[idx])
         with mounted(imgbase._lvm_from_layer(layers[idx]).path) as m, \
                 mounted(imgbase._lvm_from_layer(layers[idx+1]).path) as n:
-                    # Resync since we updated
-                    r = Rsync()
+                    # Resync the files we changed on the last pass
+                    r = Rsync(checksum_only=True)
                     r.sync(m.path("/etc"), n.path("/etc"))
 
                     check_layers(m, n)
@@ -261,6 +258,16 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             changed_and_new(dircmp(old_etc,
                             old_fs.path("/") + "/usr/share/factory/etc/")
                             )
+
+            required_files = ["/etc/passwd", "/etc/group", "/etc/fstab",
+                              "/etc/shadow", "/etc/iscsi/initiatorname.iscsi"]
+
+            # Comparisons against the first layer can leave these files out.
+            # Ensure they're copied
+            for f in required_files:
+                log.debug("%s not in required_files, adding" % f)
+                if f not in changed:
+                    changed.append(f)
 
             # imgbase layout --init double-dips here. Make sure that it's
             # not actually the same filesystem
