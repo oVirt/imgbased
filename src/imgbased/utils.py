@@ -765,11 +765,13 @@ class systemctl():
 
 
 class Rsync():
+    checksum_only = False
     existing = False
     exclude = None
 
-    def __init__(self):
+    def __init__(self, checksum_only=False):
         self.exclude = []
+        self.checksum_only = checksum_only
 
     def _run(self, cmd):
         log.debug("Running: %s" % cmd)
@@ -779,11 +781,15 @@ class Rsync():
         assert os.path.isdir(sourcetree)
 
         cmd = ["ionice", "rsync"]
-        cmd += ["-pogAXtlHrx"]
+        cmd += ["-pogAXlHrx"]
         cmd += ["-Sc", "--no-i-r"]
         # cmd += ["--progress"]
         if self.existing:
             cmd += ["--existing"]
+        if self.checksum_only:
+            cmd += ["--checksum"]
+        else:
+            cmd += ["-t"]
         if self.exclude:
             for pat in self.exclude:
                 cmd += ["--exclude", pat]
