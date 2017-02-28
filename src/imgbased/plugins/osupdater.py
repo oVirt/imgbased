@@ -94,6 +94,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         LvmCLI.vgchange(["-ay"])
         remediate_etc(imgbase)
         check_nist_layout(imgbase)
+        migrate_var(imgbase, new_lv)
         migrate_etc(imgbase, new_lv, previous_layer_lv)
     except:
         log.exception("Failed to migrate etc")
@@ -142,6 +143,25 @@ def check_nist_layout(imgbase):
         for t in to_create:
             log.debug("Creating %s as %s" % (t, paths[t]))
             v.create(t, paths[t])
+
+
+def migrate_var(imgbase, new_lv):
+    def strip(s):
+        return re.sub(r'^/tmp/mnt.*?/', '', s)
+
+    log.debug("Syncing items present in the new /var which are not "
+              "present in the existing FS")
+    with mounted(new_lv.path) as new_fs:
+        for cur, _dirs, files in os.walk(new_fs.path("/var")):
+            for d in _dirs:
+                newlv_path = "/".join([cur, d])
+                realpath = "/".join([strip(cur), d])
+                if not os.path.exists(realpath):
+                    log.debug("Copying {} to {}".format(newlv_path, realpath))
+                    if os.path.isdir(newlv_path):
+                        shutil.copytree(newlv_path, realpath, symlinks=True)
+                    else:
+                        shutil.copy2(newlv_path, realpath)
 
 
 def boot_partition_validation():
@@ -355,7 +375,8 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         fix_systemd_services(old_fs, new_fs)
         relocate_var_lib_yum(new_fs)
 
-        hack_rpm_permissions(new_fs)
+        with utils.bindmounted("/var", new_fs.path("/var")):
+            hack_rpm_permissions(new_fs)
 
         Motd(new_etc + "/motd").clear_motd()
 
