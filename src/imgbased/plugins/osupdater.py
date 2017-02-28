@@ -413,12 +413,15 @@ def relocate_var_lib_yum(new_fs):
     # Check whether /var is a symlink to /usr/share, and move it if it is not
     # We could directly check this in new_fs, but this gets tricky with
     # symlinks, and it will already be present on new builds
-    if not os.path.islink(path):
+    if os.path.exists(path) and not os.path.islink(path):
         log.debug("/var/lib/yum is not a link -- moving it")
         shutil.rmtree(path)
+
+    if not os.path.exists(path):
         os.mkdir(path)
-        shutil.move(path, "/usr/share/yum")
-        os.symlink("/usr/share/yum", "/var/lib/yum")
+
+    shutil.move(path, "/usr/share/yum")
+    os.symlink("/usr/share/yum", "/var/lib/yum")
 
 
 def hack_rpm_permissions(new_fs):
