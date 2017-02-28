@@ -104,6 +104,11 @@ def findmnt(options, path=None):
         return None
 
 
+def unmount(path):
+    umount = ExternalBinary().umount
+    return umount([path])
+
+
 def find_mount_target():
     return findmnt(["TARGET", "-l"]).split()
 
@@ -206,11 +211,15 @@ class MountPoint(object):
         self.run.call(cmd)
 
     def umount(self):
-        if os.path.ismount(self.target):
+        if self._ismount(self.target):
             log.debug("%s is mounted~" % self.target)
             self.run.call(["umount", "-l", self.target])
             if self.tmpdir:
                 self.run.call(["rmdir", self.tmpdir])
+
+    def _ismount(self, path):
+        return any([l for l in File('/proc/mounts').lines() if
+                    l.split()[1] == path])
 
     def path(self, subpath):
         """Return the abs path to a path inside this mounted fs
@@ -417,6 +426,10 @@ class ExternalBinary(object):
 
     def pkill(self, args, **kwargs):
         return self.call(["pkill"] + args, **kwargs)
+    
+    def umount(self, args, **kwargs):
+        return self.call(["umount"] + args, **kwargs)
+
 
 
 class LvmBinary(ExternalBinary):
@@ -834,7 +847,7 @@ class Rsync():
     exclude = None
 
     def __init__(self, checksum_only=False):
-        self.exclude = []
+        self.exclude = ["mnt.*/*"]
         self.checksum_only = checksum_only
 
     def _run(self, cmd):
