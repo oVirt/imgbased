@@ -418,10 +418,12 @@ class ExternalBinary(object):
     def pkill(self, args, **kwargs):
         return self.call(["pkill"] + args, **kwargs)
 
+
 class LvmBinary(ExternalBinary):
     def call(self, *args, **kwargs):
         with open(os.devnull, "w") as DEVNULL:
             return super(LvmBinary, self).call(*args, stderr=DEVNULL, **kwargs)
+
 
 class LvmCLI():
     lvs = LvmBinary().lvs
