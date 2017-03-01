@@ -384,6 +384,7 @@ class LvmBinary(ExternalBinary):
         with open(os.devnull, "w") as DEVNULL:
             return super(LvmBinary, self).call(*args, stderr=DEVNULL, **kwargs)
 
+
 class LvmCLI():
     lvs = LvmBinary().lvs
     vgs = LvmBinary().vgs
