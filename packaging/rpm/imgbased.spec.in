@@ -104,6 +104,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Fri Mar 03 2017 Ryan Barry <rbarry@redhat.com> - 0.9.15-0
+- Add unmount to imgbased.utils
+
 * Thu Feb 23 2017 Ryan Barry <rbarry@redhat.com> - 0.9.14-0
 - Rescan all LVs on update
 
