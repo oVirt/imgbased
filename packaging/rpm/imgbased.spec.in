@@ -77,6 +77,7 @@ install -Dm 0644 data/imgbase-clean-grub.service %{buildroot}%{_unitdir}/imgbase
 install -Dm 0644 data/imgbase-motd.service %{buildroot}%{_unitdir}/imgbase-motd.service
 install -Dm 0644 data/imgbase-copy-bootfiles.service %{buildroot}%{_unitdir}/imgbase-copy-bootfiles.service
 install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgbase-generate-iqn.service
+install -Dm 0644 data/imgbase-config-vdsm.service %{buildroot}%{_unitdir}/imgbase-config-vdsm.service
 %make_install
 
 
