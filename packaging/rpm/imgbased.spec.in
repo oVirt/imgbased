@@ -141,6 +141,10 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Mon Mar 06 2017 Sandro Bonazzola <sbonazzo@redhat.com> - 0.9.16-0
+- Added systemd unit for running vdsm-tool configure
+- Resolves: BZ#1429288
+
 * Fri Mar 03 2017 Ryan Barry <rbarry@redhat.com> - 0.9.15-0
 - Add unmount to imgbased.utils
 
