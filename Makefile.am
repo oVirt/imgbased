@@ -40,6 +40,7 @@ EXTRA_DIST = \
   data/imgbase-clean-grub.service \
   data/imgbase-copy-bootfiles.service \
   data/imgbase-generate-iqn.service \
+  data/imgbase-config-vdsm.service \
   docs/imgbase-copy-bootfiles.8 \
   scripts/grub/09_node \
   tests/*.py
