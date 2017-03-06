@@ -1,0 +1,11 @@
+[Unit]
+Description=Reconfigure vdsm
+Before=supervdsmd.service
+
+[Service]
+ExecStart=/usr/bin/vdsm-tool -v configure --force
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
