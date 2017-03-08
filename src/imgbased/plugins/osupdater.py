@@ -34,20 +34,12 @@ from filecmp import dircmp
 from .. import bootloader, utils
 from ..lvm import LVM
 from ..naming import Image
-from ..volume import Volumes
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
     find_mount_target, Motd, LvmCLI
 
 
 log = logging.getLogger(__package__)
-
-paths = {"/var":           "15G",
-         "/var/log":       "8G",
-         "/var/log/audit": "2G",
-         "/home":          "500M",
-         "/tmp":           "2G"
-         }
 
 
 class SeparateVarPartition(Exception):
@@ -93,7 +85,6 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         # so LVM and /dev/mapper agree
         LvmCLI.vgchange(["-ay"])
         remediate_etc(imgbase)
-        check_nist_layout(imgbase)
         migrate_etc(imgbase, new_lv, previous_layer_lv)
     except:
         log.exception("Failed to migrate etc")
@@ -128,20 +119,6 @@ def on_post_init_layout(imgbase, existing_lv, new_base, new_layer):
                                target="/etc",
                                options="bind")
     new_etc.mount()
-
-
-def check_nist_layout(imgbase):
-    to_create = []
-
-    for path in paths.keys():
-        if not os.path.ismount(path):
-            to_create.append(path)
-
-    if to_create:
-        v = Volumes(imgbase)
-        for t in to_create:
-            log.debug("Creating %s as %s" % (t, paths[t]))
-            v.create(t, paths[t])
 
 
 def boot_partition_validation():
@@ -463,13 +440,6 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
     new_lvm_name = new_lv.lvm_name
 
-    paths = {"/var":           "15G",
-             "/var/log":       "8G",
-             "/var/log/audit": "2G",
-             "/home":          "500M",
-             "/tmp":           "2G"
-             }
-
     oldrootsource = None
     with mounted(previous_lv.path) as oldrootmnt:
         oldfstab = Fstab("%s/etc/fstab" % oldrootmnt.target)
@@ -669,10 +639,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         loader.set_default(new_lv.lv_name)
 
     with mounted(new_lv.path) as newroot:
-        with utils.ExitStack() as es:
-            mounts = [es.enter_context(utils.bindmounted(path,
-                      target=newroot.target + path))
-                      for path in sorted(paths.keys())]
+        with utils.bindmounted("/var", target=newroot.target + "/var"):
             update_fstab(newroot.target)
             update_grub_default(newroot.target)
             copy_kernel(newroot.target)
@@ -682,8 +649,6 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 boot_partition_validation()
             except:
                 raise
-
-            del mounts
 
     imgbase.hooks.emit("os-upgraded",
                        previous_lv.lv_name,
