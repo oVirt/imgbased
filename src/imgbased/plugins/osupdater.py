@@ -45,7 +45,7 @@ log = logging.getLogger(__package__)
 paths = {"/var":           "15G",
          "/var/log":       "8G",
          "/var/log/audit": "2G",
-         "/home":          "500M",
+         "/home":          "1G",
          "/tmp":           "2G"
          }
 
