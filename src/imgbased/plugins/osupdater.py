@@ -37,7 +37,7 @@ from ..naming import Image
 from ..volume import Volumes
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
-    find_mount_target, Motd, LvmCLI, unmount
+    find_mount_target, Motd, LvmCLI
 
 
 log = logging.getLogger(__package__)
@@ -463,6 +463,13 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
     new_lvm_name = new_lv.lvm_name
 
+    paths = {"/var":           "15G",
+             "/var/log":       "8G",
+             "/var/log/audit": "2G",
+             "/home":          "500M",
+             "/tmp":           "2G"
+             }
+
     oldrootsource = None
     with mounted(previous_lv.path) as oldrootmnt:
         oldfstab = Fstab("%s/etc/fstab" % oldrootmnt.target)
@@ -677,8 +684,6 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 raise
 
             del mounts
-
-    unmount("/tmp")
 
     imgbase.hooks.emit("os-upgraded",
                        previous_lv.lv_name,
