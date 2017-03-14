@@ -151,7 +151,19 @@ def boot_partition_validation():
 def remediate_etc(imgbase):
     # Find a list of files which have been erroneously copied and
     # look through old layers to find them
+    critical_files = [r'.*?/initiatorname.iscsi$',
+                      r'.*?group-?$',
+                      r'.*?passwd-?$',
+                      r'.*?shadow-?$',
+                      r'.*?fstab$'
+                      ]
+
+    crits = [re.compile(f) for f in critical_files]
+
     layers = []
+
+    def check_file(f):
+        return any(c.match(f) for c in crits)
 
     def strip(s):
         s = re.sub(r'^/tmp/mnt.*?/', '', s)
@@ -189,7 +201,7 @@ def remediate_etc(imgbase):
                 # always match what's in the first factory, but we
                 # actually don't want to copy it
                 if not os.path.islink("{}/{}".format(dc.left, l)) and \
-                        "initiatorname.iscsi" not in l:
+                        not check_file(l):
                     problems.append("{}/{}".format(strip(dc.left), l))
         if dc.subdirs:
             for d in sorted(dc.subdirs.values()):
