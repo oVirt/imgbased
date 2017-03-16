@@ -43,7 +43,7 @@ WantedBy=local-fs.target
         safewhere = self._volname(where)
         return File("/etc/systemd/system/%s.%s" % (safewhere, unittype))
 
-    def create(self, where, size):
+    def create(self, where, size, attach_now=True):
         assert not self.is_volume(where), \
             "Path is already a volume: %s" % where
         assert where.startswith("/"), "An absolute path is required"
@@ -63,7 +63,7 @@ WantedBy=local-fs.target
             pass
 
         log.info("Volume for '%s' was created successful" % where)
-        self.attach(where)
+        self.attach(where, attach_now)
 
     def remove(self, where):
         assert self.is_volume(where), "Path is no volume: %s" % where
@@ -77,7 +77,7 @@ WantedBy=local-fs.target
 
         log.info("Volume for '%s' was removed successful" % where)
 
-    def attach(self, where):
+    def attach(self, where, attach_now):
         assert self.is_volume(where), "Path is no volume: %s" % where
 
         volname = self._volname(where)
@@ -91,12 +91,15 @@ WantedBy=local-fs.target
         systemctl.daemon_reload()
 
         systemctl.enable(unitfile.basename())
-        systemctl.start(unitfile.basename())
+        if attach_now:
+            systemctl.start(unitfile.basename())
 
-        # Access it to start it
-        os.listdir(where)
+            # Access it to start it
+            os.listdir(where)
 
-        log.info("Volume for '%s' was attached successful" % where)
+            log.info("Volume for '%s' was attached successful" % where)
+        else:
+            log.info("Volume for '%s' was created but not attached" % where)
 
     def detach(self, where):
         assert self.is_volume(where), "Path is no volume: %s" % where
