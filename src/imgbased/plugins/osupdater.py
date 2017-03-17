@@ -83,7 +83,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     try:
         # Some change in managed nodes is blapping /dev/mapper. Add it back
         # so LVM and /dev/mapper agree
-        LvmCLI.vgchange(["-ay"])
+        LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
         remediate_etc(imgbase)
         migrate_etc(imgbase, new_lv, previous_layer_lv)
     except:
