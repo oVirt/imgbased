@@ -241,7 +241,7 @@ def remediate_etc(imgbase):
         with mounted(imgbase._lvm_from_layer(layers[idx]).path) as m, \
                 mounted(imgbase._lvm_from_layer(layers[idx+1]).path) as n:
                     # Resync the files we changed on the last pass
-                    r = Rsync(checksum_only=True)
+                    r = Rsync(checksum_only=True, update_only=True)
                     r.sync(m.path("/etc"), n.path("/etc"))
 
                     check_layers(m, n)
