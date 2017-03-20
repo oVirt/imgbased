@@ -847,10 +847,12 @@ class Rsync():
     checksum_only = False
     existing = False
     exclude = None
+    update_only = False
 
-    def __init__(self, checksum_only=False):
+    def __init__(self, checksum_only=False, update_only=False):
         self.exclude = ["mnt.*/*"]
         self.checksum_only = checksum_only
+        self.update_only = update_only
 
     def _run(self, cmd):
         log.debug("Running: %s" % cmd)
@@ -867,6 +869,8 @@ class Rsync():
             cmd += ["--existing"]
         if self.checksum_only:
             cmd += ["--checksum"]
+        if self.update_only:
+            cmd += ["--update"]
         else:
             cmd += ["-t"]
         if self.exclude:
