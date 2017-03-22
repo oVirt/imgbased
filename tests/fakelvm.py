@@ -201,4 +201,7 @@ class FakeLVM(imgbased.lvm.LVM):
             debug("Created thin LV: %s" % lv)
             return lv
 
+        def check_metadata_size(self, resize=False):
+            pass
+
 # vim: et ts=4 sw=4 sts=4

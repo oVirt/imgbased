@@ -179,6 +179,8 @@ class ImageLayers(object):
 
         prev_lv = self._lvm_from_layer(previous_layer)
 
+        self._thinpool().check_metadata_size(resize=True)
+
         try:
             new_lv = self._add_lvm_snapshot(prev_lv, new_layer.lv_name)
         except FilesystemNotSupported:

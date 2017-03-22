@@ -34,12 +34,17 @@ class MissingLvmThinPool(Exception):
     pass
 
 
+class ThinPoolMetadataError(Exception):
+    pass
+
+
 class LVM(object):
     _lvs = LvmCLI.lvs
     _vgs = LvmCLI.vgs
     _lvcreate = LvmCLI.lvcreate
     _lvchange = LvmCLI.lvchange
     _lvremove = LvmCLI.lvremove
+    _lvextend = LvmCLI.lvextend
     _vgcreate = LvmCLI.vgcreate
     _vgchange = LvmCLI.vgchange
 
@@ -295,5 +300,26 @@ class LVM(object):
                            "--name", vol.lv_name,
                            self.lvm_name])
             return vol
+
+        def _get_metadata_size(self):
+            args = ["--noheadings", "--nosuffix", "--units", "m",
+                    "-o", "metadata_percent,lv_metadata_size", self.lvm_name]
+            return map(float, LVM._lvs(args).split())
+
+        def _resize_metadata(self, size_mb):
+            args = ["--poolmetadatasize", "{}M".format(size_mb), self.lvm_name]
+            LVM._lvextend(args)
+
+        def check_metadata_size(self, resize=False):
+            min_size_mb = 1024
+            meta_pct, meta_sz = self._get_metadata_size()
+            log.debug("Pool: %s, metadata size=%sM (%s%%)" % (self.lvm_name,
+                                                              meta_sz,
+                                                              meta_pct))
+            if meta_sz < min_size_mb:
+                if resize:
+                    self._resize_metadata(min_size_mb)
+                else:
+                    raise ThinPoolMetadataError("Thinpool metadata too small")
 
 # vim: sw=4 et sts=4
