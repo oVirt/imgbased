@@ -385,6 +385,9 @@ class ExternalBinary(object):
     def lvremove(self, args, **kwargs):
         return self.call(["lvremove"] + args, **kwargs)
 
+    def lvextend(self, args, **kwargs):
+        return self.call(["lvextend"] + args, **kwargs)
+
     def vgcreate(self, args, **kwargs):
         return self.call(["vgcreate"] + args, **kwargs)
 
@@ -443,6 +446,7 @@ class LvmCLI():
     lvcreate = LvmBinary().lvcreate
     lvchange = LvmBinary().lvchange
     lvremove = LvmBinary().lvremove
+    lvextend = LvmBinary().lvextend
     vgcreate = LvmBinary().vgcreate
     vgchange = LvmBinary().vgchange
 
