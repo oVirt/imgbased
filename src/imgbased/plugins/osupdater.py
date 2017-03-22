@@ -169,9 +169,10 @@ def remediate_etc(imgbase):
         s = re.sub(r'^/tmp/mnt.*?/', '', s)
         return re.sub(r'/+', '/', s)
 
-    def md5sum(a, b):
-        return hashlib.md5(open(a, 'rb').read()).hexdigest() == hashlib.md5(
-            open(b, 'rb').read()).hexdigest()
+    def sha256sum(a, b):
+        chksum_a = hashlib.sha256(open(a, 'rb').read()).hexdigest()
+        chksum_b = hashlib.sha256(open(b, 'rb').read()).hexdigest()
+        return chksum_a == chksum_b
 
     def diff_candidates(dc, problems, candidates=None):
         if candidates is None:
@@ -181,7 +182,7 @@ def remediate_etc(imgbase):
                 f = "{}/{}".format(dc.left, l)
                 if not os.path.islink(f):
                     if strip(f) in problems and strip(f) not in candidates:
-                        if md5sum(f, "{}/{}".format(dc.right, l)):
+                        if sha256sum(f, "{}/{}".format(dc.right, l)):
                             candidates.add(strip(f))
                             log.debug("Updating %s from the next "
                                       "layer" % ("{}".format(strip(f))))
