@@ -49,7 +49,9 @@ class LVM(object):
     _vgchange = LvmCLI.vgchange
 
     @staticmethod
-    def _list_lv_full_names():
+    def _list_lv_full_names(filtr=""):
+        if filtr:
+            cmd = ["--noheadings", "-o", "lv_full_name", "--select", filtr]
         cmd = ["--noheadings", "-o", "lv_full_name"]
         raw = LVM._lvs(cmd)
         names = sorted(n.strip() for n in raw.splitlines())
@@ -57,8 +59,8 @@ class LVM(object):
         return names
 
     @classmethod
-    def list_lvs(cls):
-        lvs = [cls.LV.from_lvm_name(n) for n in cls._list_lv_full_names()]
+    def list_lvs(cls, filtr=""):
+        lvs = [cls.LV.from_lvm_name(n) for n in cls._list_lv_full_names(filtr)]
         log.debug("All LVS: %s" % lvs)
         return lvs
 
