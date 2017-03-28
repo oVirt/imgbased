@@ -81,7 +81,9 @@ class ImageLayers(object):
         self.naming = naming.NvrNaming(datasource=self.list_our_lv_names)
 
     def list_our_lv_names(self):
-        lvs = LVM.list_lvs()
+        filtr = "lv_tags = {} || lv_tags = {}".format(self.lv_base_tag,
+                                                      self.lv_layer_tag)
+        lvs = LVM.list_lvs(filtr=filtr)
 
         def has_our_tag(lv):
             our_tags = [self.lv_base_tag, self.lv_layer_tag]
