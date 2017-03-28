@@ -30,7 +30,7 @@ class FakeLVM(imgbased.lvm.LVM):
     _vgs = []
 
     @staticmethod
-    def _list_lv_full_names():
+    def _list_lv_full_names(filtr=""):
         lvs = [lv for lv in FakeLVM.lvs()]
         debug("LVS %s" % lvs)
         return [lv.lvm_name for lv in lvs]
