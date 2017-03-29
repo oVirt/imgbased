@@ -893,6 +893,9 @@ class IDMap():
     """
     from_etc = None
     to_etc = None
+    changed_ids = {}
+    _merge_gids = []
+    _merge_uids = []
 
     def __init__(self, from_etc, to_etc):
         self.from_etc = from_etc
@@ -938,6 +941,7 @@ class IDMap():
                 continue
             tid = to_idmap[fname]
             if fid != tid:
+                log.debug("%s changed from %s to %s" % (fname, fid, tid))
                 xmap.append((int(fid), int(tid)))
         return sorted(xmap)
 
@@ -960,9 +964,118 @@ class IDMap():
 
         return (uidmap, gidmap)
 
+    def _merge_ids(self, old_content, new_content, l, tracker={}):
+        """
+        >>> old_content = '''
+        ... root:x:0:0:root:/root:/bin/bash
+        ... bin:x:1:1:bin:/bin:/sbin/nologin
+        ... daemon:x:2:2:daemon:/sbin:/sbin/nologin
+        ... sync:x:5:0:sync:/sbin:/bin/sync
+        ... shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+        ... '''
+        >>> new_content = '''
+        ... root:x:0:0:root:/root:/bin/bash
+        ... bin:x:1:1:bin:/bin:/sbin/nologin
+        ... daemon:x:2:2:daemon:/sbin:/sbin/nologin
+        ... sync:x:5:0:sync:/sbin:/bin/sync
+        ... cockpit-ws:x:6:0:shutdown:/sbin:/sbin/nologin
+        ... screen:x:8:0:shutdown:/sbin:/sbin/nologin
+        ... '''
+
+        >>> content,ids = IDMap(None, None)._merge_ids(
+        ... old_content, new_content, [])
+        >>> print(content)
+        <BLANKLINE>
+        root:x:0:0:root:/root:/bin/bash
+        bin:x:1:1:bin:/bin:/sbin/nologin
+        daemon:x:2:2:daemon:/sbin:/sbin/nologin
+        sync:x:5:0:sync:/sbin:/bin/sync
+        shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+        cockpit-ws:x:7:0:shutdown:/sbin:/sbin/nologin
+        screen:x:8:0:shutdown:/sbin:/sbin/nologin
+        <BLANKLINE>
+        >>> ids
+        {'6': '7'}
+        """
+
+        ids = {}
+        changed_ids = {}
+
+        def check_id_in_use(i, j):
+            return any([i == int(k) for k in j.values()])
+
+        old_lines = old_content.strip().split('\n')
+        new_lines = new_content.strip().split('\n')
+
+        for o in old_lines:
+            name, _, i = o.split(":")[:3]
+            ids[name] = i
+
+        for n in new_lines:
+            _write_content = False
+            name, _, i = n.split(":")[:3]
+            i = int(i)
+            if name not in ids:
+                _write_content = True
+                old_id = i
+                if not check_id_in_use(i, ids):
+                    pass
+                else:
+                    log.debug("ID in use")
+                    while check_id_in_use(i, ids):
+                        i += 1
+                        if i > 1000:
+                            # If it's a system account, do our best to
+                            # ensure that it stays as one
+                            i = 1
+                    fields = n.split(":")
+                    i = str(i)
+                    fields[2] = i
+                    n = ":".join(fields)
+                    log.debug("Assigning {} as {}".format(fields[0],
+                                                          fields[2]))
+                    ids[name] = i
+                    changed_ids[str(old_id)] = i
+                    l.append((int(i), old_id))
+
+            try:
+                fields = n.split(":")
+                if fields[3] in tracker:
+                    _write_content = True
+                    log.debug("GID for {} changed to {}".format(
+                        fields[0],
+                        tracker[fields[3]]))
+                    fields[3] = tracker[fields[3]]
+                n = ":".join(fields)
+
+            except IndexError:
+                # Not passwd
+                pass
+
+            if _write_content:
+                log.debug("Adding a new user/group as: {}".format(n))
+                old_content += n + "\n"
+
+        return (old_content, changed_ids)
+
+    def _sync_files(self):
+        new_groups, ids = self._merge_ids(
+            File(self.from_etc + "/group").contents,
+            File(self.to_etc + "/group").contents,
+            self._merge_gids)
+        self.group_content = new_groups
+        new_passwd, _ = self._merge_ids(
+            File(self.from_etc + "/passwd").contents,
+            File(self.to_etc + "/passwd").contents,
+            self._merge_uids, ids)
+        self.passwd_content = new_passwd
+
     def get_drift(self):
         """Returns the uid and gid dirft from the old to the new etc
         """
+
+        self._sync_files()
+
         from_uids = self._parse_ids(File(self.from_etc + "/passwd").contents)
         from_gids = self._parse_ids(File(self.from_etc + "/group").contents)
 
@@ -971,6 +1084,9 @@ class IDMap():
 
         uidmap, gidmap = self._create_idmaps(from_uids, from_gids,
                                              to_uids, to_gids)
+
+        gidmap = gidmap + self._merge_gids
+        uidmap = uidmap + self._merge_uids
 
         return (uidmap, gidmap)
 
