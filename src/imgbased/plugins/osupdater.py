@@ -344,6 +344,8 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             log.error("New: %s" % new_rel)
 
         if is_same_product:
+            group_content, passwd_content = (None, None)
+
             # The IDMap check must be run before etc was copied!
             # The check relies on the fact that the old etc and new etc differ
             idmaps = IDMap(old_etc, new_fs.path("/usr/share/factory/etc"))
@@ -352,6 +354,8 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                 log.debug("Drifted uids: %s gids: %s" %
                           idmaps.get_drift())
                 changes = idmaps.fix_drift(new_fs.path("/"))
+                group_content, passwd_content = idmaps.group_content, \
+                    idmaps.passwd_content
                 if changes:
                     log.info("UID/GID adjustments were applied")
                     log.debug("Changed files: %s" % list(changes))
@@ -382,6 +386,9 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                 for c in changed:
                     copy_files(new_fs.path("/") + c, [old_fs.path("/") + c],
                                "-a", "-r")
+
+            File(new_fs.path("/etc/group")).write(group_content)
+            File(new_fs.path("/etc/passwd")).write(passwd_content)
 
         else:
             log.info("Just copying important files")
