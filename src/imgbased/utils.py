@@ -413,6 +413,12 @@ class ExternalBinary(object):
     def pkill(self, args, **kwargs):
         return self.call(["pkill"] + args, **kwargs)
 
+    def umount(self, args, **kwargs):
+        return self.call(["umount"] + args, **kwargs)
+
+    def setfiles(self, args, **kwargs):
+        return self.call(["setfiles"] + args, **kwargs)
+
 
 class LvmBinary(ExternalBinary):
     def call(self, *args, **kwargs):

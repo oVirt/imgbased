@@ -368,6 +368,8 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         with utils.bindmounted("/var", new_fs.path("/var")):
             hack_rpm_permissions(new_fs)
 
+        relabel_selinux(new_fs)
+
         Motd(new_etc + "/motd").clear_motd()
 
 
@@ -406,6 +408,21 @@ def fix_systemd_services(old_fs, new_fs):
                     remove_file(new_fs.path("/") + d)
         except:
             log.exception("Could not remove %s. Is it a read-only layer?")
+
+
+def relabel_selinux(new_fs):
+    fc_path = new_fs.path("/")
+    fc_path += "/etc/selinux/targeted/contexts/files/file_contexts"
+
+    if not os.path.exists(fc_path):
+        log.debug("{} not found, not relabeling".format(fc_path))
+        return
+
+    dirs = ["/etc", "/var"]
+    setfiles = utils.ExternalBinary().setfiles
+
+    for d in dirs:
+        setfiles(["-r", new_fs.path("/"), fc_path, new_fs.path(d)])
 
 
 def relocate_var_lib_yum(new_fs):
