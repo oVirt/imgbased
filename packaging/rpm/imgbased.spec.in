@@ -105,6 +105,11 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Thu Mar 30 2017 Ryan Barry <rbarry@redhat.com> - 0.9.19-0
+- Migrate /var on updates
+- Relabel /etc and /var on updates
+- Add groups and users from new layers
+
 * Tue Mar 14 2017 Ryan Barry <rbarry@redhat.com> - 0.9.18-0
 - Don't copy critical files when remediating /etc
 
