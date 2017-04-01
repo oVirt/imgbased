@@ -344,7 +344,8 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             log.error("New: %s" % new_rel)
 
         if is_same_product:
-            group_content, passwd_content = (None, None)
+            group_content = File(old_etc + "/group").read()
+            passwd_content = File(old_etc + "/passwd").read()
 
             # The IDMap check must be run before etc was copied!
             # The check relies on the fact that the old etc and new etc differ
