@@ -60,6 +60,7 @@ class ImageLayers(object):
 
     vg_tag = "imgbased:vg"
     thinpool_tag = "imgbased:pool"
+    thinpool_profile = "imgbased-pool"
     lv_init_tag = "imgbased:init"
     lv_base_tag = "imgbased:base"
     lv_layer_tag = "imgbased:layer"

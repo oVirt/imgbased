@@ -23,7 +23,7 @@
 import os
 import logging
 import inspect
-from ..utils import BuildMetadata, File, Fstab, Motd, bcolors
+from ..utils import BuildMetadata, Fstab, Motd, bcolors
 from ..naming import Image
 from ..lvm import LVM
 from ..bootloader import BootConfiguration
@@ -378,12 +378,11 @@ class Health():
         group.reason = ("It looks like the LVM layout is not "
                         "correct. The reason could be an "
                         "incorrect installation.")
-
+        pool = self.app.imgbase._thinpool()
         datap = None
         try:
             lvs = LVM._lvs(["--noheadings",
-                            "-odata_percent,metadata_percent",
-                            self.app.imgbase._thinpool().lvm_name])
+                            "-odata_percent,metadata_percent", pool.lvm_name])
             datap, metap = map(float, lvs.replace(",", ".").split())
         except:
             log.debug("Failed to get thin data", exc_info=True)
@@ -395,10 +394,16 @@ class Health():
             return group
 
         def has_autoextend():
-            if File("/etc/lvm/lvm.conf").findall(
-                    'thin_pool_autoextend_threshold\s?=s?0\s*$'):
-                return False
-            return True
+            profile = pool.profile()
+            args = ["--metadataprofile", profile] if profile else []
+            args += ["--type", "full",
+                     "activation/thin_pool_autoextend_threshold"]
+            ret = False
+            try:
+                ret = int(LVM._lvmconfig(args).split("=")[1]) < 100
+            except:
+                pass
+            return ret
 
         group.checks = [
             Health.Check("Checking available space in thinpool",
@@ -407,8 +412,9 @@ class Health():
                                   "threshold. Check the output of `lvs`")),
             Health.Check("Checking thinpool auto-extend",
                          has_autoextend,
-                         lambda: ("thin_pool_autoextend_threshold "
-                                  "needs to be set above 0 in lvm.conf"))
+                         lambda: ("In order to enable thinpool auto-extend,"
+                                  "activation/thin_pool_autoextend_threshold "
+                                  "needs to be set below 100 in lvm.conf"))
         ]
         return group
 

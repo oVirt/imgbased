@@ -438,6 +438,9 @@ class ExternalBinary(object):
     def runcon(self, args, **kwargs):
         return self.call(["runcon"] + args, **kwargs)
 
+    def lvmconfig(self, args, **kwargs):
+        return self.call(["lvmconfig"] + args, **kwargs)
+
 
 class LvmBinary(ExternalBinary):
     def call(self, *args, **kwargs):
@@ -454,6 +457,7 @@ class LvmCLI():
     lvextend = LvmBinary().lvextend
     vgcreate = LvmBinary().vgcreate
     vgchange = LvmBinary().vgchange
+    lvmconfig = LvmBinary().lvmconfig
 
 
 class SELinuxDomain(object):

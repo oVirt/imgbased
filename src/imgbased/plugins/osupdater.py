@@ -101,6 +101,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         # Some change in managed nodes is blapping /dev/mapper. Add it back
         # so LVM and /dev/mapper agree
         LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
+        set_thinpool_profile(imgbase, new_lv)
         remediate_etc(imgbase)
         migrate_var(imgbase, new_lv)
         check_nist_layout(imgbase, new_lv)
@@ -138,6 +139,21 @@ def on_post_init_layout(imgbase, existing_lv, new_base, new_layer):
                                target="/etc",
                                options="bind")
     new_etc.mount()
+
+
+def set_thinpool_profile(imgbase, new_lv):
+    pool = imgbase._thinpool()
+    img_profile = imgbase.thinpool_profile
+    cur_profile = pool.profile()
+    if not cur_profile:
+        with mounted(new_lv.path) as new_fs:
+            prof_dir = new_fs.path("/etc/lvm/profile")
+            config = "config {profile_dir = \"%s\"}" % prof_dir
+            log.debug("Pool %s: setting profile to %s", pool, img_profile)
+            pool.set_profile(img_profile, config)
+    else:
+        if cur_profile != img_profile:
+            log.warn("Unknown profile set for thinpool: %s", cur_profile)
 
 
 def check_nist_layout(imgbase, new_lv):

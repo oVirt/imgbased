@@ -47,6 +47,7 @@ class LVM(object):
     _lvextend = LvmCLI.lvextend
     _vgcreate = LvmCLI.vgcreate
     _vgchange = LvmCLI.vgchange
+    _lvmconfig = LvmCLI.lvmconfig
 
     @staticmethod
     def _list_lv_full_names(filtr=""):
@@ -266,6 +267,13 @@ class LVM(object):
         def origin(self):
             lv_name = self.options(["origin"]).pop()
             return LVM.LV.from_lv_name(self.vg_name, lv_name)
+
+        def profile(self):
+            return self.options(["lv_profile"]).pop()
+
+        def set_profile(self, name, config=None):
+            args = ["--config", config] if config else []
+            LVM._lvchange(args + ["--metadataprofile", name, self.lvm_name])
 
         def options(self, options):
             sep = "$"
