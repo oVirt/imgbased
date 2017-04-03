@@ -101,6 +101,9 @@ install -Dm 0644 data/imgbase-config-vdsm.service %{buildroot}%{_unitdir}/imgbas
 %endif
 
 %changelog
+* Mon Apr 03 2017 Ryan Barry <rbarry@redhat.com> - 0.8.17-0
+- Only activate imgbased LVs/VGs
+
 * Mon Mar 06 2017 Sandro Bonazzola <sbonazzo@redhat.com> - 0.8.16-0
 - Added systemd unit for running vdsm-tool configure
 - Resolves: BZ#1429594
