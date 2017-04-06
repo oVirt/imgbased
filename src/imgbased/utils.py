@@ -432,8 +432,11 @@ class ExternalBinary(object):
     def umount(self, args, **kwargs):
         return self.call(["umount"] + args, **kwargs)
 
-    def setfiles(self, args, **kwargs):
-        return self.call(["setfiles"] + args, **kwargs)
+    def semanage(self, args, **kwargs):
+        return self.call(["semanage"] + args, **kwargs)
+
+    def runcon(self, args, **kwargs):
+        return self.call(["runcon"] + args, **kwargs)
 
 
 class LvmBinary(ExternalBinary):
@@ -451,6 +454,32 @@ class LvmCLI():
     lvextend = LvmBinary().lvextend
     vgcreate = LvmBinary().vgcreate
     vgchange = LvmBinary().vgchange
+
+
+class SELinuxDomain(object):
+    _semanage = ExternalBinary().semanage
+    _runcon = ExternalBinary().runcon
+
+    def __init__(self, domain):
+        self._domain = domain
+        self._exists = self._check_domain()
+
+    def _check_domain(self):
+        domains = self._semanage(["permissive", "-nl"])
+        return self._domain in domains.split()
+
+    def __enter__(self):
+        if not self._exists:
+            self._semanage(["permissive", "-a", self._domain])
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        if self._exists:
+            return
+        self._semanage(["permissive", "-d", self._domain])
+
+    def runcon(self, args):
+        self._runcon(["-t", self._domain, "--"] + args)
 
 
 class File(object):
