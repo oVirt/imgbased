@@ -41,9 +41,9 @@ class LVM(object):
 
     @staticmethod
     def _list_lv_full_names(filtr=""):
+        cmd = ["--noheadings", "-o", "lv_full_name"]
         if filtr:
             cmd = ["--noheadings", "-o", "lv_full_name", "--select", filtr]
-        cmd = ["--noheadings", "-o", "lv_full_name"]
         raw = LVM._lvs(cmd)
         names = sorted(n.strip() for n in raw.splitlines())
         log.debug("All LV names: %s" % names)
