@@ -36,7 +36,7 @@ from ..lvm import LVM
 from ..naming import Image
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
-    find_mount_target, Motd, LvmCLI
+    find_mount_target, Motd, LvmCLI, SELinuxDomain
 
 
 log = logging.getLogger(__package__)
@@ -419,18 +419,17 @@ def fix_systemd_services(old_fs, new_fs):
 
 
 def relabel_selinux(new_fs):
-    fc_path = new_fs.path("/")
-    fc_path += "/etc/selinux/targeted/contexts/files/file_contexts"
+    fc = "/etc/selinux/targeted/contexts/files/file_contexts"
 
-    if not os.path.exists(fc_path):
-        log.debug("{} not found, not relabeling".format(fc_path))
+    if not os.path.exists(new_fs.path("/") + fc):
+        log.debug("{} not found in new fs, not relabeling".format(fc))
         return
 
     dirs = ["/etc", "/var"]
-    setfiles = utils.ExternalBinary().setfiles
 
-    for d in dirs:
-        setfiles(["-r", new_fs.path("/"), fc_path, new_fs.path(d)])
+    with SELinuxDomain("setfiles_mac_t") as dom:
+        for d in dirs:
+            dom.runcon(["chroot", new_fs.path("/"), "setfiles", "-v", fc, d])
 
 
 def relocate_var_lib_yum(new_fs):
