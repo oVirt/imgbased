@@ -101,6 +101,9 @@ install -Dm 0644 data/imgbase-config-vdsm.service %{buildroot}%{_unitdir}/imgbas
 %endif
 
 %changelog
+* Wed Apr 12 2017 Ryan Barry <rbarry@redhat.com> - 0.8.18-0
+- Fix LVM volume filtering
+
 * Mon Apr 03 2017 Ryan Barry <rbarry@redhat.com> - 0.8.17-0
 - Only activate imgbased LVs/VGs
 
