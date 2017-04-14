@@ -871,6 +871,14 @@ class systemctl():
         systemctl._systemctl("disable", *units)
 
     @staticmethod
+    def mask(*units):
+        systemctl._systemctl("mask", *units)
+
+    @staticmethod
+    def unmask(*units):
+        systemctl._systemctl("unmask", *units)
+
+    @staticmethod
     def daemon_reload():
         systemctl._systemctl("daemon-reload")
 
