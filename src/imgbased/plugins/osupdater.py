@@ -462,7 +462,7 @@ def relabel_selinux(new_fs):
 
     dirs = ["/etc", "/var"]
 
-    with SELinuxDomain("setfiles_mac_t") as dom:
+    with SELinuxDomain("setfiles_t") as dom:
         for d in dirs:
             dom.runcon(["chroot", new_fs.path("/"), "setfiles", "-v", fc, d])
 
