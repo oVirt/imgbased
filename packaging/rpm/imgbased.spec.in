@@ -105,6 +105,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Fri Apr 14 2017 Sandro Bonazzola <sbonazzo@redhat.com> - 0.9.23-0
+- osupdater: using setfiles_t to relabel new fs
+
 * Wed Apr 12 2017 Ryan Barry <rbarry@redhat.com> - 0.9.22-0
 - Set selinux contexts on update
 
