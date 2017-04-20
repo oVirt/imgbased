@@ -50,7 +50,7 @@ paths = {"/var":           {"size":   "15G",
                             "attach": True},
          "/home":          {"size":   "1G",
                             "attach": True},
-         "/tmp":           {"size":   "2G",
+         "/tmp":           {"size":   "1G",
                             "attach": False},
          }
 
