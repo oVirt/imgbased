@@ -37,7 +37,7 @@ from ..naming import Image
 from ..volume import Volumes
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
-    find_mount_target, Motd, LvmCLI, SELinuxDomain
+    find_mount_target, Motd, LvmCLI, SELinuxDomain, RpmPackage
 
 
 log = logging.getLogger(__package__)
@@ -410,6 +410,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         with utils.bindmounted("/var", new_fs.path("/var")):
             hack_rpm_permissions(new_fs)
 
+        run_rpm_selinux_post(new_fs)
         relabel_selinux(new_fs)
 
         Motd(new_etc + "/motd").clear_motd()
@@ -464,6 +465,48 @@ def relabel_selinux(new_fs):
     with SELinuxDomain("setfiles_t") as dom:
         for d in dirs:
             dom.runcon(["chroot", new_fs.path("/"), "setfiles", "-v", fc, d])
+
+
+def run_rpm_selinux_post(new_fs):
+    def just_do(arg, **kwargs):
+        DEVNULL = open(os.devnull, "w")
+        arg = "nsenter --root=%s --wd=/ %s" % (new_fs.path("/"), arg)
+        log.debug("Running %s" % arg)
+
+        # shell=True is bad! But we're executing RPM %post scripts
+        # directly and imgbased can't learn every possible way bash
+        # can be written in order to make it sane
+        proc = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                                stderr=DEVNULL, shell=True,
+                                **kwargs).communicate()
+        return proc[0]
+
+    log.debug("Checking whether any %post scripts from the new image must be "
+              "run")
+    rpmdb = RpmPackageDb()
+    rpmdb.root = new_fs.path("/")
+
+    pkgs = []
+    for p in rpmdb.get_packages():
+        pkg = RpmPackage(p, rpmdb)
+        pkg.get_script_sections()
+        pkgs.append(pkg)
+
+    run_commands = []
+
+    critical_commands = ["semodule", "semanage", "fixfiles"]
+
+    for pkg in pkgs:
+        if "postinstall" in pkg.scripts:
+            for s in pkg.scripts["postinstall"]:
+                if any([c in critical_commands for c in s.split()]):
+                    print "Found a command in %s: %s" % (pkg, s)
+                    run_commands.append(s)
+
+    with utils.bindmounted("/proc", new_fs.target + "/proc"):
+        with utils.bindmounted("/dev", new_fs.target + "/dev"):
+            for r in run_commands:
+                just_do(r)
 
 
 def relocate_var_lib_yum(new_fs):

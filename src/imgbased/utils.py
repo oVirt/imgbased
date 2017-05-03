@@ -29,6 +29,7 @@ import re
 import glob
 import shlex
 from contextlib import contextmanager
+from rpmUtils.miscutils import splitFilename
 
 
 log = logging.getLogger(__package__)
@@ -835,6 +836,34 @@ class RpmPackageDb(PackageDb):
 
     def get_nvr(self, pkgname):
         return self._rpm("-q", pkgname)
+
+    def get_scripts(self, pkgname):
+        return self._rpm("-q", "--scripts", pkgname)
+
+
+class RpmPackage:
+    def __init__(self, pkg, rpmdb=None):
+        name = splitFilename(pkg)[0]
+        self.name = name
+        self.pkg = pkg
+        self.scripts = {}
+        self.rpmdb = rpmdb or RpmPackageDb()
+
+    def get_script_sections(self):
+        scripts = self.rpmdb.get_scripts(self.pkg)
+        for line in scripts:
+            r = re.match(r'^(.*?) (scriptlet|program).*?:', line)
+            if r:
+                group = r.groups()[0]
+                self.scripts[group] = []
+            elif line:
+                self.scripts[group].extend(line.strip().splitlines())
+
+    def __repr__(self):
+        return "<%s: %s>" % (self.__class__, self.pkg)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class systemctl():
