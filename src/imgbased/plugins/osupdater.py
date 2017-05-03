@@ -378,7 +378,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             # Ensure they're copied
             for f in required_files:
                 log.debug("%s not in required_files, adding" % f)
-                if f not in changed:
+                if f not in changed and os.path.exists(f):
                     changed.append(f)
 
             # imgbase layout --init double-dips here. Make sure that it's
