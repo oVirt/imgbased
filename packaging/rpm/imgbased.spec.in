@@ -42,10 +42,11 @@ BuildRequires:       python3-six
 BuildRequires:       python3-devel
 %endif
 
-Requires:       lvm2
-Requires:       util-linux
-Requires:       augeas
-Requires:       rsync
+Requires:            lvm2
+Requires:            util-linux
+Requires:            augeas
+Requires:            rsync
+Requires:            yum
 
 
 %description

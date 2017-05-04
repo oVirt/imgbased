@@ -20,3 +20,4 @@ python3-nose
 systemd-python3
 pykickstart
 rpm-python
+yum
