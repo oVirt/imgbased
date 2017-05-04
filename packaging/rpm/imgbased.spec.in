@@ -41,6 +41,7 @@ Requires:            lvm2
 Requires:            util-linux
 Requires:            augeas
 Requires:            rsync
+Requires:            yum
 
 %{!?_licensedir:%global license %%doc}
 

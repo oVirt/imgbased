@@ -516,7 +516,7 @@ def run_rpm_selinux_post(new_fs):
         if "postinstall" in pkg.scripts:
             for s in pkg.scripts["postinstall"]:
                 if any([c in critical_commands for c in s.split()]):
-                    print "Found a command in %s: %s" % (pkg, s)
+                    log.debug("Found a command in %s: %s", pkg, s)
                     run_commands.append(s)
 
     with utils.bindmounted("/proc", new_fs.target + "/proc"):
