@@ -674,7 +674,8 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
             kfiles = __check_kernel_files(pkgfiles, newroot)
 
-            os.mkdir(bootdir)
+            if not os.path.exists(bootdir):
+                os.mkdir(bootdir)
             copy_files(bootdir, kfiles)
         except:
             log.warn("No kernel found in %s" % new_lv, exc_info=True)
