@@ -30,7 +30,7 @@ log = logging.getLogger()
 
 if __name__ == '__main__':
     lvl = logging.DEBUG if "--debug" in sys.argv else logging.INFO
-    fmt = "[%(levelname)s] %(message)s"
+    fmt = "%(asctime)s [%(levelname)s] %(message)s"
 
     handlers = [logging.StreamHandler()]
     try:
