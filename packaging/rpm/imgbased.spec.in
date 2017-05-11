@@ -106,6 +106,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Thu May 10 2017 Ryan Barry <rbarry@redhat.com> - 0.9.25-0
+- Restore contexts on /usr/{bin,libexec,sbin} on updating
+
 * Wed May 03 2017 Ryan Barry <rbarry@redhat.com> - 0.9.24-0
 - Run selinux commands in RPM %post scripts on update
 
