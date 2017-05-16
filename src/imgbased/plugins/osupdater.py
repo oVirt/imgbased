@@ -410,7 +410,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         with utils.bindmounted("/var", new_fs.path("/var")):
             hack_rpm_permissions(new_fs)
 
-        #run_rpm_selinux_post(new_fs)
+        run_rpm_selinux_post(new_fs)
         relabel_selinux(new_fs)
 
         Motd(new_etc + "/motd").clear_motd()
