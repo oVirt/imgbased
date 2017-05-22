@@ -34,25 +34,12 @@ from filecmp import dircmp
 from .. import bootloader, utils
 from ..lvm import LVM
 from ..naming import Image
-from ..volume import Volumes
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
     find_mount_target, Motd, LvmCLI, SELinuxDomain, RpmPackage
 
 
 log = logging.getLogger(__package__)
-
-paths = {"/var":           {"size":   "15G",
-                            "attach": True},
-         "/var/log":       {"size":   "8G",
-                            "attach": True},
-         "/var/log/audit": {"size":   "2G",
-                            "attach": True},
-         "/home":          {"size":   "1G",
-                            "attach": True},
-         "/tmp":           {"size":   "2G",
-                            "attach": False},
-         }
 
 
 class SeparateVarPartition(Exception):
@@ -68,10 +55,6 @@ class ConfigMigrationError(Exception):
 
 
 class BootSetupError(Exception):
-    pass
-
-
-class NistSetupError(Exception):
     pass
 
 
@@ -103,7 +86,6 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
         remediate_etc(imgbase)
         migrate_var(imgbase, new_lv)
-        check_nist_layout(imgbase, new_lv)
         migrate_etc(imgbase, new_lv, previous_layer_lv)
     except:
         log.exception("Failed to migrate etc")
@@ -138,22 +120,6 @@ def on_post_init_layout(imgbase, existing_lv, new_base, new_layer):
                                target="/etc",
                                options="bind")
     new_etc.mount()
-
-
-def check_nist_layout(imgbase, new_lv):
-    to_create = []
-
-    for path in paths.keys():
-        if not os.path.ismount(path):
-            to_create.append(path)
-
-    with mounted(new_lv.path) as new_fs:
-        if to_create:
-            with utils.bindmounted(new_fs.path("/etc"), "/etc"):
-                v = Volumes(imgbase)
-                for t in to_create:
-                    log.debug("Creating %s as %s" % (t, paths[t]))
-                    v.create(t, paths[t]["size"], paths[t]["attach"])
 
 
 def migrate_var(imgbase, new_lv):
