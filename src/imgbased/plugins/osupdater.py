@@ -460,7 +460,7 @@ def relabel_selinux(new_fs):
         log.debug("{} not found in new fs, not relabeling".format(fc))
         return
 
-    dirs = ["/etc", "/var", "/usr/libexec", "/usr/bin", "/usr/sbin"]
+    dirs = ["/etc", "/var"]
 
     with SELinuxDomain("setfiles_t") as dom:
         for d in dirs:
