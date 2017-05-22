@@ -106,6 +106,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Mon May 22 2017 Ryan Barry <rbarry@redhat.com> - 0.9.27-0
+- Defer migrating to NIST again until the timeout is increased
+
 * Tue May 16 2017 Ryan Barry <rbarry@redhat.com> - 0.9.26-0
 - Disable running selinux commands in RPM %post scripts until engine
   timeout is increased
