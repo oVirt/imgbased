@@ -916,6 +916,23 @@ class systemctl():
         systemctl._systemctl("daemon-reload")
 
 
+class Tar():
+    def __init__(self):
+        pass
+
+    def sync(self, source, dst):
+        default_args = ["tar", "--selinux", "--xattrs", "--acls"]
+        srccmd = default_args + ["cf", "-", "-C", source, "."]
+        log.debug("Calling binary: %s" % srccmd)
+        src = subprocess.Popen(srccmd, stdout=subprocess.PIPE)
+
+        dstcmd = default_args + ["xBf", "-", "-C", dst]
+        log.debug("Calling binary: %s" % dstcmd)
+        dstproc = subprocess.Popen(dstcmd, stdin=src.stdout)
+        dstproc.communicate()
+        log.debug("Done syncing new filesystem")
+
+
 class Rsync():
     checksum_only = False
     existing = False
@@ -934,9 +951,9 @@ class Rsync():
     def sync(self, sourcetree, dst):
         assert os.path.isdir(sourcetree)
 
-        cmd = ["ionice", "rsync"]
+        cmd = ["rsync"]
         cmd += ["-pogAXlHrx"]
-        cmd += ["-Sc", "--no-i-r"]
+        cmd += ["-SWc", "--no-i-r"]
         # cmd += ["--progress"]
         if self.existing:
             cmd += ["--existing"]
