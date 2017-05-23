@@ -6,7 +6,7 @@ import os
 from .. import local
 from ..bootloader import BootConfiguration
 from ..naming import Image
-from ..utils import mounted, Filesystem, Rsync, BuildMetadata
+from ..utils import mounted, Filesystem, BuildMetadata, Tar
 
 log = logging.getLogger(__package__)
 
@@ -93,8 +93,8 @@ class LiveimgExtractor():
             log.info("Writing tree to base")
             with mounted(new_base_lv.path) as mount:
                 dst = mount.target + "/"
-                rsync = Rsync()
-                rsync.sync(sourcetree, dst)
+                tar = Tar()
+                tar.sync(sourcetree, dst)
                 log.debug("Trying to copy prev fstab")
 
         new_layer_lv = self.imgbase.add_layer(new_base)
