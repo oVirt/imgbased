@@ -1,8 +1,10 @@
 [Unit]
 Description=Reconfigure vdsm
 Before=supervdsmd.service
+After=chronyd.service ntpd.service
 
 [Service]
+ExecStartPre=/usr/bin/sleep 2
 ExecStart=/usr/bin/vdsm-tool -v configure --force
 Type=oneshot
 RemainAfterExit=yes
