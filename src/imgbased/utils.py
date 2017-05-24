@@ -22,15 +22,19 @@
 #
 
 import functools
-import subprocess
-import os
-import logging
-import re
-import sys
 import glob
+import logging
+import os
+import re
 import shlex
+import subprocess
+import sys
+import threading
+import traceback
+
 from contextlib import contextmanager
 from collections import deque
+from Queue import Queue
 from rpmUtils.miscutils import splitFilename
 
 
@@ -227,8 +231,6 @@ class MountPoint(object):
 
 
 class mounted(object):
-    mp = None
-
     def __init__(self, source, options=None, target=None):
         self.mp = MountPoint(source, options, target)
 
@@ -1416,6 +1418,50 @@ class bcolors256(bcolors):
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+
+class ThreadRunner(threading.Thread):
+    """Simple abstraction so we can run 'bare' methods inside threads
+    and keep access to semantics for thread synchronization, which
+    using pure thread.start_new_thread() will not do
+
+    """
+
+    def __init__(self, function, *args, **kwargs):
+        self._function = function
+        self._args = args
+        self._kwargs = kwargs
+        self.__exceptions = Queue()
+        threading.Thread.__init__(self)
+
+    def run(self):
+        try:
+            self._function(*self._args, **self._kwargs)
+        except:
+            self.__exceptions.put(sys.exc_info())
+        self.__exceptions.put(None)
+
+    def _wait_exc(self):
+        return self.__exceptions.get()
+
+    def join_with_exceptions(self):
+        exc = self._wait_exc()
+
+        if exc is None:
+            return
+        else:
+            raise exc[1]
+
+
+def thread_group_handler(threads, exc=None):
+    [t.start() for t in threads]
+
+    for t in threads:
+        try:
+            t.join_with_exceptions()
+        except:
+            log.debug(traceback.print_exc())
+            sys.exit(1)
 
 
 class ExitStack(object):
