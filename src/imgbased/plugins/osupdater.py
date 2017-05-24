@@ -37,7 +37,8 @@ from ..naming import Image
 from ..volume import Volumes
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
-    find_mount_target, Motd, LvmCLI, SELinuxDomain, RpmPackage
+    find_mount_target, Motd, LvmCLI, SELinuxDomain, RpmPackage, \
+    ThreadRunner, thread_group_handler
 
 
 log = logging.getLogger(__package__)
@@ -97,17 +98,6 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     new_layer = Image.from_lv_name(new_lv.lv_name)
     previous_layer_lv = \
         imgbase._lvm_from_layer(imgbase.naming.layer_before(new_layer))
-    try:
-        # Some change in managed nodes is blapping /dev/mapper. Add it back
-        # so LVM and /dev/mapper agree
-        LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
-        remediate_etc(imgbase)
-        migrate_var(imgbase, new_lv)
-        check_nist_layout(imgbase, new_lv)
-        migrate_etc(imgbase, new_lv, previous_layer_lv)
-    except:
-        log.exception("Failed to migrate etc")
-        raise ConfigMigrationError()
 
     if not os.path.ismount("/var"):
         raise SeparateVarPartition(
@@ -115,6 +105,34 @@ def on_new_layer(imgbase, previous_lv, new_lv):
             "\nPlease check documentation for more details!"
         )
 
+    try:
+        # Some change in managed nodes is blapping /dev/mapper. Add it back
+        # so LVM and /dev/mapper agree
+        LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
+        set_thinpool_profile(imgbase, new_lv)
+
+        threads = []
+        threads.append(ThreadRunner(remediate_etc, imgbase))
+        threads.append(ThreadRunner(migrate_var, imgbase, new_lv))
+
+        thread_group_handler(threads, ConfigMigrationError)
+
+        check_nist_layout(imgbase, new_lv)
+
+        threads = []
+        threads.append(ThreadRunner(migrate_etc, imgbase, new_lv,
+                                    previous_layer_lv))
+        threads.append(ThreadRunner(migrate_root, new_lv, previous_layer_lv))
+        threads.append(ThreadRunner(relocate_var_lib_yum, new_lv))
+
+        thread_group_handler(threads)
+
+    except:
+        log.exception("Failed to migrate etc")
+        raise ConfigMigrationError()
+
+
+def thread_boot_migrator(imgbase, new_lv, previous_layer_lv):
     try:
         adjust_mounts_and_boot(imgbase, new_lv, previous_layer_lv)
     except:
@@ -173,6 +191,13 @@ def migrate_var(imgbase, new_lv):
                         shutil.copytree(newlv_path, realpath, symlinks=True)
                     else:
                         shutil.copy2(newlv_path, realpath)
+
+
+def migrate_root(new_lv, previous_lv):
+    rsync = Rsync()
+    with mounted(new_lv.path) as new_fs,\
+            mounted(previous_lv.path) as old_fs:
+        rsync.sync(old_fs.path("/root/"), new_fs.path("/root"))
 
 
 def boot_partition_validation():
@@ -400,18 +425,19 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                         old_etc + "/group"])
 
         log.info("Migrating /root")
-        rsync = Rsync()
-        rsync.sync(old_fs.path("/root/"), new_fs.path("/root"))
 
-        log.info("Syncing systemd levels")
-        fix_systemd_services(old_fs, new_fs)
-        relocate_var_lib_yum(new_fs)
+        threads = []
+        threads.append(ThreadRunner(run_rpm_perms, new_lv))
+        threads.append(ThreadRunner(fix_systemd_services, old_fs, new_fs))
+        threads.append(ThreadRunner(run_rpm_selinux_post, new_lv))
+        threads.append(ThreadRunner(relabel_selinux, new_fs))
 
-        with utils.bindmounted("/var", new_fs.path("/var")):
-            hack_rpm_permissions(new_fs)
+        # This may seem like it's in the wrong place, but grubby depends on
+        # a surprising number of values from /etc, so do it here.
+        threads.append(ThreadRunner(thread_boot_migrator, imgbase,
+                                    previous_lv, new_lv))
 
-        # run_rpm_selinux_post(new_fs)
-        relabel_selinux(new_fs)
+        thread_group_handler(threads)
 
         Motd(new_etc + "/motd").clear_motd()
 
@@ -436,6 +462,8 @@ def fix_systemd_services(old_fs, new_fs):
         if dc.subdirs:
             for d in dc.subdirs.values():
                 diff(d)
+
+    log.info("Syncing systemd levels")
 
     diff(dircmp(old_fs.target + "/etc/systemd",
                 old_fs.target + "/usr/share/factory/etc/systemd")
@@ -467,7 +495,7 @@ def relabel_selinux(new_fs):
             dom.runcon(["chroot", new_fs.path("/"), "setfiles", "-v", fc, d])
 
 
-def run_rpm_selinux_post(new_fs):
+def run_rpm_selinux_post(new_lv):
     def just_do(arg, **kwargs):
         DEVNULL = open(os.devnull, "w")
         arg = "nsenter --root=%s --wd=/ %s" % (new_fs.path("/"), arg)
@@ -481,35 +509,36 @@ def run_rpm_selinux_post(new_fs):
                                 **kwargs).communicate()
         return proc[0]
 
-    log.debug("Checking whether any %post scripts from the new image must be "
-              "run")
-    rpmdb = RpmPackageDb()
-    rpmdb.root = new_fs.path("/")
+    with mounted(new_lv.path) as new_fs:
+        log.debug("Checking whether any %post scripts from the new image must "
+                  "be run")
+        rpmdb = RpmPackageDb()
+        rpmdb.root = new_fs.path("/")
 
-    pkgs = []
-    for p in rpmdb.get_packages():
-        pkg = RpmPackage(p, rpmdb)
-        pkg.get_script_sections()
-        pkgs.append(pkg)
+        pkgs = []
+        for p in rpmdb.get_packages():
+            pkg = RpmPackage(p, rpmdb)
+            pkg.get_script_sections()
+            pkgs.append(pkg)
 
-    run_commands = []
+        run_commands = []
 
-    critical_commands = ["semodule", "semanage", "fixfiles"]
+        critical_commands = ["semodule", "semanage", "fixfiles"]
 
-    for pkg in pkgs:
-        if "postinstall" in pkg.scripts:
-            for s in pkg.scripts["postinstall"]:
-                if any([c in critical_commands for c in s.split()]):
-                    log.debug("Found a command in %s: %s", pkg, s)
-                    run_commands.append(s)
+        for pkg in pkgs:
+            if "postinstall" in pkg.scripts:
+                for s in pkg.scripts["postinstall"]:
+                    if any([c in critical_commands for c in s.split()]):
+                        log.debug("Found a command in %s: %s", pkg, s)
+                        run_commands.append(s)
 
-    with utils.bindmounted("/proc", new_fs.target + "/proc"):
-        with utils.bindmounted("/dev", new_fs.target + "/dev"):
-            for r in run_commands:
-                just_do(r)
+        with utils.bindmounted("/proc", new_fs.target + "/proc"):
+            with utils.bindmounted("/dev", new_fs.target + "/dev"):
+                for r in run_commands:
+                    just_do(r)
 
 
-def relocate_var_lib_yum(new_fs):
+def relocate_var_lib_yum(new_lv):
     path = "/var/lib/yum"
     # Check whether /var is a symlink to /usr/share, and move it if it is not
     # We could directly check this in new_fs, but this gets tricky with
@@ -520,6 +549,12 @@ def relocate_var_lib_yum(new_fs):
         os.mkdir(path)
         shutil.move(path, "/usr/share/yum")
         os.symlink("/usr/share/yum", "/var/lib/yum")
+
+
+def run_rpm_perms(new_lv):
+    with mounted(new_lv.path) as new_fs:
+        with utils.bindmounted("/var", new_fs.path("/var")):
+            hack_rpm_permissions(new_fs)
 
 
 def hack_rpm_permissions(new_fs):
