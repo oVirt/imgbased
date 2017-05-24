@@ -356,13 +356,15 @@ def findls(path):
 
 class ExternalBinary(object):
     dry = False
+    squash_output = False
 
     def call(self, *args, **kwargs):
         log.debug("Calling binary: %s %s" % (args, kwargs))
         stdout = bytes()
         if not self.dry:
             stdout = call(*args, **kwargs)
-            log.debug("Returned: %s" % stdout[0:1024])
+            if not self.squash_output:
+                log.debug("Returned: %s" % stdout[0:1024])
         return stdout.decode(errors="replace").strip()
 
     def lvs(self, args, **kwargs):
@@ -408,6 +410,7 @@ class ExternalBinary(object):
         return self.call(["augtool"] + args, **kwargs)
 
     def rpm(self, args, **kwargs):
+        self.squash_output = True
         return self.call(["rpm"] + args, **kwargs)
 
     def grub2_set_default(self, args, **kwargs):
@@ -843,6 +846,24 @@ class RpmPackageDb(PackageDb):
 
     def get_scripts(self, pkgname):
         return self._rpm("-q", "--scripts", pkgname)
+
+    def get_script_type(self, t):
+        scripts = self._rpm("-qa",
+                            "--queryformat",
+                            '%{{NAME}} @@ %{{{0}}}\\n'.format(t))
+
+        rpms = {}
+        pkg = None
+
+        for line in scripts:
+            if "@@" in line:
+                pkg, _ = line.split('@@')
+                pkg = pkg
+                rpms[pkg] = ""
+            else:
+                rpms[pkg] += "{0}\n".format(line.encode('utf-8'))
+
+        return rpms
 
 
 class RpmPackage:

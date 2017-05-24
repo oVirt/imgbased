@@ -37,8 +37,8 @@ from ..naming import Image
 from ..volume import Volumes
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
-    find_mount_target, Motd, LvmCLI, SELinuxDomain, RpmPackage, \
-    ThreadRunner, thread_group_handler
+    find_mount_target, Motd, LvmCLI, SELinuxDomain, ThreadRunner, \
+    thread_group_handler
 
 
 log = logging.getLogger(__package__)
@@ -496,6 +496,9 @@ def relabel_selinux(new_fs):
 
 
 def run_rpm_selinux_post(new_lv):
+    run_commands = []
+    critical_commands = ["semodule", "semanage", "fixfiles"]
+
     def just_do(arg, **kwargs):
         DEVNULL = open(os.devnull, "w")
         arg = "nsenter --root=%s --wd=/ %s" % (new_fs.path("/"), arg)
@@ -509,28 +512,25 @@ def run_rpm_selinux_post(new_lv):
                                 **kwargs).communicate()
         return proc[0]
 
+    def filter_selinux_commands(rpms):
+        for pkg, v in rpms.items():
+            for s in v.splitlines():
+                if any([c in critical_commands for c in s.split()]):
+                    s = s.strip()
+                    log.debug("Found a command in %s: %s", pkg, s)
+                    run_commands.append(s)
+
     with mounted(new_lv.path) as new_fs:
         log.debug("Checking whether any %post scripts from the new image must "
                   "be run")
         rpmdb = RpmPackageDb()
         rpmdb.root = new_fs.path("/")
 
-        pkgs = []
-        for p in rpmdb.get_packages():
-            pkg = RpmPackage(p, rpmdb)
-            pkg.get_script_sections()
-            pkgs.append(pkg)
+        postin = rpmdb.get_script_type('POSTIN')
+        posttrans = rpmdb.get_script_type('POSTTRANS')
 
-        run_commands = []
-
-        critical_commands = ["semodule", "semanage", "fixfiles"]
-
-        for pkg in pkgs:
-            if "postinstall" in pkg.scripts:
-                for s in pkg.scripts["postinstall"]:
-                    if any([c in critical_commands for c in s.split()]):
-                        log.debug("Found a command in %s: %s", pkg, s)
-                        run_commands.append(s)
+        filter_selinux_commands(postin)
+        filter_selinux_commands(posttrans)
 
         with utils.bindmounted("/proc", new_fs.target + "/proc"):
             with utils.bindmounted("/dev", new_fs.target + "/dev"):
