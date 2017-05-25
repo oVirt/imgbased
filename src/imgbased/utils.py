@@ -201,9 +201,13 @@ class MountPoint(object):
         self.run.call(cmd)
 
     def umount(self):
-        self.run.call(["umount", self.target])
+        self.run.call(["umount", "-l", self.target])
         if self.tmpdir:
             self.run.call(["rmdir", self.tmpdir])
+
+    def _ismount(self, path):
+        return any([l for l in File('/proc/mounts').lines() if
+                    l.split()[1] == re.sub(r'/+', '/', path)])
 
     def path(self, subpath):
         """Return the abs path to a path inside this mounted fs
