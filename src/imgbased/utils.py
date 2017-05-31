@@ -930,12 +930,12 @@ class Tar():
         pass
 
     def sync(self, source, dst):
-        default_args = ["tar", "--selinux", "--xattrs", "--acls"]
-        srccmd = default_args + ["cf", "-", "-C", source, "."]
+        default_args = ["--selinux", "--xattrs", "--acls"]
+        srccmd = ["tar", "cf", "-"] + default_args + ["-C", source, "."]
         log.debug("Calling binary: %s" % srccmd)
         src = subprocess.Popen(srccmd, stdout=subprocess.PIPE)
 
-        dstcmd = default_args + ["xBf", "-", "-C", dst]
+        dstcmd = ["tar", "xBf", "-"] + default_args + ["-C", dst]
         log.debug("Calling binary: %s" % dstcmd)
         dstproc = subprocess.Popen(dstcmd, stdin=src.stdout)
         dstproc.communicate()
