@@ -106,6 +106,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Wed May 31 2017 Ryan Barry <rbarry@redhat.com> - 0.9.29-0
+- Remove references to setting LVM thinpool profile
+
 * Thu May 25 2017 Ryan Barry <rbarry@redhat.com> - 0.9.28-0
 - Delay imgbased-config-vdsm until after chronyd/ntpd
 - Thread operations in osupdater to speed it up

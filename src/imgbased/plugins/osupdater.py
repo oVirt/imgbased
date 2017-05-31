@@ -109,7 +109,6 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         # Some change in managed nodes is blapping /dev/mapper. Add it back
         # so LVM and /dev/mapper agree
         LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
-        set_thinpool_profile(imgbase, new_lv)
 
         threads = []
         threads.append(ThreadRunner(remediate_etc, imgbase))
