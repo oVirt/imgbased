@@ -450,7 +450,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         # This may seem like it's in the wrong place, but grubby depends on
         # a surprising number of values from /etc, so do it here.
         threads.append(ThreadRunner(thread_boot_migrator, imgbase,
-                                    previous_lv, new_lv))
+                                    new_lv, previous_lv))
 
         thread_group_handler(threads)
 
