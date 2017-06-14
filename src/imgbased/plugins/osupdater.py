@@ -594,7 +594,9 @@ def hack_rpm_permissions(new_fs):
     incorrect_paths = {"paths": [],
                        "verb": "--setperms"
                        }
-    for line in just_do(["rpm", "--verify", "-qa"]).splitlines():
+    for line in just_do(["rpm", "--verify", "-qa", "--nodeps", "--nodigest",
+                         "--nofiledigest", "--noscripts",
+                         "--nosignature"]).splitlines():
         _mode, _path = (line[0:13], line[13:])
         if _mode[1] == "M":
             incorrect_paths["paths"].append(_path)
