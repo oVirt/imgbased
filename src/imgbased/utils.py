@@ -329,7 +329,7 @@ class Filesystem():
 class Ext4(Filesystem):
     @staticmethod
     def mkfs(path, debug=False):
-        cmd = ["mkfs.ext4", "-c", "-E", "discard", path]
+        cmd = ["mkfs.ext4", "-E", "discard", path]
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
