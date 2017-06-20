@@ -30,6 +30,7 @@ import shutil
 import subprocess
 
 from filecmp import dircmp
+from tempfile import mkdtemp
 
 from .. import bootloader, utils
 from ..lvm import LVM
@@ -182,11 +183,24 @@ def check_nist_layout(imgbase, new_lv):
 
     with mounted(new_lv.path) as new_fs:
         if to_create:
+            # lvm.conf has a breaking change in 7.4.
+            # work around it
+            config_path = mkdtemp()
+
+            lvm_config_path = "/etc/lvm/lvm.conf"
+
+            original_config = "{}/lvm.conf".format(config_path)
+            new_config = "{}/lvm.conf.new".format(config_path)
+
+            shutil.copy2(lvm_config_path, original_config)
             with utils.bindmounted(new_fs.path("/etc"), "/etc"):
+                shutil.copy2("/etc/lvm/lvm.conf", new_config)
+                shutil.copy2(original_config, lvm_config_path)
                 v = Volumes(imgbase)
                 for t in to_create:
                     log.debug("Creating %s as %s" % (t, paths[t]))
                     v.create(t, paths[t]["size"], paths[t]["attach"])
+                shutil.copy2(new_config, lvm_config_path)
 
 
 def migrate_var(imgbase, new_lv):
