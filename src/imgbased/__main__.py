@@ -22,6 +22,7 @@
 #
 
 import logging
+import os
 import sys
 from . import CliApplication
 
@@ -29,6 +30,7 @@ log = logging.getLogger()
 
 
 if __name__ == '__main__':
+    os.environ.update({"LC_ALL": "C", "LANG": "C"})
     lvl = logging.DEBUG if "--debug" in sys.argv else logging.INFO
     fmt = "%(asctime)s [%(levelname)s] %(message)s"
 
