@@ -90,7 +90,7 @@ def install_rpms(new_fs):
     # set up a local repo and `yum -y localinstall foo bar quux`, with
     # the deps autoresolving
     def install(args):
-        cmd = ["nsenter", "--root=" + new_fs.path("/"), "--wd=/"] + args
+        cmd = ["systemd-nspawn", "-D", new_fs.path("/")] + args
         log.debug("Running %s" % cmd)
         try:
             subprocess.check_output(cmd, stderr=subprocess.STDOUT)
