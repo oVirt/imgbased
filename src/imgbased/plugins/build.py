@@ -138,7 +138,7 @@ def disable_and_clean_yum_repos():
                          "{ s/enabled=.*/enabled=1/ }", fn])
 
     log.info("Clean all yum data")
-    subprocess.call(["yum", "clean", "all"])
+    subprocess.call(["yum", "clean", "all", "--enablerepo", "*"])
 
 
 @Postprocessor.add_step
