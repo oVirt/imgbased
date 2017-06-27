@@ -106,6 +106,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Tue Jun 27 2017 Ryan Barry <rbarry@redhat.com> - 0.9.33-0
+- Always use a fixed locale for imgbased updates
+
 * Thu Jun 22 2017 Ryan Barry <rbarry@redhat.com> - 0.9.32-0
 - Work around lvm.conf changes in 7.4 when bind mounting /etc during updates
 
