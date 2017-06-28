@@ -510,7 +510,8 @@ def relabel_selinux(new_fs):
 
 def run_rpm_selinux_post(new_lv):
     run_commands = []
-    critical_commands = ["semodule", "semanage", "fixfiles"]
+    critical_commands = ["restorecon", "semodule", "semanage", "fixfiles",
+                         "chcon"]
 
     def just_do(arg, **kwargs):
         DEVNULL = open(os.devnull, "w")
@@ -531,6 +532,7 @@ def run_rpm_selinux_post(new_lv):
                 if any([c in critical_commands for c in s.split()]):
                     s = s.strip()
                     log.debug("Found a command in %s: %s", pkg, s)
+                    s = "bash -c '{}'".format(s)
                     run_commands.append(s)
 
     with mounted(new_lv.path) as new_fs:
