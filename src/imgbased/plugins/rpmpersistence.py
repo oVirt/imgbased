@@ -99,5 +99,5 @@ def install_rpms(new_fs):
             log.info("Result: " + e.output)
 
     rpms = glob.glob("/var/imgbased/persisted-rpms/*.rpm")
-
-    install(['rpm', '-Uvh'] + rpms)
+    if rpms:
+        install(['rpm', '-Uvh'] + rpms)
