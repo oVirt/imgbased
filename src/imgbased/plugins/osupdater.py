@@ -878,7 +878,8 @@ def remove_boot(imgbase, lv_fullname):
     loader.remove_entry(lv_name)
 
     assert bootdir.strip("/") != "boot"
-    log.debug("Removing kernel dir: %s" % bootdir)
-    shutil.rmtree(bootdir)
+    if os.path.exists(bootdir):
+        log.debug("Removing kernel dir: %s" % bootdir)
+        shutil.rmtree(bootdir)
 
 # vim: sw=4 et sts=4:

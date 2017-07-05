@@ -234,10 +234,11 @@ class Grubby(Bootloader):
         return key
 
     def remove_entry(self, key):
-        entry = self._get_valid_entries()[key]
-        log.debug("Removing boot entry: %s" % entry.title)
-        log.info("Removing boot entry: %s" % entry.title)
-        grubby("--remove-kernel", entry.kernel)
+        entry = self._get_valid_entries().get(key)
+        if entry:
+            log.debug("Removing boot entry: %s" % entry.title)
+            log.info("Removing boot entry: %s" % entry.title)
+            grubby("--remove-kernel", entry.kernel)
 
     def set_default(self, key):
         entry = self._get_valid_entries()[key]
