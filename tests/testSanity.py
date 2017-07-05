@@ -177,6 +177,7 @@ class BaseVerbTestCase(CliTestCase):
 class UpdateVerbTestCase(CliTestCase):
     def test_update(self):
         with patch("imgbased.plugins.update.LiveimgExtractor.extract") as mock:
+            mock.return_value = ("Image-1.0-0", "Image-2.0-0")
             self.cli("--debug", "update", "/my/file")
             mock.assert_called_with("/my/file")
 

@@ -353,7 +353,7 @@ class Image(object):
         return name
 
     def __hash__(self):
-        return hash(repr(self))
+        return hash(self.nvr)
 
     def __cmp__(self, other):
         return cmp(self.nvr, other.nvr)
