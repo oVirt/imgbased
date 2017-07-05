@@ -53,12 +53,10 @@ def post_argparse(app, args):
 
     elif args.command == "update":
         if args.format == "liveimg":
-            LiveimgExtractor(app.imgbase)\
-                .extract(args.FILENAME)
+            base_lv, _ = LiveimgExtractor(app.imgbase).extract(args.FILENAME)
             log.info("Update was pulled successfully")
-
             keep = app.imgbase.config.section("update").images_to_keep
-            GarbageCollector(app.imgbase).run(keep=keep)
+            GarbageCollector(app.imgbase).run(base_lv, keep)
         else:
             log.error("Unknown update format %r" % args.format)
 
@@ -84,6 +82,7 @@ class LiveimgExtractor():
         new_base = self.imgbase.add_base(size,
                                          nvr,
                                          lvs)
+
         new_base_lv = self.imgbase._lvm_from_layer(new_base)
 
         with new_base_lv.unprotected():
@@ -174,7 +173,7 @@ class GarbageCollector():
     def __init__(self, imgbase):
         self.imgbase = imgbase
 
-    def run(self, keep):
+    def run(self, new_base_lv, keep):
         log.info("Starting garbage collection")
 
         assert keep > 0
@@ -186,7 +185,9 @@ class GarbageCollector():
             return
 
         current_layer = self.imgbase.current_layer()
-        remove_bases = self._filter_candidates(bases, current_layer.base, keep)
+        new_base = Image.from_lv_name(new_base_lv.lv_name)
+        remove_bases = self._filter_candidates(bases, current_layer.base,
+                                               new_base, keep)
 
         for base in remove_bases:
             log.info("Freeing %s" % base)
@@ -194,40 +195,37 @@ class GarbageCollector():
 
         log.info("Garbage collection done.")
 
-    def _filter_candidates(self, bases, current_layer_base, keep):
+    def _filter_candidates(self, bases, current_layer_base, new_base, keep):
         """
 
         >>> gc = GarbageCollector(None)
         >>> bases = [1, 2, 3]
         >>> keep = 2
+        >>> new_base = 3
 
         >>> cur = 1
-        >>> gc._filter_candidates(bases, cur, keep)
-        []
+        >>> gc._filter_candidates(bases, cur, new_base, keep)
+        [2]
 
         >>> cur = 2
-        >>> gc._filter_candidates(bases, cur, keep)
+        >>> gc._filter_candidates(bases, cur, new_base, keep)
         [1]
 
         >>> cur = 3
-        >>> gc._filter_candidates(bases, cur, keep)
+        >>> gc._filter_candidates(bases, cur, new_base, keep)
         [1]
 
         """
-        bases_to_keep = bases[-keep:]
-        bases_to_free = bases[:-keep]
+        bases_to_keep = {current_layer_base, new_base}
+        keep_extra = keep - len(bases_to_keep)
+        if keep_extra > 0:
+            extra_bases = sorted(set(bases) - bases_to_keep)
+            bases_to_keep.update(extra_bases[-keep_extra:])
+        bases_to_free = [b for b in bases if b not in bases_to_keep]
 
         log.debug("Keeping bases: %s" % bases_to_keep)
         log.debug("Freeing bases: %s" % bases_to_free)
 
-        remove_bases = []
-
-        for base in bases_to_free:
-            if base == current_layer_base:
-                log.info("Not freeing %s, because it is in use" % base)
-                continue
-            remove_bases.append(base)
-
-        return remove_bases
+        return bases_to_free
 
 # vim: sw=4 et sts=4:
