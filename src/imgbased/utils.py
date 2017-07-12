@@ -1453,7 +1453,7 @@ class ThreadRunner(threading.Thread):
         self._args = args
         self._kwargs = kwargs
         self.__exceptions = Queue()
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name=self._function.func_name)
 
     def run(self):
         try:

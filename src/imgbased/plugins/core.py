@@ -161,7 +161,8 @@ def post_argparse(app, args):
 
     elif args.command == "w":
         msg = "You are on %s" % app.imgbase.current_layer()
-        log.info(msg)
+        log.debug(msg)
+        print(msg)
 
     if args.command == "layout":
         layout = Layout(app)
