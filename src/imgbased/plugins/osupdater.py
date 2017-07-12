@@ -459,7 +459,6 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         threads.append(ThreadRunner(run_rpm_perms, new_lv))
         threads.append(ThreadRunner(fix_systemd_services, old_fs, new_fs))
         threads.append(ThreadRunner(run_rpm_selinux_post, new_lv))
-        threads.append(ThreadRunner(relabel_selinux, new_fs))
 
         # This may seem like it's in the wrong place, but grubby depends on
         # a surprising number of values from /etc, so do it here.
@@ -467,6 +466,10 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                                     new_lv, previous_lv))
 
         thread_group_handler(threads)
+
+        # This needs to be called after calling the selinux post install
+        # scripts in case someone added a file context and needs a relabeling
+        relabel_selinux(new_fs)
 
         Motd(new_etc + "/motd").clear_motd()
 
@@ -511,17 +514,20 @@ def fix_systemd_services(old_fs, new_fs):
 
 
 def relabel_selinux(new_fs):
-    fc = "/etc/selinux/targeted/contexts/files/file_contexts"
-
-    if not os.path.exists(new_fs.path("/") + fc):
-        log.debug("{} not found in new fs, not relabeling".format(fc))
-        return
+    ctx_files = ["/etc/selinux/targeted/contexts/files/file_contexts",
+                 "/etc/selinux/targeted/contexts/files/file_contexts.homedirs",
+                 "/etc/selinux/targeted/contexts/files/file_contexts.local"]
 
     dirs = ["/etc", "/var", "/usr/libexec", "/usr/bin", "/usr/sbin"]
 
+    new_root = new_fs.path("/")
+
     with SELinuxDomain("setfiles_t") as dom:
-        for d in dirs:
-            dom.runcon(["chroot", new_fs.path("/"), "setfiles", "-v", fc, d])
+        for fc in ctx_files:
+            if os.path.exists(new_root + "/" + fc):
+                dom.runcon(["chroot", new_root, "setfiles", "-v", fc] + dirs)
+            else:
+                log.debug("{} not found in new fs, skipping".format(fc))
 
 
 def run_rpm_selinux_post(new_lv):
