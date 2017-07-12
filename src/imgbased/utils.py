@@ -207,7 +207,7 @@ class MountPoint(object):
         self.run.call(cmd)
 
     def umount(self):
-        self.run.call(["umount", "-l", self.target])
+        self.run.call(["umount", self.target])
         if self.tmpdir:
             self.run.call(["rmdir", self.tmpdir])
 
@@ -239,7 +239,7 @@ class mounted(object):
 
 @contextmanager
 def bindmounted(source, target):
-    with mounted(source, target=target, options="bind") as mnt:
+    with mounted(source, target=target, options="bind,private") as mnt:
         yield mnt
 
 
