@@ -528,12 +528,9 @@ def run_rpm_selinux_post(new_lv):
 
     def filter_selinux_commands(rpms):
         for pkg, v in rpms.items():
-            for s in v.splitlines():
-                if any([c in critical_commands for c in s.split()]):
-                    s = s.strip()
-                    log.debug("Found a command in %s: %s", pkg, s)
-                    s = "bash -c '{}'".format(s)
-                    run_commands.append(s)
+            if any([c for c in critical_commands if c in v]):
+                log.debug("Found a critical command in %s", pkg)
+                run_commands.append("bash -c '{}'".format(v))
 
     with mounted(new_lv.path) as new_fs:
         log.debug("Checking whether any %post scripts from the new image must "
