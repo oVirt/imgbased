@@ -113,10 +113,11 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         threads.append(ThreadRunner(relocate_var_lib_yum, new_lv))
 
         thread_group_handler(threads)
-
     except:
         log.exception("Failed to migrate etc")
         raise ConfigMigrationError()
+
+    thread_boot_migrator(imgbase, new_lv, previous_layer_lv)
 
 
 def thread_boot_migrator(imgbase, new_lv, previous_layer_lv):
@@ -445,11 +446,6 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         threads.append(ThreadRunner(run_rpm_perms, new_lv))
         threads.append(ThreadRunner(fix_systemd_services, old_fs, new_fs))
         threads.append(ThreadRunner(run_rpm_selinux_post, new_lv))
-
-        # This may seem like it's in the wrong place, but grubby depends on
-        # a surprising number of values from /etc, so do it here.
-        threads.append(ThreadRunner(thread_boot_migrator, imgbase,
-                                    new_lv, previous_lv))
 
         thread_group_handler(threads)
 
