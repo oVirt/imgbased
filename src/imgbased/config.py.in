@@ -30,6 +30,8 @@ def version():
 
 paths = {"/var":           {"size":   "15G",
                             "attach": True},
+         "/var/crash":     {"size":   "10G",
+                            "attach": True},
          "/var/log":       {"size":   "8G",
                             "attach": True},
          "/var/log/audit": {"size":   "2G",
