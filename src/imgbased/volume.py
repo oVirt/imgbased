@@ -30,17 +30,17 @@ WantedBy=local-fs.target
 
     def volumes(self):
         lvs = LVM.LV.find_by_tag(self.tag_volume)
-        return ["/" + lv.lv_name.replace("-", "/").replace("//", "-")
+        return ["/" + lv.lv_name.replace("_", "/").replace("--", "-")
                 for lv in lvs]
 
     def is_volume(self, where):
         return where.rstrip("/") in self.volumes()
 
     def _volname(self, where):
-        return where.strip("/").replace("-", "--").replace("/", "-")
+        return where.strip("/").replace("-", "--").replace("/", "_")
 
     def _mountfile(self, where, unittype="mount"):
-        safewhere = self._volname(where)
+        safewhere = self._volname(where).replace("_", "-")
         return File("/etc/systemd/system/%s.%s" % (safewhere, unittype))
 
     def create(self, where, size, attach_now=True):
