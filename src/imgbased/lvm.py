@@ -308,9 +308,15 @@ class LVM(object):
                     "-o", "metadata_percent,lv_metadata_size", self.lvm_name]
             return map(float, LVM._lvs(args).split())
 
-        def _resize_metadata(self, size_mb):
-            args = ["--poolmetadatasize", "{}M".format(size_mb), self.lvm_name]
-            LVM._lvextend(args)
+        def _resize_metadata(self, x_size_mb):
+            free = float(LVM._vgs(["--noheading", "--nosuffix", "-o", "free",
+                                   "--units", "m", self.vg_name]))
+            if x_size_mb <= free:
+                args = ["--poolmetadatasize", "+{}m".format(x_size_mb),
+                        self.lvm_name]
+                LVM._lvextend(args)
+            else:
+                log.warn("Not resizing metadata: %s > %s", x_size_mb, free)
 
         def check_metadata_size(self, resize=False):
             min_size_mb = 1024
@@ -318,9 +324,10 @@ class LVM(object):
             log.debug("Pool: %s, metadata size=%sM (%s%%)" % (self.lvm_name,
                                                               meta_sz,
                                                               meta_pct))
-            if meta_sz < min_size_mb:
+            x_size_mb = min_size_mb - meta_sz
+            if x_size_mb > 0:
                 if resize:
-                    self._resize_metadata(min_size_mb)
+                    self._resize_metadata(x_size_mb)
                 else:
                     raise ThinPoolMetadataError("Thinpool metadata too small")
 
