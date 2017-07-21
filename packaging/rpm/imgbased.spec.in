@@ -106,6 +106,10 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Fri Jul 21 2017 Ryan Barry <rbarry@redhat.com> - 0.9.34-0
+- Make sure NIST partitions have discard
+- Only try to extend the metadata size if there is enough reserved space
+
 * Tue Jun 27 2017 Ryan Barry <rbarry@redhat.com> - 0.9.33-0
 - Always use a fixed locale for imgbased updates
 
