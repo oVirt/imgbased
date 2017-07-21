@@ -33,6 +33,7 @@ from filecmp import dircmp
 from tempfile import mkdtemp
 
 from .. import bootloader, utils
+from ..config import paths
 from ..lvm import LVM
 from ..volume import Volumes
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
@@ -42,18 +43,6 @@ from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
 
 
 log = logging.getLogger(__package__)
-
-paths = {"/var":           {"size":   "15G",
-                            "attach": True},
-         "/var/log":       {"size":   "8G",
-                            "attach": True},
-         "/var/log/audit": {"size":   "2G",
-                            "attach": True},
-         "/home":          {"size":   "1G",
-                            "attach": True},
-         "/tmp":           {"size":   "1G",
-                            "attach": False},
-         }
 
 
 class SeparateVarPartition(Exception):
@@ -678,11 +667,31 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
         # Ensure that discard is used
         # This can also be done in anaconda once it is fixed
-        for tgt in ["/", "/var"]:
-            e = newfstab.by_target(tgt)
-            if "discard" not in e.options:
-                e.options += ["discard"]
-                newfstab.update(e)
+        for tgt in paths.keys():
+            try:
+                e = newfstab.by_target(tgt)
+                if "discard" not in e.options:
+                    e.options += ["discard"]
+                    newfstab.update(e)
+            except KeyError:
+                # Created with imgbased.volume?
+                log.debug("{} not found in /etc/fstab. "
+                          "ot created by Anaconda".format(tgt))
+                from ConfigParser import ConfigParser
+                from io import BytesIO
+                c = ConfigParser()
+
+                sub = re.sub(r'^/', '', tgt)
+                sub = re.sub(r'/', '-', sub)
+                fname = "{}/etc/systemd/system/{}.mount".format(newroot, sub)
+                c.readfp(BytesIO(File(fname).contents))
+
+                if 'discard' not in c.get('Mount', 'options'):
+                    c.set('Mount', 'Options',
+                          ','.join([c.get('Mount', 'options'), 'foo']))
+
+                with open(fname, 'wb') as mountfile:
+                    c.write(mountfile)
 
     def update_grub_default(newroot):
         defgrub = ShellVarFile("%s/etc/default/grub" % newroot)

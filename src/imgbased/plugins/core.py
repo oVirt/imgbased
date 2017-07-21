@@ -23,7 +23,10 @@
 import os
 import logging
 import inspect
-from ..utils import BuildMetadata, Fstab, Motd, bcolors
+import re
+
+from ..config import paths
+from ..utils import BuildMetadata, File, Fstab, Motd, bcolors
 from ..naming import Image
 from ..lvm import LVM
 from ..bootloader import BootConfiguration
@@ -429,9 +432,27 @@ class Health():
             if not os.path.ismount("/var"):
                 return False
             fstab = Fstab("/etc/fstab")
-            is_ok = all("discard" in e.options for e in
-                        [fstab.by_target("/"),
-                         fstab.by_target("/var")])
+
+            discards = []
+
+            for tgt in paths.keys():
+                try:
+                    ret = "discard" in fstab.by_target(tgt).options
+                    discards.append(ret)
+                except KeyError:
+                    from ConfigParser import ConfigParser
+                    from io import BytesIO
+                    c = ConfigParser()
+
+                    sub = re.sub(r'^/', '', tgt)
+                    sub = re.sub(r'/', '-', tgt)
+                    fname = "/etc/systemd/system/{}.mount".format(sub)
+
+                    if os.path.exists(fname):
+                        c.readfp(BytesIO(File(fname).contents))
+                        ret = "discard" in c.get('Mount', 'options')
+                        discards.append(ret)
+            is_ok = all(discards)
             return is_ok
 
         group.checks = [
