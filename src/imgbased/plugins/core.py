@@ -436,6 +436,7 @@ class Health():
                     from ConfigParser import ConfigParser
                     from io import BytesIO
                     c = ConfigParser()
+                    c.optionxform = str
 
                     sub = re.sub(r'^/', '', tgt)
                     sub = re.sub(r'/', '-', tgt)
@@ -443,7 +444,7 @@ class Health():
 
                     if os.path.exists(fname):
                         c.readfp(BytesIO(File(fname).contents))
-                        ret = "discard" in c.get('Mount', 'options')
+                        ret = "discard" in c.get('Mount', 'Options')
                         discards.append(ret)
             is_ok = all(discards)
             return is_ok

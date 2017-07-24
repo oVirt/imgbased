@@ -659,15 +659,16 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 from ConfigParser import ConfigParser
                 from io import BytesIO
                 c = ConfigParser()
+                c.optionxform = str
 
                 sub = re.sub(r'^/', '', tgt)
                 sub = re.sub(r'/', '-', sub)
                 fname = "{}/etc/systemd/system/{}.mount".format(newroot, sub)
                 c.readfp(BytesIO(File(fname).contents))
 
-                if 'discard' not in c.get('Mount', 'options'):
+                if 'discard' not in c.get('Mount', 'Options'):
                     c.set('Mount', 'Options',
-                          ','.join([c.get('Mount', 'options'), 'foo']))
+                          ','.join([c.get('Mount', 'Options'), 'discard']))
 
                 with open(fname, 'wb') as mountfile:
                     c.write(mountfile)
