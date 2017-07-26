@@ -435,7 +435,8 @@ class Health():
 
             discards = []
 
-            for tgt in paths.keys():
+            targets = paths.keys() + ["/"]
+            for tgt in targets:
                 try:
                     ret = "discard" in fstab.by_target(tgt).options
                     discards.append(ret)
