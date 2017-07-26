@@ -642,7 +642,8 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
         # Ensure that discard is used
         # This can also be done in anaconda once it is fixed
-        for tgt in paths.keys():
+        targets = paths.keys() + ["/"]
+        for tgt in targets:
             try:
                 e = newfstab.by_target(tgt)
                 if "discard" not in e.options:
