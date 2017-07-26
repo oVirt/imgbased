@@ -12,10 +12,4 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-if [[ -d "src/imgbased" ]]; then
-  echo "Enabling in-tree mode ($PYTHON)" >&2
-  export PYTHONPATH="$PWD/src"
-  export PYTHONDONTWRITEBYTECODE=x
-fi
-
 $PYTHON -m imgbased.__main__ $@
