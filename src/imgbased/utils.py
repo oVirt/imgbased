@@ -216,7 +216,7 @@ class MountPoint(object):
         self.run.call(cmd)
 
     def umount(self):
-        self.run.call(["umount", self.target])
+        self.run.call(["umount", "-l", self.target])
         if self.tmpdir:
             self.run.call(["rmdir", self.tmpdir])
 
@@ -436,7 +436,7 @@ class ExternalBinary(object):
         return self.call(["pkill"] + args, **kwargs)
 
     def umount(self, args, **kwargs):
-        return self.call(["umount"] + args, **kwargs)
+        return self.call(["umount", "-l"] + args, **kwargs)
 
     def semanage(self, args, **kwargs):
         return self.call(["semanage"] + args, **kwargs)
