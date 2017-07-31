@@ -329,6 +329,7 @@ def remediate_etc(imgbase):
                     r.sync(m.path("/etc"), n.path("/etc"))
 
                     check_layers(m, n)
+                    fix_systemd_services(m, n)
 
 
 def migrate_etc(imgbase, new_lv, previous_lv):
@@ -476,12 +477,28 @@ def fix_systemd_services(old_fs, new_fs):
 
     for d in diffs:
         log.debug("Removing %s" % d)
+        filename = os.path.basename(d)
         try:
             if os.path.exists(new_fs.path("/") + d):
                 if os.path.isdir(new_fs.path("/") + d):
                     remove_file(new_fs.path("/") + d, dir=True)
                 elif os.path.isfile(new_fs.path("/") + d):
                     remove_file(new_fs.path("/") + d)
+
+            # EL updates can move some of these around. Firewalld goes from
+            # basic.target.wants to multiuser.target.wants in 7.4. Check the
+            # entire tree
+            for root, dirs, files in os.walk(new_fs.path("/etc/systemd")):
+                for d in dirs:
+                    if d == filename:
+                        log.debug("Found a disabled systemd service "
+                                  "elsewhere. Removing it: %s" % filename)
+                        remove_file(os.path.join(root, d), dir=True)
+                for f in files:
+                    if f == filename:
+                        log.debug("Found a disabled systemd service "
+                                  "elsewhere. Removing it: %s" % filename)
+                        remove_file(os.path.join(root, f))
         except:
             log.exception("Could not remove %s. Is it a read-only layer?")
 
