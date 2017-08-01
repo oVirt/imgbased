@@ -521,17 +521,33 @@ def relabel_selinux(new_fs):
                  "/etc/selinux/targeted/contexts/files/file_contexts.homedirs",
                  "/etc/selinux/targeted/contexts/files/file_contexts.local"]
 
-    dirs = ["/etc", "/var", "/usr/libexec", "/usr/bin", "/usr/sbin"]
+    dirs = ["/etc",
+            "/usr/bin",
+            "/usr/bin",
+            "/usr/sbin",
+            "/usr/share",
+            "/var"]
+
+    exclude_dirs = ["/usr/share/factory"]
+
+    # Reduce the list to something subprocess can use directly
+    excludes = sum([["-e", d] for d in exclude_dirs], [])
 
     new_root = new_fs.path("/")
 
+    log.debug("Relabeling selinux")
+
     with SELinuxDomain("setfiles_t") as dom:
-        for fc in ctx_files:
-            if os.path.exists(new_root + "/" + fc):
-                dom.runcon(["setfiles", "-v", "-r", new_fs.path("/"),
-                            fc, new_fs.path("/") + dirs])
-            else:
-                log.debug("{} not found in new fs, skipping".format(fc))
+        with utils.bindmounted("/var", target=new_fs.path("/") + "/var",
+                               rbind=True):
+            for fc in ctx_files:
+                if os.path.exists(new_root + "/" + fc):
+                    dom.runcon(["setfiles", "-v", "-r", new_fs.path("/"),
+                                fc] +
+                               excludes +
+                               dirs)
+                else:
+                    log.debug("{} not found in new fs, skipping".format(fc))
 
 
 def run_rpm_selinux_post(new_lv):

@@ -449,6 +449,7 @@ class ExternalBinary(object):
 
     def lvmconfig(self, args, **kwargs):
         return self.call(["lvmconfig"] + args, **kwargs)
+
     def mount(self, args, **kwargs):
         return self.call(["mount"] + args, **kwargs)
 
