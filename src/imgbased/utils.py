@@ -437,6 +437,9 @@ class ExternalBinary(object):
     def runcon(self, args, **kwargs):
         return self.call(["runcon"] + args, **kwargs)
 
+    def lvmconfig(self, args, **kwargs):
+        return self.call(["lvmconfig"] + args, **kwargs)
+
     def mount(self, args, **kwargs):
         return self.call(["mount"] + args, **kwargs)
 
