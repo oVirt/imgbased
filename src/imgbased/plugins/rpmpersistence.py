@@ -21,6 +21,8 @@
 # Author(s): Ryan Barry <rbarry@redhat.com>
 #
 
+import os
+import uuid
 import logging
 import glob
 import subprocess
@@ -90,7 +92,8 @@ def install_rpms(new_fs):
     # set up a local repo and `yum -y localinstall foo bar quux`, with
     # the deps autoresolving
     def install(args):
-        cmd = ["systemd-nspawn", "-D", new_fs.path("/")] + args
+        nsid = str(uuid.uuid4()).replace("-", "")
+        cmd = ["systemd-nspawn", "--uuid", nsid, "-D", new_fs.path("/")] + args
         log.debug("Running %s" % cmd)
         try:
             subprocess.check_output(cmd, stderr=subprocess.STDOUT)
@@ -100,4 +103,8 @@ def install_rpms(new_fs):
 
     rpms = glob.glob("/var/imgbased/persisted-rpms/*.rpm")
     if rpms:
+        machine_id = new_fs.path("/etc") + "/machine-id"
+        backup = machine_id + ".bak"
+        os.rename(machine_id, backup)
         install(['rpm', '-Uvh'] + rpms)
+        os.rename(backup, machine_id)
