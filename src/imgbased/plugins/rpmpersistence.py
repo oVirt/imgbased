@@ -28,7 +28,7 @@ import glob
 import subprocess
 
 from .. import utils
-from ..utils import mounted, SystemRelease
+from ..utils import mounted, SystemRelease, SELinuxDomain
 
 
 log = logging.getLogger(__package__)
@@ -106,5 +106,6 @@ def install_rpms(new_fs):
         machine_id = new_fs.path("/etc") + "/machine-id"
         backup = machine_id + ".bak"
         os.rename(machine_id, backup)
-        install(['rpm', '-Uvh'] + rpms)
+        with SELinuxDomain("systemd_machined_t"):
+            install(['rpm', '-Uvh'] + rpms)
         os.rename(backup, machine_id)
