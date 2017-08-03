@@ -507,7 +507,8 @@ def relabel_selinux(new_fs):
     with SELinuxDomain("setfiles_t") as dom:
         for fc in ctx_files:
             if os.path.exists(new_root + "/" + fc):
-                dom.runcon(["chroot", new_root, "setfiles", "-v", fc] + dirs)
+                dom.runcon(["setfiles", "-v", "-r", new_fs.path("/"),
+                            fc, new_fs.path("/") + dirs])
             else:
                 log.debug("{} not found in new fs, skipping".format(fc))
 
