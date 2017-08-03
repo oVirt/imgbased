@@ -490,7 +490,8 @@ def relabel_selinux(new_fs):
 
     with SELinuxDomain("setfiles_t") as dom:
         for d in dirs:
-            dom.runcon(["chroot", new_fs.path("/"), "setfiles", "-v", fc, d])
+            dom.runcon(["setfiles", "-v", "-r", new_fs.path("/"),
+                        fc, new_fs.path("/") + dirs])
 
 
 def run_rpm_selinux_post(new_lv):

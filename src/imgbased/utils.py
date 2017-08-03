@@ -924,6 +924,10 @@ class systemctl():
     def daemon_reload():
         systemctl._systemctl("daemon-reload")
 
+    @staticmethod
+    def status(*units):
+        systemctl._systemctl("status", *units)
+
 
 class Tar():
     def __init__(self):
