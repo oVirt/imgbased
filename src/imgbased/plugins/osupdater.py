@@ -535,11 +535,11 @@ def run_rpm_selinux_post(new_lv):
                                 **kwargs).communicate()
         return proc[0]
 
-    def filter_selinux_commands(rpms):
+    def filter_selinux_commands(rpms, scr_arg):
         for pkg, v in rpms.items():
             if any([c for c in critical_commands if c in v]):
                 log.debug("Found a critical command in %s", pkg)
-                run_commands.append("bash -c '{}'".format(v))
+                run_commands.append("bash -c '{}' -- {}".format(v, scr_arg))
 
     with mounted(new_lv.path) as new_fs:
         log.debug("Checking whether any %post scripts from the new image must "
@@ -550,8 +550,8 @@ def run_rpm_selinux_post(new_lv):
         postin = rpmdb.get_script_type('POSTIN')
         posttrans = rpmdb.get_script_type('POSTTRANS')
 
-        filter_selinux_commands(postin)
-        filter_selinux_commands(posttrans)
+        filter_selinux_commands(postin, 1)
+        filter_selinux_commands(posttrans, 0)
 
         with utils.bindmounted("/proc", new_fs.target + "/proc"):
             with utils.bindmounted("/dev", new_fs.target + "/dev"):
