@@ -1,0 +1,12 @@
+[Unit]
+Description=Reconfigure vdsm
+After=chronyd.service ntpd.service
+ConditionPathExists=/.imgbased-firstboot
+
+[Service]
+ExecStart=/usr/sbin/imgbase --debug firstboot --configure
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
