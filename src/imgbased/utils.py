@@ -863,9 +863,10 @@ class RpmPackageDb(PackageDb):
 
         for line in scripts:
             if "@@" in line:
-                pkg, _ = line.split('@@')
-                pkg = pkg
+                pkg, begin = [x.strip() for x in line.split('@@')]
                 rpms[pkg] = ""
+                if begin != "(none)":
+                    rpms[pkg] = "{0}\n".format(begin.encode('utf-8'))
             else:
                 rpms[pkg] += "{0}\n".format(line.encode('utf-8'))
 
