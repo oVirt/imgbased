@@ -107,6 +107,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Mon Aug 07 2017 Ryan Barry <rbarry@redhat.com> - 0.9.40-0
+- Move selinux handling to a systemd service which runs after boot
+
 * Fri Aug 04 2017 Ryan Barry <rbarry@redhat.com> - 0.9.39-0
 - Add --xattrs-enable=* to untarring so suid bits get set
 - Use the root redirection in setfiles instead of a chroot
