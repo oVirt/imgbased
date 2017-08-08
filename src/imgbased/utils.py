@@ -950,11 +950,10 @@ class Tar():
 class Rsync():
     checksum_only = False
     existing = False
-    exclude = None
     update_only = False
 
-    def __init__(self, checksum_only=False, update_only=False):
-        self.exclude = ["mnt.*/*"]
+    def __init__(self, checksum_only=False, update_only=False, exclude=[]):
+        self.exclude = ["mnt.*/*"] + exclude
         self.checksum_only = checksum_only
         self.update_only = update_only
 
