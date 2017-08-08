@@ -574,7 +574,7 @@ def relocate_var_lib_yum(new_lv):
 
 def run_rpm_perms(new_lv):
     with mounted(new_lv.path) as new_fs:
-        with utils.bindmounted("/var", new_fs.path("/var")):
+        with utils.bindmounted("/var", new_fs.path("/var"), rbind=True):
             hack_rpm_permissions(new_fs)
 
 
@@ -855,10 +855,8 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         loader.set_default(new_lv.lv_name)
 
     with mounted(new_lv.path) as newroot:
-        with utils.ExitStack() as es:
-            mounts = [es.enter_context(utils.bindmounted(path,
-                      target=newroot.target + path))
-                      for path in sorted(paths.keys())]
+        with utils.bindmounted("/var", target=newroot.target + "/var",
+                               rbind=True):
             update_fstab(newroot.target)
             update_grub_default(newroot.target)
             copy_kernel(newroot.target)
@@ -868,8 +866,6 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 boot_partition_validation()
             except:
                 raise
-
-            del mounts
 
     imgbase.hooks.emit("os-upgraded",
                        previous_lv.lv_name,

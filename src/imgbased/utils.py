@@ -184,12 +184,11 @@ def format_to_pattern(fmt):
 def remount(target, opts=""):
     ExternalBinary().call(["mount", "-oremount" + opts, target])
 
-
-class MountPoint(object):
-    source = None
-    options = None
     target = None
 
+
+class MountPoint(object):
+    target = None
     tmpdir = None
 
     def __init__(self, source, options=None, target=None):
@@ -216,7 +215,10 @@ class MountPoint(object):
         self.run.call(cmd)
 
     def umount(self):
-        self.run.call(["umount", "-l", self.target])
+        if self.options is not None and "rbind" in self.options:
+            self.run.call(["umount", "-R", "-l", self.target])
+        else:
+            self.run.call(["umount", "-l", self.target])
         if self.tmpdir:
             self.run.call(["rmdir", self.tmpdir])
 
@@ -247,8 +249,9 @@ class mounted(object):
 
 
 @contextmanager
-def bindmounted(source, target):
-    with mounted(source, target=target, options="bind,private") as mnt:
+def bindmounted(source, target, rbind=False):
+    options = "rbind,rprivate" if rbind else "bind,private"
+    with mounted(source, target=target, options=options) as mnt:
         yield mnt
     log.debug("Done!")
 
@@ -446,6 +449,8 @@ class ExternalBinary(object):
 
     def lvmconfig(self, args, **kwargs):
         return self.call(["lvmconfig"] + args, **kwargs)
+    def mount(self, args, **kwargs):
+        return self.call(["mount"] + args, **kwargs)
 
 
 class LvmBinary(ExternalBinary):
