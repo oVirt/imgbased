@@ -39,7 +39,8 @@ from ..naming import Image
 from ..volume import Volumes
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
-    find_mount_target, Motd, LvmCLI, ThreadRunner, thread_group_handler
+    find_mount_target, Motd, LvmCLI, SELinuxDomain, ThreadRunner, \
+    thread_group_handler
 
 
 log = logging.getLogger(__package__)
@@ -431,6 +432,8 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         threads = []
         threads.append(ThreadRunner(run_rpm_perms, new_lv))
         threads.append(ThreadRunner(fix_systemd_services, old_fs, new_fs))
+        threads.append(ThreadRunner(run_rpm_selinux_post, new_lv))
+        threads.append(ThreadRunner(relabel_selinux, new_fs))
 
         thread_group_handler(threads)
 
@@ -474,6 +477,63 @@ def fix_systemd_services(old_fs, new_fs):
                     remove_file(new_fs.path("/") + d)
         except:
             log.exception("Could not remove %s. Is it a read-only layer?")
+
+
+def relabel_selinux(new_fs):
+    fc = "/etc/selinux/targeted/contexts/files/file_contexts"
+
+    if not os.path.exists(new_fs.path("/") + fc):
+        log.debug("{} not found in new fs, not relabeling".format(fc))
+        return
+
+    dirs = ["/etc", "/var", "/usr/libexec", "/usr/bin", "/usr/sbin"]
+
+    with SELinuxDomain("setfiles_t") as dom:
+        for d in dirs:
+            dom.runcon(["setfiles", "-v", "-r", new_fs.path("/"),
+                        fc, new_fs.path("/") + dirs])
+
+
+def run_rpm_selinux_post(new_lv):
+    run_commands = []
+    critical_commands = ["restorecon", "semodule", "semanage", "fixfiles",
+                         "chcon"]
+
+    def just_do(arg, **kwargs):
+        DEVNULL = open(os.devnull, "w")
+        arg = "nsenter --root=%s --wd=/ %s" % (new_fs.path("/"), arg)
+        log.debug("Running %s" % arg)
+
+        # shell=True is bad! But we're executing RPM %post scripts
+        # directly and imgbased can't learn every possible way bash
+        # can be written in order to make it sane
+        proc = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                                stderr=DEVNULL, shell=True,
+                                **kwargs).communicate()
+        return proc[0]
+
+    def filter_selinux_commands(rpms):
+        for pkg, v in rpms.items():
+            if any([c for c in critical_commands if c in v]):
+                log.debug("Found a critical command in %s", pkg)
+                run_commands.append("bash -c '{}'".format(v))
+
+    with mounted(new_lv.path) as new_fs:
+        log.debug("Checking whether any %post scripts from the new image must "
+                  "be run")
+        rpmdb = RpmPackageDb()
+        rpmdb.root = new_fs.path("/")
+
+        postin = rpmdb.get_script_type('POSTIN')
+        posttrans = rpmdb.get_script_type('POSTTRANS')
+
+        filter_selinux_commands(postin)
+        filter_selinux_commands(posttrans)
+
+        with utils.bindmounted("/proc", new_fs.target + "/proc"):
+            with utils.bindmounted("/dev", new_fs.target + "/dev"):
+                for r in run_commands:
+                    just_do(r)
 
 
 def relocate_var_lib_yum(new_lv):
@@ -779,8 +839,6 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 boot_partition_validation()
             except:
                 raise
-
-        File("{}/.imgbased-firstboot".format(newroot.target)).write("")
 
     imgbase.hooks.emit("os-upgraded",
                        previous_lv.lv_name,
