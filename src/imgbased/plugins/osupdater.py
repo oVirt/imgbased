@@ -319,11 +319,12 @@ def remediate_etc(imgbase):
     def check_layers(m, n):
         candidates = find_problems(m.path("/"), n.path("/"))
         for c in sorted(candidates):
-            copy_from = n.path("/usr/share/factory") + c
-            copy_to = n.path("/") + c
+            if "targeted/active/modules" not in c:
+                copy_from = n.path("/usr/share/factory") + c
+                copy_to = n.path("/") + c
 
-            log.debug("Copying %s to %s" % (copy_from, copy_to))
-            shutil.copy2(copy_from, copy_to)
+                log.debug("Copying %s to %s" % (copy_from, copy_to))
+                shutil.copy2(copy_from, copy_to)
 
     tree = imgbase.naming.tree()
 
@@ -336,7 +337,8 @@ def remediate_etc(imgbase):
         with mounted(imgbase._lvm_from_layer(layers[idx]).path) as m, \
                 mounted(imgbase._lvm_from_layer(layers[idx+1]).path) as n:
                     # Resync the files we changed on the last pass
-                    r = Rsync(checksum_only=True, update_only=True)
+                    r = Rsync(checksum_only=True, update_only=True,
+                              exclude=["*targeted/active/modules*"])
                     r.sync(m.path("/etc"), n.path("/etc"))
 
                     check_layers(m, n)
@@ -426,8 +428,10 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             # not actually the same filesystem
             if old_fs.source != new_fs.source:
                 for c in changed:
-                    copy_files(new_fs.path("/") + c, [old_fs.path("/") + c],
-                               "-a", "-r")
+                    if "targeted/active/modules" not in c:
+                        copy_files(new_fs.path("/") + c,
+                                   [old_fs.path("/") + c],
+                                   "-a", "-r")
 
             File(new_fs.path("/etc/group")).write(group_content)
             File(new_fs.path("/etc/passwd")).write(passwd_content)
