@@ -1026,6 +1026,7 @@ class IDMap():
     def __init__(self, from_etc, to_etc):
         self.from_etc = from_etc
         self.to_etc = to_etc
+        self._new_ugids = False
 
     def _parse_ids(self, id_data):
         """foo
