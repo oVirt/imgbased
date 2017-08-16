@@ -106,6 +106,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Wed Aug 16 2017 Ryan Barry <rbarry@redhat.com> - 0.9.44-0
+- Use chroot again for setfiles
+
 * Sat Aug 12 2017 Ryan Barry <rbarry@redhat.com> - 0.9.43-0
 - Reconcile rebases in setfiles_t
 
