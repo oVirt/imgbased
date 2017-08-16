@@ -540,13 +540,10 @@ def relabel_selinux(new_fs):
                                rbind=True):
             for fc in ctx_files:
                 if os.path.exists(new_root + "/" + fc):
-                    excludes = sum([["-e", "{}/{}".format(new_root, d)]
-                                    for d in exclude_dirs], [])
-                    run_dirs = [new_root + d for d in dirs]
-                    dom.runcon(["setfiles", "-v", "-r", new_root,
-                                new_root + fc] +
+                    excludes = sum([["-e", d] for d in exclude_dirs], [])
+                    dom.runcon(["chroot", new_root, "setfiles", "-v", fc] +
                                excludes +
-                               run_dirs)
+                               dirs)
                 else:
                     log.debug("{} not found in new fs, skipping".format(fc))
 
