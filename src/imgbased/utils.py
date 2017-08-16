@@ -1154,6 +1154,7 @@ class IDMap():
             i = int(i)
             if name not in ids:
                 _write_content = True
+                self._new_ugids = True
                 old_id = i
                 if not check_id_in_use(i, ids):
                     pass
@@ -1230,7 +1231,7 @@ class IDMap():
     def has_drift(self):
         """Returns True if the id mapping of a group or user has changed
         """
-        return sum(len(m) for m in self.get_drift()) > 0
+        return (sum(len(m) for m in self.get_drift()) > 0) or self._new_ugids
 
     def _map_new_ids_to_old_ids(self, paths_and_ids, _fake_drift=None):
         """Translate all uids/gids in path
