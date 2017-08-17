@@ -523,6 +523,7 @@ def relabel_selinux(new_fs):
 
     dirs = ["/etc",
             "/usr/bin",
+            "/usr/libexec",
             "/usr/sbin",
             "/usr/share",
             "/var"]
