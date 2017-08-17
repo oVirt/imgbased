@@ -510,6 +510,7 @@ def relabel_selinux(new_fs):
 
     dirs = ["/etc",
             "/usr/bin",
+            "/usr/libexec",
             "/usr/sbin",
             "/usr/share",
             "/var"]
@@ -527,8 +528,7 @@ def relabel_selinux(new_fs):
                                rbind=True):
             for fc in ctx_files:
                 if os.path.exists(new_root + "/" + fc):
-                    excludes = sum([["-e", "{}/{}".format(new_root, d)]
-                                    for d in exclude_dirs], [])
+                    excludes = sum([["-e", d] for d in exclude_dirs], [])
                     dom.runcon(["chroot", new_root, "setfiles", "-v", fc] +
                                excludes +
                                dirs)
