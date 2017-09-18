@@ -1,7 +1,14 @@
 #!/usr/bin/bash
 
+trap "log 'Ignoring SIGTERM'" SIGTERM
+
+logtag=$(basename $0)
 initrd=
 kernel=
+
+log() {
+  logger -t $logtag "$1"
+}
 
 get_files() {
   set -- $(cat /proc/cmdline)
@@ -16,13 +23,25 @@ get_files() {
 }
 
 copy_files_to_boot() {
+  log "startup called, copying files to /boot"
+
   cp $kernel /boot
   cp $initrd /boot
+
+  log "$(stat --format "Copied boot file: %n (size=%s) to /boot" $kernel $initrd)"
+  log "$(stat --format "Found boot file: %n (size=%s)" /boot/{vmlinuz*,init*})"
 }
 
 copy_files_from_boot() {
-  cp /boot/$(basename $kernel) $(dirname $kernel)
-  cp /boot/$(basename $initrd) $(dirname $kernel)
+  dest=$(dirname $kernel)
+
+  log "shutdown called, copying files from /boot to $dest"
+
+  cp /boot/$(basename $kernel) $dest
+  cp /boot/$(basename $initrd) $dest
+
+  log "$(stat --format "Copied boot file: %n (size=%s) to $dest" /boot/$(basename $kernel) /boot/$(basename $initrd))"
+  log "$(stat --format "Found boot file: %n (size=%s)" $dest/{vmlinuz*,init*})"
 }
 
 get_files

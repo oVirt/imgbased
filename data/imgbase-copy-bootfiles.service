@@ -7,6 +7,8 @@ ExecStart=/usr/sbin/imgbase-copy-bootfiles startup
 ExecStop=/usr/sbin/imgbase-copy-bootfiles shutdown
 Type=oneshot
 RemainAfterExit=yes
+TimeoutStopSec=infinity
+KillMode=none
 
 [Install]
 WantedBy=multi-user.target
