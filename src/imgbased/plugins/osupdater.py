@@ -173,7 +173,7 @@ def set_thinpool_profile(imgbase, new_lv):
 def check_nist_layout(imgbase, new_lv):
     to_create = []
 
-    for path in paths.keys():
+    for path in sorted(paths.keys()):
         if not os.path.ismount(path):
             to_create.append(path)
 
