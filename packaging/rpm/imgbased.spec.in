@@ -144,6 +144,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Wed Sep 27 2017 Ryan Barry <rbarry@redhat.com> - 1.0.1-0
+- Sort the NIST partition list before creating them
+
 * Mon Aug 21 2017 Ryan Barry <rbarry@redhat.com> - 1.0.0-0
 - Branch for 4.2
 
