@@ -111,7 +111,10 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         threads = []
         threads.append(ThreadRunner(migrate_etc, imgbase, new_lv,
                                     previous_layer_lv))
-        threads.append(ThreadRunner(migrate_root, new_lv, previous_layer_lv))
+        threads.append(ThreadRunner(migrate_state, new_lv, previous_layer_lv,
+                                    "/root/"))
+        threads.append(ThreadRunner(migrate_state, new_lv, previous_layer_lv,
+                                    "/usr/share/rhn/"))
         threads.append(ThreadRunner(relocate_var_lib_yum, new_lv))
 
         thread_group_handler(threads)
@@ -151,7 +154,7 @@ def on_post_init_layout(imgbase, existing_lv, new_base, new_layer):
 def check_nist_layout(imgbase, new_lv):
     to_create = []
 
-    for path in paths.keys():
+    for path in sorted(paths.keys()):
         if not os.path.ismount(path):
             to_create.append(path)
 
@@ -177,6 +180,14 @@ def check_nist_layout(imgbase, new_lv):
                 shutil.copy2(new_config, lvm_config_path)
 
 
+def migrate_state(new_lv, previous_lv, path):
+    log.debug("Migrating %s from the old image to the new image" % path)
+    rsync = Rsync()
+    with mounted(new_lv.path) as new_fs,\
+            mounted(previous_lv.path) as old_fs:
+        rsync.sync(old_fs.path(path), new_fs.path(path))
+
+
 def migrate_var(imgbase, new_lv):
     def strip(s):
         return re.sub(r'^/tmp/mnt.*?/', '', s)
@@ -194,13 +205,6 @@ def migrate_var(imgbase, new_lv):
                         shutil.copytree(newlv_path, realpath, symlinks=True)
                     else:
                         shutil.copy2(newlv_path, realpath)
-
-
-def migrate_root(new_lv, previous_lv):
-    rsync = Rsync()
-    with mounted(new_lv.path) as new_fs,\
-            mounted(previous_lv.path) as old_fs:
-        rsync.sync(old_fs.path("/root/"), new_fs.path("/root"))
 
 
 def boot_partition_validation():
