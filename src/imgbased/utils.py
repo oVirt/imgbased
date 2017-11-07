@@ -1484,6 +1484,7 @@ class ThreadRunner(threading.Thread):
         if exc is None:
             return
         else:
+            log.debug(''.join(traceback.format_exception(*exc)))
             raise exc[1]
 
 
@@ -1494,7 +1495,7 @@ def thread_group_handler(threads, exc=None):
         try:
             t.join_with_exceptions()
         except:
-            log.debug(traceback.print_exc())
+            log.debug(traceback.format_exc())
             sys.exit(1)
 
 
