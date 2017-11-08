@@ -983,7 +983,7 @@ class Rsync():
         call(cmd)
 
     def sync(self, sourcetree, dst):
-        assert os.path.isdir(sourcetree)
+        assert os.path.isdir(sourcetree), "%s is not a directory" % sourcetree
 
         cmd = ["rsync"]
         cmd += ["-pogAXlHrx"]
