@@ -106,6 +106,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Wed Nov 01 2017 Ryan Barry <rbarry@redhat.com> - 0.9.50-0
+- Only resync files if the path exists
+
 * Wed Nov 01 2017 Ryan Barry <rbarry@redhat.com> - 0.9.49-0
 - Resync files for satellite on update
 
