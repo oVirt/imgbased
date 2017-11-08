@@ -207,7 +207,9 @@ def migrate_state(new_lv, previous_lv, path):
     rsync = Rsync()
     with mounted(new_lv.path) as new_fs,\
             mounted(previous_lv.path) as old_fs:
-        rsync.sync(old_fs.path(path), new_fs.path(path))
+        old_path = old_fs.path(path)
+        if os.path.isdir(old_path):
+            rsync.sync(old_path, new_fs.path(path))
 
 
 def migrate_var(imgbase, new_lv):
