@@ -32,7 +32,7 @@ import subprocess
 from filecmp import dircmp
 from tempfile import mkdtemp
 
-from .. import bootloader, utils
+from .. import bootloader, timeserver, utils
 from ..config import paths
 from ..lvm import LVM
 from ..naming import Image
@@ -463,6 +463,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         log.info("Migrating /root")
 
         threads = []
+        threads.append(ThreadRunner(migrate_ntp_to_chrony, new_lv))
         threads.append(ThreadRunner(run_rpm_perms, new_lv))
         threads.append(ThreadRunner(fix_systemd_services, old_fs, new_fs))
         threads.append(ThreadRunner(run_rpm_selinux_post, new_lv))
@@ -617,6 +618,21 @@ def relocate_var_lib_yum(new_lv):
         os.mkdir(path)
         shutil.move(path, "/usr/share/yum")
         os.symlink("/usr/share/yum", "/var/lib/yum")
+
+
+def migrate_ntp_to_chrony(new_lv):
+    with mounted(new_lv.path) as new_fs:
+        if os.path.exists(new_fs.path("/") + "/etc/ntp.conf"):
+            # Create a state directory to track migrations
+            # /var is the right place for application-level data
+            if not os.path.isdir("/var/lib/imgbased"):
+                os.mkdir("/var/lib/imgbased")
+
+            if not os.path.exists("/var/lib/imgbased/ntp-migrated"):
+                log.debug("Migrating NTP configuration to chrony")
+                c = timeserver.Chrony(new_fs.path("/") + "/etc/chrony.conf")
+
+                c.from_ntp(timeserver.Ntp(new_fs.path("/") + "/etc/ntp.conf"))
 
 
 def run_rpm_perms(new_lv):
