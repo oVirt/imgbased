@@ -243,7 +243,8 @@ def remediate_etc(imgbase):
                       r'.*?group-?$',
                       r'.*?passwd-?$',
                       r'.*?shadow-?$',
-                      r'.*?fstab$'
+                      r'.*?fstab$',
+                      r'.*?ifcfg-.*$'
                       ]
 
     crits = [re.compile(f) for f in critical_files]
@@ -331,7 +332,8 @@ def remediate_etc(imgbase):
                 mounted(imgbase._lvm_from_layer(layers[idx+1]).path) as n:
                     # Resync the files we changed on the last pass
                     r = Rsync(checksum_only=True, update_only=True,
-                              exclude=["*targeted/active/modules*"])
+                              exclude=["*targeted/active/modules*",
+                                       "*network-scripts/ifcfg-*"])
                     r.sync(m.path("/etc"), n.path("/etc"))
 
                     check_layers(m, n)
