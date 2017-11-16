@@ -40,9 +40,11 @@ class TimeserverConfiguration(File):
     """Low-level object to access the timekeeping configuration
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename, dry=False):
         super(TimeserverConfiguration, self).__init__(filename)
-        self._parse()
+
+        if dry is False:
+            self._parse()
 
     def _parse(self):
         keys = {}
@@ -138,8 +140,10 @@ class Ntp(TimeserverConfiguration):
     ... server 1.2.4.5  # added by /sbin/dhclient-script
     ... '''
 
-    >>> ntp = Ntp(None)
+    >>> ntp = Ntp(None, dry=True)
     >>> ntp.read = lambda: config
+    >>> ntp.lines = lambda: config.splitlines()
+    >>> _ = ntp._parse()
     >>> ntp.get_servers()
     ['1.2.3.4', '1.2.4.5']
     >>> ntp.get_option('driftfile')
@@ -171,8 +175,10 @@ class Chrony(TimeserverConfiguration):
     ... logdir /var/log/chrony
     ... '''
 
-    >>> chrony = Chrony(None)
+    >>> chrony = Chrony(None, dry=True)
     >>> chrony.read = lambda: config
+    >>> chrony.lines = lambda: config.splitlines()
+    >>> _ = chrony._parse()
     >>> chrony.get_option('pool')
     '2.fedora.pool.ntp.org iburst'
     >>> print(chrony._configuration)
