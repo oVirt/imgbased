@@ -39,7 +39,7 @@ class ImgbasedPersist(dnf.Plugin):
         super(ImgbasedPersist, self).__init__(base, cli)
         self.base = base
 
-        cp = self.read_config(self.base.conf, self.PLUGIN_CONF)
+        cp = self.read_config(self.PLUGIN_CONF)
         self.excluded_pkgs = cp.get("main", "exclude_pkgs").split(',')
 
     def check_excludes(self, name):
