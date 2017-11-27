@@ -198,6 +198,7 @@ class Chrony(TimeserverConfiguration):
             "keys",
             "logfile",
             "requestkey",
+            "restrict",
             "trustedkey",
             "requestkey",
         ]
