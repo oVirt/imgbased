@@ -453,6 +453,9 @@ class ExternalBinary(object):
     def mount(self, args, **kwargs):
         return self.call(["mount"] + args, **kwargs)
 
+    def getenforce(self):
+        return self.call(["getenforce"])
+
 
 class LvmBinary(ExternalBinary):
     def call(self, *args, **kwargs):
@@ -475,12 +478,20 @@ class LvmCLI():
 class SELinuxDomain(object):
     _semanage = ExternalBinary().semanage
     _runcon = ExternalBinary().runcon
+    _getenforce = ExternalBinary().getenforce
 
     def __init__(self, domain):
         self._domain = domain
+        self._disabled = self._getenforce() == "Disabled"
         self._exists = self._check_domain()
 
     def _check_domain(self):
+        """
+        Checks if the domain is permissive, or if SELinux is disabled.  If any
+        of the the checks are True, we should not call `semanage permissive`.
+        """
+        if self._disabled:
+            return True
         domains = self._semanage(["permissive", "-nl"])
         return self._domain in domains.split()
 
@@ -495,6 +506,8 @@ class SELinuxDomain(object):
         self._semanage(["permissive", "-d", self._domain])
 
     def runcon(self, args):
+        if self._disabled:
+            return
         self._runcon(["-t", self._domain, "--"] + args)
 
 
