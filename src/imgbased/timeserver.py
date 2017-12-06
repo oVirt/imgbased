@@ -190,24 +190,60 @@ class Chrony(TimeserverConfiguration):
     """
 
     def from_ntp(self, ntp):
-        dont_migrate = [
-            "controlkey",
-            "driftfile",
-            "fudge",
-            "includefile",
-            "keys",
-            "logfile",
-            "requestkey",
-            "restrict",
-            "trustedkey",
-            "requestkey",
+        whitelist = [
+            'acquisitionport',
+            'clientloglimit',
+            'cmdport',
+            'cmdratelimit',
+            'combinelimit',
+            'corrtimeratio',
+            'dumpdir',
+            'hwclockfile',
+            'keyfile',
+            'leapsecmode',
+            'leapsectz',
+            'local',
+            'lock_all',
+            'log',
+            'logbanner',
+            'logchange',
+            'logdir',
+            'manual',
+            'maxclockerror',
+            'maxdistance',
+            'maxdrift',
+            'maxjitter',
+            'maxsamples',
+            'maxslewrate',
+            'maxupdateskew',
+            'minsamples',
+            'minsources',
+            'noclientlog',
+            'ntpsigndsocket',
+            'port',
+            'rate.',
+            'ratelimit',
+            'reselectdist',
+            'rtcautotrim',
+            'rtcdevice',
+            'rtcfile',
+            'rtconutc',
+            'rtcsync',
+            'sched_priority',
+            'stratumweight',
+            'user'
         ]
 
         old_keys = ntp.keys
 
-        for d in dont_migrate:
-            if d in old_keys:
-                del old_keys[d]
+        delete_keys = []
+
+        for d in old_keys.keys():
+            if d not in whitelist:
+                delete_keys.append(d)
+
+        for d in delete_keys:
+            del old_keys[d]
 
         for k, v in old_keys.items():
             self.set_option(k, v)
