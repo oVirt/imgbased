@@ -96,6 +96,10 @@ class TimeserverConfiguration(File):
         log.debug("Adding ntp option: %s" % key)
 
         assert " " not in key
+
+        if key == "servers":
+            self.set_servers(value)
+
         self._set(key, value)
 
     def remove_option(self, key):
@@ -230,6 +234,7 @@ class Chrony(TimeserverConfiguration):
             'rtconutc',
             'rtcsync',
             'sched_priority',
+            'servers',
             'stratumweight',
             'user'
         ]
@@ -247,5 +252,8 @@ class Chrony(TimeserverConfiguration):
 
         for k, v in old_keys.items():
             self.set_option(k, v)
+
+        if "servers" in old_keys:
+            self.set_servers
 
         self.write_configuration()
