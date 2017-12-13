@@ -144,6 +144,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Wed Dec 13 2017 Ryan Barry <rbarry@redhat.com> - 1.0.5-0
+- Make the NTP migration smarter
+
 * Wed Dec 06 2017 Ryan Barry <rbarry@redhat.com> - 1.0.4-0
 - Make the NTP migration smarter
 
