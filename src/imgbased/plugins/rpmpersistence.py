@@ -28,7 +28,7 @@ import glob
 import subprocess
 
 from .. import utils
-from ..utils import mounted, SystemRelease, SELinuxDomain
+from ..utils import File, mounted, SystemRelease, SELinuxDomain
 
 
 log = logging.getLogger(__package__)
@@ -65,17 +65,20 @@ def on_os_upgraded(imgbase, previous_lv_name, new_lv_name):
 def reinstall_rpms(imgbase, new_lv, previous_lv):
     # FIXME: this should get moved to a generalized plugin. We need to check
     # it in multiple places
-    with mounted(new_lv.path) as new_fs:
-        new_etc = new_fs.path("/etc")
+    if "inst.ks" not in File('/proc/cmdline').contents:
+        with mounted(new_lv.path) as new_fs:
+            new_etc = new_fs.path("/etc")
 
-        new_rel = SystemRelease(new_etc + "/system-release-cpe")
+            new_rel = SystemRelease(new_etc + "/system-release-cpe")
 
-        if not new_rel.is_supported_product():
-            log.error("Unsupported product: %s" % new_rel)
-            raise RpmPersistenceError()
+            if not new_rel.is_supported_product():
+                log.error("Unsupported product: %s" % new_rel)
+                raise RpmPersistenceError()
 
-        with utils.bindmounted("/var", target=new_fs.target + "/var"):
-            install_rpms(new_fs)
+            with utils.bindmounted("/var", target=new_fs.target + "/var"):
+                install_rpms(new_fs)
+
+        log.info("Not reinstalling RPMs during system installation")
 
     imgbase.hooks.emit("rpms-persisted",
                        previous_lv.lv_name,
