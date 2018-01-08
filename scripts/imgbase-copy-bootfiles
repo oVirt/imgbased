@@ -28,6 +28,8 @@ copy_files_to_boot() {
   cp $kernel /boot
   cp $initrd /boot
 
+  rm -f $(dirname $kernel)/tmp.imgbase.*
+
   log "$(stat --format "Copied boot file: %n (size=%s) to /boot" $kernel $initrd)"
   log "$(stat --format "Found boot file: %n (size=%s)" /boot/{vmlinuz*,init*})"
 }
@@ -37,8 +39,11 @@ copy_files_from_boot() {
 
   log "shutdown called, copying files from /boot to $dest"
 
-  cp /boot/$(basename $kernel) $dest
-  cp /boot/$(basename $initrd) $dest
+  tmpkernel=$(mktemp -up $dest tmp.imgbase.vmlinuz.XXXXXX)
+  tmpinitrd=$(mktemp -up $dest tmp.imgbase.initrd.XXXXXX)
+
+  cp /boot/$(basename $kernel) $tmpkernel && mv $tmpkernel $kernel
+  cp /boot/$(basename $initrd) $tmpinitrd && mv $tmpinitrd $initrd
 
   log "$(stat --format "Copied boot file: %n (size=%s) to $dest" /boot/$(basename $kernel) /boot/$(basename $initrd))"
   log "$(stat --format "Found boot file: %n (size=%s)" $dest/{vmlinuz*,init*})"
