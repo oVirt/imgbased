@@ -62,12 +62,13 @@ if test "x$ASCIIDOC" = "x"; then
         AC_MSG_ERROR([asciidoc not found - cannot create man pages without it])
 fi
 
-AC_PATH_PROG([PYTHON3], [python3], [no])
-[if test "$PYTHON3" == "no"]
+AC_ARG_WITH([python3], AS_HELP_STRING([--with-python3], [Use python3]))
+
+[if test "x$with_python3" == xyes]
 [then]
-    AM_PATH_PYTHON([2])
-    AC_SUBST([pyimagebaseddir], ["\$(pythondir)/imgbased"])
-[else]
+    AC_PATH_PROG([PYTHON3], [python3])
+    AC_PATH_PROG([PYFLAKES], [pyflakes-3])
+
     AC_SUBST([PYTHON3_PREFIX], ['${prefix}'])
     AC_SUBST([PYTHON3_EXEC_PREFIX], ['${exec_prefix}'])
 
@@ -81,6 +82,12 @@ AC_PATH_PROG([PYTHON3], [python3], [no])
     AC_SUBST(python3dir, $PYTHON3_DIR)
     AC_SUBST(py3execdir, $PYTHON3_EXECDIR)
     AC_SUBST([pyimagebaseddir], ["\$(python3dir)/imgbased"])
+    AC_SUBST([USE_PYTHON_VERSION], [3])
+[else]
+    AM_PATH_PYTHON([2])
+    AC_PATH_PROG([PYFLAKES], [pyflakes-2])
+    AC_SUBST([pyimagebaseddir], ["\$(pythondir)/imgbased"])
+    AC_SUBST([USE_PYTHON_VERSION], [2])
 [fi]
 
 AC_CONFIG_FILES([Makefile

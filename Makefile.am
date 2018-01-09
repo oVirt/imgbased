@@ -5,6 +5,7 @@ SHELL := /bin/bash
 
 TMPDIR = tmp
 TMPREPOS = tmp.repos
+AUTOGEN_ARGS = --with-python@USE_PYTHON_VERSION@
 
 hooksdir = $(pkgdatadir)/hooks.d/
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
@@ -82,14 +83,14 @@ SRCFILES = $(shell find . -xdev -name \*.py)
 
 check-build: $(SRCFILES)
 	@echo "[CHECK] rpmbuild"
-	./autogen.sh
+	./autogen.sh $(AUTOGEN_ARGS)
 	make -s rpm doc
 
 export PYTHONPATH=src/
 
 check-pyflakes: $(SRCFILES)
 	@echo "[CHECK] pyflakes"
-	find . -xdev -name \*.py | xargs pyflakes
+	find . -xdev -name \*.py | xargs @PYFLAKES@
 
 check-pep8: $(SRCFILES)
 	@echo "[CHECK] pep8"
@@ -116,6 +117,5 @@ distcheck:
 	mkdir $(TMPDIR) && \
 	cd $(TMPDIR) && \
 	tar xf ../imgbased-@PACKAGE_VERSION@.tar.xz -C . --strip 1 && \
-	./autogen.sh && \
-	$(MAKE) check
+	./autogen.sh $(AUTOGEN_ARGS) && $(MAKE) check
 	rm -rf $(TMPDIR)
