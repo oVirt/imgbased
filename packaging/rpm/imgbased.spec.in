@@ -9,10 +9,14 @@ Source0:        http://resources.ovirt.org/pub/src/%{name}/%{name}-%{version}.ta
 
 BuildArch:      noarch
 
-%if 0%{?fedora} || 0%{?rhel} >= 8
+%global use_python_version @USE_PYTHON_VERSION@
+
+%if 0%{?use_python_version} == 03
 %global with_python3 1
+%global dnf_plugin_path %{python3_sitelib}/dnf-plugins/
 %else
 %global with_python2 1
+%global dnf_plugin_path %{python2_sitelib}/dnf-plugins/
 %endif
 
 # Skips check since rhel default repos lack pep8, pyflakes and python-nose
@@ -84,7 +88,7 @@ python3-imgbased is a python 3 library to manage lvm layers
 
 
 %build
-%configure
+%configure %{?with_python3:--with-python3}
 make %{?_smp_mflags}
 
 %install
@@ -92,7 +96,7 @@ make %{?_smp_mflags}
 install -Dm 0644 src/plugin-dnf/imgbased-persist.conf \
                  %{buildroot}/%{_sysconfdir}/dnf/pluginconf.d/imgbased-persist.conf
 install -Dm 0644 src/plugin-dnf/imgbased-persist.py \
-                 %{buildroot}/%{python3_sitelib}/dnf-plugins/imgbased-persist.py
+                 %{buildroot}/%{dnf_plugin_path}/imgbased-persist.py
 %else
 install -Dm 0644 src/plugin-yum/imgbased-persist.py \
                  %{buildroot}/%{_prefix}/lib/yum-plugins/imgbased-persist.py
@@ -122,8 +126,10 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %{_sysconfdir}/lvm/profile/imgbased-pool.profile
 %if 0%{?fedora}
 %{_sysconfdir}/dnf/pluginconf.d/imgbased-persist.conf
-%{python3_sitelib}/dnf-plugins/imgbased-persist.py*
-%{python3_sitelib}/dnf-plugins/__pycache__/imgbased*
+%{dnf_plugin_path}/imgbased-persist.py*
+%if 0%{?with_python3}
+%{dnf_plugin_path}/__pycache__/imgbased*
+%endif
 %else
 %{_sysconfdir}/yum/pluginconf.d/imgbased-persist.conf
 %{_prefix}/lib/yum-plugins/imgbased-persist.py*
