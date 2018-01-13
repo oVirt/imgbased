@@ -951,6 +951,17 @@ def remove_boot(imgbase, lv_fullname):
     loader.remove_entry(lv_name)
 
     assert bootdir.strip("/") != "boot"
+
+    bootfiles = [os.path.basename(b) for b in glob.glob("%s/*" % bootdir)]
+
+    bootfiles.extend([re.sub(r'(initramfs.*?).img', r'\1kdump.img', f)
+                      for f in bootfiles if "initramfs" in f])
+
+    for f in bootfiles:
+        if os.path.isfile("/boot/%s" % f):
+            log.debug("Removing extraneous boot file /boot/%s" % f)
+            os.unlink("/boot/%s" % f)
+
     if os.path.exists(bootdir):
         log.debug("Removing kernel dir: %s" % bootdir)
         shutil.rmtree(bootdir)
