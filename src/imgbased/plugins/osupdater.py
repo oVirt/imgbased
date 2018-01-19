@@ -320,6 +320,28 @@ def remediate_etc(imgbase):
                 log.debug("Copying %s to %s" % (copy_from, copy_to))
                 shutil.copy2(copy_from, copy_to)
 
+    def analyze_removals(dc, pre_files=None):
+        if pre_files is None:
+            pre_files = []
+        if dc.left_only:
+            for f in sorted(dc.left_only):
+                log.debug("Planning to remove %s/%s" % (strip(dc.right), f))
+                pre_files.append("{}/{}".format(strip(dc.right), f))
+        if dc.subdirs:
+            for d in sorted(dc.subdirs.values()):
+                analyze_removals(d, pre_files)
+
+        return pre_files
+
+    def perform_removals(rms, n):
+        for f in rms:
+            filename = "{}/{}".format(n.path("/", f))
+            if not os.path.exists("{}/usr/share/factory/{}".format(
+                    n.path("/"), f)):
+                log.debug("os.unlink({})".format(filename))
+                if os.path.isfile(filename):
+                    os.unlink(filename)
+
     tree = imgbase.naming.tree()
 
     for t in tree:
@@ -330,6 +352,11 @@ def remediate_etc(imgbase):
         log.debug("Checking %s" % layers[idx])
         with mounted(imgbase._lvm_from_layer(layers[idx]).path) as m, \
                 mounted(imgbase._lvm_from_layer(layers[idx+1]).path) as n:
+                    pre_files = analyze_removals(
+                        dircmp("{}/etc".format(m.path("/")),
+                               "{}/etc".format(n.path("/"))
+                               )
+                    )
                     # Resync the files we changed on the last pass
                     r = Rsync(checksum_only=True, update_only=True,
                               exclude=["*targeted/active/modules*",
@@ -338,6 +365,7 @@ def remediate_etc(imgbase):
 
                     check_layers(m, n)
                     fix_systemd_services(m, n)
+                    perform_removals(pre_files, n)
 
 
 def migrate_etc(imgbase, new_lv, previous_lv):
