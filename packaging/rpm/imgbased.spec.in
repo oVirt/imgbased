@@ -150,6 +150,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Wed Jan 24 2018 Ryan Barry <rbarry@redhat.com> - 1.0.7-0
+- Don't migrate deleted configuration files
+
 * Mon Jan 15 2018 Ryan Barry <rbarry@redhat.com> - 1.0.6-0
 - Cleanup boot files when layers are removed
 
