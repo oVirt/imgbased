@@ -357,7 +357,7 @@ def remediate_etc(imgbase):
 
     def perform_removals(rms, n):
         for f in rms:
-            filename = "{}/{}".format(n.path("/", f))
+            filename = "{}/{}".format(n.path("/"), f)
             if not os.path.exists("{}/usr/share/factory/{}".format(
                     n.path("/"), f)):
                 log.debug("os.unlink({})".format(filename))
