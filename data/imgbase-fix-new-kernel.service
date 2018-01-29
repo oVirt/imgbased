@@ -1,0 +1,14 @@
+[Unit]
+Description=Clean up after new-kernel-pkg
+Before=imgbase-copy-bootfiles.service
+
+[Service]
+ExecStart=/bin/true
+ExecStop=/usr/sbin/imgbase-fix-new-kernel shutdown
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStopSec=infinity
+KillMode=none
+
+[Install]
+WantedBy=multi-user.target

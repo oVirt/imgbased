@@ -126,8 +126,9 @@ class Grubby(Bootloader):
         >>> entries = '''index=0
         ... kernel=ker0
         ... args=ar0 img.bootid=0
+        ... root=foo0
         ... initrd=in0
-        ... title=tit0
+        ... title=node
         ... index=1
         ... kernel=ker1
         ... args=ar1
@@ -203,12 +204,13 @@ class Grubby(Bootloader):
         for stanza in stanzas:
             try:
                 entry = self.GrubbyEntry.parse(stanza)
+                if "node" not in entry.title and "rhvh" not in entry.title:
+                    raise NoKeyFoundError()
                 key = self._parse_key_from_args(entry.args)
             except InvalidBootEntryError:
                 log.debug("Failed to parse entry: %s" % stanza)
                 continue
             except NoKeyFoundError:
-                log.debug("No key found in entry: %s" % entry.args)
                 other_entries.append(entry)
                 continue
 
@@ -249,7 +251,12 @@ class Grubby(Bootloader):
         log.debug("Getting default")
         kernel = grubby("--default-kernel")
         entries = self._get_valid_entries()
-        entry = [e for e in entries if entries[e].kernel == kernel][0]
+        try:
+            entry = [e for e in entries if entries[e].kernel == kernel][0]
+        except IndexError:
+            # Installing new kernels means we miss this. Check the others
+            entry = [e for e in self._get_other_entries()
+                     if e.kernel == kernel][0].title
         log.debug("Default: %s" % entry)
         return entry
 
