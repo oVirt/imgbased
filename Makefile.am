@@ -5,9 +5,9 @@ SHELL := /bin/bash
 
 TMPDIR = tmp
 TMPREPOS = tmp.repos
-AUTOGEN_ARGS = --with-python@USE_PYTHON_VERSION@
 
 hooksdir = $(pkgdatadir)/hooks.d/
+pyimagebaseddir = $(pythondir)/@PACKAGE_NAME@
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
 
 .PHONY: check check-code check-build distcheck
@@ -21,10 +21,10 @@ dist_sbin_SCRIPTS = \
   scripts/imgbase-fix-new-kernel
 
 dist_pyimagebased_PYTHON = \
-  src/imgbased/*.py
+  $(srcdir)/src/imgbased/*.py
 
 dist_pyimagebasedplugins_PYTHON = \
-  src/imgbased/plugins/*.py
+  $(srcdir)/src/imgbased/plugins/*.py
 
 dist_hooks_SCRIPTS = \
   data/hooks/persistence \
@@ -87,14 +87,14 @@ SRCFILES = $(shell find . -xdev -name \*.py)
 
 check-build: $(SRCFILES)
 	@echo "[CHECK] rpmbuild"
-	./autogen.sh $(AUTOGEN_ARGS)
+	./autogen.sh
 	make -s rpm doc
 
 export PYTHONPATH=src/
 
 check-pyflakes: $(SRCFILES)
 	@echo "[CHECK] pyflakes"
-	find . -xdev -name \*.py | xargs @PYFLAKES@
+	find . -xdev -name \*.py | xargs pyflakes
 
 check-pep8: $(SRCFILES)
 	@echo "[CHECK] pep8"
@@ -121,5 +121,5 @@ distcheck:
 	mkdir $(TMPDIR) && \
 	cd $(TMPDIR) && \
 	tar xf ../imgbased-@PACKAGE_VERSION@.tar.xz -C . --strip 1 && \
-	./autogen.sh $(AUTOGEN_ARGS) && $(MAKE) check
+	./autogen.sh && $(MAKE) check
 	rm -rf $(TMPDIR)

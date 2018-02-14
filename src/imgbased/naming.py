@@ -25,6 +25,8 @@ import logging
 import re
 import rpm
 
+from functools import total_ordering
+
 log = logging.getLogger(__package__)
 
 
@@ -230,6 +232,7 @@ Image-3-0\\n +- Image-3-0+1'
         return list(sorted(bases.values()))
 
 
+@total_ordering
 class NVR(object):
     """Simple clas to parse and compare NVRs
 
@@ -280,15 +283,23 @@ class NVR(object):
         o.name, o.version, o.release = nvrtuple
         return o
 
-    def __cmp__(self, other):
+    def _do_compare(self, other):
         assert type(self) == type(other), "%r vs %r" % (self, other)
         if not self.name == other.name:
             raise RuntimeError("NVRs for different names: %s %s"
                                % (self.name, other.name))
         this_version = (None, self.version, self.release)
         other_version = (None, other.version, other.release)
-        return rpm.labelCompare(this_version,  # @UndefinedVariable
-                                other_version)
+        return rpm.labelCompare(this_version, other_version)
+
+    def __eq__(self, other):
+        return (self._do_compare(other) == 0)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __lt__(self, other):
+        return (self._do_compare(other) < 0)
 
     def __str__(self):
         return "%s-%s-%s" % (self.name, self.version, self.release)
@@ -300,6 +311,7 @@ class NVR(object):
         return hash(str(self))
 
 
+@total_ordering
 class Image(object):
     """Representing either a Base or a Layer
 
@@ -355,8 +367,14 @@ class Image(object):
     def __hash__(self):
         return hash(self.nvr)
 
-    def __cmp__(self, other):
-        return cmp(self.nvr, other.nvr)
+    def __eq__(self, other):
+        return (self.nvr == other.nvr)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __lt__(self, other):
+        return (self.nvr < other.nvr)
 
     def __str__(self):
         return str(self.nvr)

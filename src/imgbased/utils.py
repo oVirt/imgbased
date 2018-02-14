@@ -34,11 +34,16 @@ import traceback
 
 from contextlib import contextmanager
 from collections import deque
-from Queue import Queue
-from rpmUtils.miscutils import splitFilename
+from six.moves.queue import Queue
 
 
 log = logging.getLogger(__package__)
+
+
+try:
+    string_types = [str, unicode, bytes]
+except NameError:
+    string_types = [str, bytes]
 
 
 class FilesystemNotSupported(Exception):
@@ -293,7 +298,7 @@ class Filesystem():
     @staticmethod
     def get_type(path):
         cmd = ["blkid", "-o", "value", "-s", "TYPE", path]
-        return subprocess.check_output(cmd).strip()
+        return subprocess.check_output(cmd).decode("utf-8").strip()
 
     @classmethod
     def from_device(cls, path):
@@ -858,6 +863,8 @@ class PackageDb():
 
 class RpmPackageDb(PackageDb):
     def _rpm_cmd(self, a):
+        for dbf in glob.glob((self.root or '') + "/var/lib/rpm/__db*"):
+            os.unlink(dbf)
         return ExternalBinary().rpm(a)
 
     def _rpm(self, *args, **kwargs):
@@ -870,6 +877,9 @@ class RpmPackageDb(PackageDb):
 
         return [p for p in rpms if exclude not in p] if exclude is not None \
             else rpms
+
+    def get_whatprovides(self, cap):
+        return self._rpm("-q", "--qf", "%{name}\\n", "--whatprovides", cap)
 
     def get_files(self, pkgname):
         return self._rpm("-ql", pkgname)
@@ -898,31 +908,6 @@ class RpmPackageDb(PackageDb):
                 rpms[pkg] += "{0}\n".format(line.encode('utf-8'))
 
         return rpms
-
-
-class RpmPackage:
-    def __init__(self, pkg, rpmdb=None):
-        name = splitFilename(pkg)[0]
-        self.name = name
-        self.pkg = pkg
-        self.scripts = {}
-        self.rpmdb = rpmdb or RpmPackageDb()
-
-    def get_script_sections(self):
-        scripts = self.rpmdb.get_scripts(self.pkg)
-        for line in scripts:
-            r = re.match(r'^(.*?) (scriptlet|program).*?:', line)
-            if r:
-                group = r.groups()[0]
-                self.scripts[group] = []
-            elif line:
-                self.scripts[group].extend(line.strip().splitlines())
-
-    def __repr__(self):
-        return "<%s: %s>" % (self.__class__, self.pkg)
-
-    def __str__(self):
-        return self.__repr__()
 
 
 class systemctl():
@@ -1476,14 +1461,14 @@ class ThreadRunner(threading.Thread):
 
     def __init__(self, function, *args, **kwargs):
         self._function = function
-        self._args = args
-        self._kwargs = kwargs
+        self._func_args = args
+        self._func_kwargs = kwargs
         self.__exceptions = Queue()
-        threading.Thread.__init__(self, name=self._function.func_name)
+        threading.Thread.__init__(self, name=self._function.__name__)
 
     def run(self):
         try:
-            self._function(*self._args, **self._kwargs)
+            self._function(*self._func_args, **self._func_kwargs)
         except:
             self.__exceptions.put(sys.exc_info())
         self.__exceptions.put(None)

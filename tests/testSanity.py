@@ -139,7 +139,7 @@ class BaseVerbTestCase(CliTestCase):
     def test_base_add(self):
         self.cli("--debug", "base", "--add", "Image-42-0",
                  "--size", "4096")
-        print self.cli("layout", "--bases").stdout
+        print(self.cli("layout", "--bases").stdout)
         assert "Image-42-0" in self.cli("layout", "--bases").stdout
 
     def test_base_latest(self):

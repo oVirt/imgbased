@@ -28,7 +28,6 @@ from .lvm import LVM, MissingLvmThinPool
 
 import logging
 
-from utils import FilesystemNotSupported
 
 log = logging.getLogger(__package__)
 
@@ -172,7 +171,7 @@ class ImageLayers(object):
         """
         log.info("Adding a new layer after %r" % previous_layer)
 
-        if type(previous_layer) in [str, unicode, bytes]:
+        if type(previous_layer) in utils.string_types:
             previous_layer = Image.from_nvr(previous_layer)
         log.info("Adding a new layer after %r" % previous_layer)
 
@@ -186,7 +185,7 @@ class ImageLayers(object):
 
         try:
             new_lv = self._add_lvm_snapshot(prev_lv, new_layer.lv_name)
-        except FilesystemNotSupported:
+        except utils.FilesystemNotSupported:
             raise
 
         self.hooks.emit("new-layer-added", prev_lv, new_lv)
@@ -211,7 +210,7 @@ class ImageLayers(object):
         # Assign a new filesystem UUID
         try:
             utils.Filesystem.from_device(new_lv.path).randomize_uuid()
-        except FilesystemNotSupported:
+        except utils.FilesystemNotSupported:
             log.error(
                 "Filesystem not supported, please use: {0}".format(
                     ' '.join(utils.Filesystem.supported_filesystem())))
@@ -283,7 +282,7 @@ class ImageLayers(object):
         try:
             self._add_lvm_snapshot(existing_lv,
                                    initial_base.lv_name)
-        except FilesystemNotSupported:
+        except utils.FilesystemNotSupported:
             log.error(
                 "Failed to create initial layout! Filesystem not supported!"
             )

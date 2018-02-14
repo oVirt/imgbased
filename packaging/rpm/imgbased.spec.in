@@ -1,3 +1,19 @@
+%if 0%{?fedora} || 0%{?rhel} >= 8
+%global with_python3 1
+%else
+%global with_python3 0
+%endif
+
+%if 0%{?rhel} >= 8
+%global with_python2 0
+%else
+%global with_python2 1
+%endif
+
+%global with_check 1
+%global _configure ../configure
+
+
 Name:           imgbased
 Version:        @PACKAGE_RPM_VERSION@
 Release:        %{?_release}%{?!_release:0.1}%{?dist}
@@ -9,22 +25,6 @@ Source0:        http://resources.ovirt.org/pub/src/%{name}/%{name}-%{version}.ta
 
 BuildArch:      noarch
 
-%global use_python_version @USE_PYTHON_VERSION@
-
-%if 0%{?use_python_version} == 03
-%global with_python3 1
-%global dnf_plugin_path %{python3_sitelib}/dnf-plugins/
-%else
-%global with_python2 1
-%global dnf_plugin_path %{python2_sitelib}/dnf-plugins/
-%endif
-
-# Skips check since rhel default repos lack pep8, pyflakes and python-nose
-%if ! 0%{?rhel}
-%{!?with_check:%global with_check 1}
-%else
-%{!?with_check:%global with_check 0}
-%endif
 
 BuildRequires:       make
 BuildRequires:       automake
@@ -33,19 +33,18 @@ BuildRequires:       rpm-build
 BuildRequires:       git
 BuildRequires:       asciidoc
 BuildRequires:       systemd-units
-BuildRequires:       rpm-python
 
-%if 0%{?with_python2}
-Requires:            python-imgbased
+%if 0%{?with_python3}
+Requires:            python%{python3_pkgversion}-imgbased
 %else
-Requires:            python3-imgbased
-%endif
+Requires:            python-imgbased
+%endif # with_python3
 
 Requires:            lvm2
 Requires:            util-linux
 Requires:            augeas
 Requires:            rsync
-Requires:            yum
+Requires:            tar
 
 %{!?_licensedir:%global license %%doc}
 
@@ -57,46 +56,55 @@ layers atop.
 %if 0%{?with_python2}
 %package -n python-imgbased
 Summary: A python 2 module for imgbased
-%if 0%{?with_python2} && 0%{?with_check}
+Requires:       rpm-python
 BuildRequires:       python-pep8
 BuildRequires:       pyflakes
 BuildRequires:       python-nose
 BuildRequires:       python-devel
 BuildRequires:       python-six
-%endif
 
 %description -n python-imgbased
-python3-imgbased is a python 3 library to manage lvm layers
-%endif
+python-imgbased is a python 2 library to manage lvm layers
+%endif # with_python2
 
 %if 0%{?with_python3}
-%package -n python3-imgbased
+%package -n python%{python3_pkgversion}-imgbased
 Summary: A python 3 module for imgbased
-BuildRequires:       python3-devel
-BuildRequires:       python3-pep8
-BuildRequires:       python3-pyflakes
-BuildRequires:       python3-nose
-BuildRequires:       python3-six
-Recommends:          systemd-python3
+BuildRequires:       python%{python3_pkgversion}-devel
+BuildRequires:       python%{python3_pkgversion}-pep8
+BuildRequires:       python%{python3_pkgversion}-pyflakes
+BuildRequires:       python%{python3_pkgversion}-nose
+BuildRequires:       python%{python3_pkgversion}-six
+Recommends:          python%{python3_pkgversion}-systemd
+Requires:       python%{python3_pkgversion}-rpm
 
-%description -n python3-imgbased
-python3-imgbased is a python 3 library to manage lvm layers
-%endif
+%description -n python%{python3_pkgversion}-imgbased
+python%{python3_pkgversion}-imgbased is a python 3 library to manage lvm layers
+%endif # with_python3
 
 %prep
 %setup -q
 
-
 %build
-%configure %{?with_python3:--with-python3}
+%if 0%{?with_python2}
+mkdir py2 && pushd py2
+%configure PYTHON="%{__python2}"
 make %{?_smp_mflags}
+popd
+%endif # with_python2
+
+%if 0%{?with_python3}
+mkdir py3 && pushd py3
+%configure PYTHON="%{__python3}"
+make %{?_smp_mflags}
+%endif # with_python3
 
 %install
-%if 0%{?fedora}
+%if 0%{?fedora} || 0%{?rhel} >= 8
 install -Dm 0644 src/plugin-dnf/imgbased-persist.conf \
-                 %{buildroot}/%{_sysconfdir}/dnf/pluginconf.d/imgbased-persist.conf
+                 %{buildroot}/%{_sysconfdir}/dnf/plugins/imgbased-persist.conf
 install -Dm 0644 src/plugin-dnf/imgbased-persist.py \
-                 %{buildroot}/%{dnf_plugin_path}/imgbased-persist.py
+                 %{buildroot}/%{python3_sitelib}/dnf-plugins/imgbased-persist.py
 %else
 install -Dm 0644 src/plugin-yum/imgbased-persist.py \
                  %{buildroot}/%{_prefix}/lib/yum-plugins/imgbased-persist.py
@@ -110,7 +118,14 @@ install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgba
 install -Dm 0644 data/imgbase-config-vdsm.service %{buildroot}%{_unitdir}/imgbase-config-vdsm.service
 install -Dm 0444 data/imgbased-pool.profile %{buildroot}%{_sysconfdir}/lvm/profile/imgbased-pool.profile
 install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
-%make_install DESTDIR="%{buildroot}"
+
+%if 0%{?with_python2}
+make -C py2 install DESTDIR="%{buildroot}"
+%endif # with_python2
+
+%if 0%{?with_python3}
+make -C py3 install DESTDIR="%{buildroot}"
+%endif # with_python3
 
 
 %files
@@ -127,12 +142,10 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %{_unitdir}/imgbase-*.service
 %{_sysconfdir}/grub.d/09_node
 %{_sysconfdir}/lvm/profile/imgbased-pool.profile
-%if 0%{?fedora}
-%{_sysconfdir}/dnf/pluginconf.d/imgbased-persist.conf
-%{dnf_plugin_path}/imgbased-persist.py*
-%if 0%{?with_python3}
-%{dnf_plugin_path}/__pycache__/imgbased*
-%endif
+%if 0%{?fedora} || 0%{?rhel} >= 8
+%{_sysconfdir}/dnf/plugins/imgbased-persist.conf
+%{python3_sitelib}/dnf-plugins/imgbased-persist.py*
+%{python3_sitelib}/dnf-plugins/__pycache__/imgbased*
 %else
 %{_sysconfdir}/yum/pluginconf.d/imgbased-persist.conf
 %{_prefix}/lib/yum-plugins/imgbased-persist.py*
@@ -146,7 +159,7 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %if 0%{?with_python3}
-%files -n python3-imgbased
+%files -n python%{python3_pkgversion}-imgbased
 %doc README.md
 %license LICENSE
 %{python3_sitelib}/%{name}/

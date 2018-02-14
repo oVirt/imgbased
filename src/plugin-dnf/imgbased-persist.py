@@ -30,7 +30,7 @@ logger.setLevel(logging.INFO)
 class ImgbasedPersist(dnf.Plugin):
 
     name = 'imagebased-persist'
-    PLUGIN_CONF = 'imgbased-persist'
+    config_name = 'imgbased-persist'
     persist_path = "/tmp/persisted-rpms/"
 
     excluded_pkgs = []
@@ -39,7 +39,7 @@ class ImgbasedPersist(dnf.Plugin):
         super(ImgbasedPersist, self).__init__(base, cli)
         self.base = base
 
-        cp = self.read_config(self.PLUGIN_CONF)
+        cp = self.read_config(self.base.conf)
         self.excluded_pkgs = cp.get("main", "exclude_pkgs").split(',')
 
     def check_excludes(self, name):

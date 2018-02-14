@@ -110,16 +110,25 @@ def relocate_rpm_and_yum_dbs():
     # Make the /var entry a symlink to the moved db
     os.symlink("../../usr/share/rpm", "/var/lib/rpm")
 
-    log.info("Relocating and cleaning yum")
-    # Delete everything under yum
-    shutil.rmtree("/var/lib/yum")
+    for d in ('yum', 'dnf'):
+        orig_path = "/var/lib/{}".format(d)
+        new_path = "/usr/share/{}".format(d)
 
-    # Then recreate it as a symlink
-    os.mkdir("/var/lib/yum")
+        if not os.path.isdir(orig_path):
+            log.info("%s does not exist, skipping", orig_path)
+            continue
 
-    shutil.move("/var/lib/yum", "/usr/share/yum")
-    # Make the /var entry a symlink to the moved path
-    os.symlink("../../usr/share/yum", "/var/lib/yum")
+        log.info("Relocating and cleaning %s", orig_path)
+
+        # Delete everything under yum
+        shutil.rmtree(orig_path)
+
+        # Then recreate it as a symlink
+        os.mkdir(orig_path)
+        shutil.move(orig_path, new_path)
+
+        # Make the /var entry a symlink to the moved path
+        os.symlink("../../" + new_path, orig_path)
 
 
 @Postprocessor.add_step
@@ -136,7 +145,6 @@ def disable_and_clean_yum_repos():
         subprocess.call(["sed", "-i", "-e",
                          "/# imgbased: set-enabled/,$ "
                          "{ s/enabled=.*/enabled=1/ }", fn])
-
     log.info("Clean all yum data")
     subprocess.call(["yum", "clean", "all", "--enablerepo", "*"])
 
@@ -185,8 +193,9 @@ def clean_network_configs():
 
     files = ["/etc/resolv.conf", "/etc/hostname"]
     for fn in files:
-        log.debug("Removing {0}".format(fn))
-        os.unlink(fn)
+        if os.path.exists(fn):
+            log.debug("Removing {0}".format(fn))
+            os.unlink(fn)
 
 
 @Postprocessor.add_step
@@ -195,7 +204,9 @@ def remove_iscsi_initiator_iqn():
     A service is responsible for generating a new and uniqe name
     FIXME https://bugzilla.redhat.com/show_bug.cgi?id=1393833
     """
-    File("/etc/iscsi/initiatorname.iscsi").remove()
+    fn = "/etc/iscsi/initiatorname.iscsi"
+    if os.path.exists(fn):
+        os.unlink(fn)
 
 
 @Postprocessor.add_step

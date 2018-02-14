@@ -26,7 +26,7 @@ import inspect
 import re
 
 from ..config import paths
-from ..utils import BuildMetadata, File, Fstab, Motd, bcolors
+from ..utils import BuildMetadata, Fstab, Motd, bcolors
 from ..naming import Image
 from ..lvm import LVM
 from ..bootloader import BootConfiguration
@@ -435,14 +435,13 @@ class Health():
 
             discards = []
 
-            targets = paths.keys() + ["/"]
+            targets = list(paths.keys()) + ["/"]
             for tgt in targets:
                 try:
                     ret = "discard" in fstab.by_target(tgt).options
                     discards.append(ret)
                 except KeyError:
-                    from ConfigParser import ConfigParser
-                    from io import BytesIO
+                    from six.moves.configparser import ConfigParser
                     c = ConfigParser()
                     c.optionxform = str
 
@@ -451,7 +450,7 @@ class Health():
                     fname = "/etc/systemd/system/{}.mount".format(sub)
 
                     if os.path.exists(fname):
-                        c.readfp(BytesIO(File(fname).contents))
+                        c.read(fname)
                         ret = "discard" in c.get('Mount', 'Options')
                         discards.append(ret)
             is_ok = all(discards)

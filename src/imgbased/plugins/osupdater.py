@@ -289,7 +289,7 @@ def remediate_etc(imgbase):
         if candidates is None:
             candidates = set()
         if dc.same_files:
-            for l in sorted(dc.same_files):
+            for l in dc.same_files:
                 f = "{}/{}".format(dc.left, l)
                 if not os.path.islink(f):
                     if strip(f) in problems and strip(f) not in candidates:
@@ -298,7 +298,7 @@ def remediate_etc(imgbase):
                             log.debug("Updating %s from the next "
                                       "layer" % ("{}".format(strip(f))))
         if dc.subdirs:
-            for d in sorted(dc.subdirs.values()):
+            for d in dc.subdirs.values():
                 diff_candidates(d, problems, candidates)
 
         return candidates
@@ -307,7 +307,7 @@ def remediate_etc(imgbase):
         if problems is None:
             problems = []
         if dc.diff_files:
-            for l in sorted(dc.diff_files):
+            for l in dc.diff_files:
                 # This is annoying, but handle initiatorname.iscsi
                 # specially, since it's generated on-the-fly and will
                 # always match what's in the first factory, but we
@@ -316,7 +316,7 @@ def remediate_etc(imgbase):
                         not check_file(l):
                     problems.append("{}/{}".format(strip(dc.left), l))
         if dc.subdirs:
-            for d in sorted(dc.subdirs.values()):
+            for d in dc.subdirs.values():
                 diff_problems(d, problems)
 
         return problems
@@ -346,11 +346,11 @@ def remediate_etc(imgbase):
         if pre_files is None:
             pre_files = []
         if dc.left_only:
-            for f in sorted(dc.left_only):
+            for f in dc.left_only:
                 log.debug("Planning to remove %s/%s" % (strip(dc.right), f))
                 pre_files.append("{}/{}".format(strip(dc.right), f))
         if dc.subdirs:
-            for d in sorted(dc.subdirs.values()):
+            for d in dc.subdirs.values():
                 analyze_removals(d, pre_files)
 
         return pre_files
@@ -761,7 +761,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
         # Ensure that discard is used
         # This can also be done in anaconda once it is fixed
-        targets = paths.keys() + ["/"]
+        targets = list(paths.keys()) + ["/"]
         for tgt in targets:
             try:
                 e = newfstab.by_target(tgt)
@@ -772,21 +772,20 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 # Created with imgbased.volume?
                 log.debug("{} not found in /etc/fstab. "
                           "ot created by Anaconda".format(tgt))
-                from ConfigParser import ConfigParser
-                from io import BytesIO
+                from six.moves.configparser import ConfigParser
                 c = ConfigParser()
                 c.optionxform = str
 
                 sub = re.sub(r'^/', '', tgt)
                 sub = re.sub(r'/', '-', sub)
                 fname = "{}/etc/systemd/system/{}.mount".format(newroot, sub)
-                c.readfp(BytesIO(File(fname).contents))
+                c.read(fname)
 
                 if 'discard' not in c.get('Mount', 'Options'):
                     c.set('Mount', 'Options',
                           ','.join([c.get('Mount', 'Options'), 'discard']))
 
-                with open(fname, 'wb') as mountfile:
+                with open(fname, 'w') as mountfile:
                     c.write(mountfile)
 
     def update_grub_default(newroot):
@@ -824,7 +823,10 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             pkgs = RpmPackageDb()
             pkgs.root = newroot
 
-            pkgfiles = pkgs.get_files("kernel")
+            pkgfiles = []
+            for k in pkgs.get_whatprovides("kernel"):
+                pkgfiles += pkgs.get_files(k)
+
             if not pkgfiles:
                 log.info("No kernel found on %s" % new_lv)
                 return

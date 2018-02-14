@@ -1,9 +1,8 @@
 
 import logging
 import os
-from lvm import LVM
-from .utils import mounted, systemctl, File, mkfs, \
-    Rsync
+from .lvm import LVM
+from .utils import mounted, systemctl, File, mkfs, Rsync
 
 
 log = logging.getLogger(__package__)

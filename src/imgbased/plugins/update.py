@@ -103,11 +103,11 @@ class LiveimgExtractor():
     def extract(self, liveimgfile, nvr=None):
         new_base = None
         log.info("Extracting image '%s'" % liveimgfile)
-        with mounted(liveimgfile) as squashfs:
+        with mounted(liveimgfile, options="ro") as squashfs:
             log.debug("Mounted squashfs")
             liveimg = glob.glob(squashfs.target + "/*/*.img").pop()
             log.debug("Found fsimage at '%s'" % liveimg)
-            with mounted(liveimg) as rootfs:
+            with mounted(liveimg, options="ro") as rootfs:
                 nvr = nvr or BuildMetadata(rootfs.target).get("nvr")
                 log.debug("Using nvr: %s" % nvr)
                 size = self._recommend_size_for_tree()
