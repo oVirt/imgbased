@@ -153,6 +153,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Tue Feb 20 2018 Ryan Barry <rbarry@redhat.com> - 1.0.9-0
+- Work around new-kernel-pkg on new kernel installations
+
 * Fri Jan 26 2018 Sandro Bonazzola <sbonazzo@redhat.com> - 1.0.8-0
 - osupdater: fixed TypeError on MountPoint (rhbz#1538925)
 
