@@ -562,17 +562,14 @@ def relabel_selinux(new_fs):
     with SELinuxDomain("setfiles_t") as dom:
         with utils.bindmounted("/var", target=new_fs.path("/") + "/var",
                                rbind=True):
-            with utils.bindmounted("/dev", target=new_fs.path("/") + "/dev",
-                                   rbind=True):
-                for fc in ctx_files:
-                    if os.path.exists(new_root + "/" + fc):
-                        excludes = sum([["-e", d] for d in exclude_dirs], [])
-                        dom.runcon(["chroot", new_root, "setfiles", "-v", fc] +
-                                   excludes +
-                                   dirs)
-                    else:
-                        log.debug("{} not found in new fs, skipping".format(
-                                  fc))
+            for fc in ctx_files:
+                if os.path.exists(new_root + "/" + fc):
+                    excludes = sum([["-e", d] for d in exclude_dirs], [])
+                    dom.runcon(["chroot", new_root, "setfiles", "-v", fc] +
+                               excludes +
+                               dirs)
+                else:
+                    log.debug("{} not found in new fs, skipping".format(fc))
 
 
 def run_rpm_selinux_post(new_lv):
