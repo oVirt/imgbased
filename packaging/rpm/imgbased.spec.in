@@ -80,6 +80,7 @@ install -Dm 0644 data/imgbase-clean-grub.service %{buildroot}%{_unitdir}/imgbase
 install -Dm 0644 data/imgbase-copy-bootfiles.service %{buildroot}%{_unitdir}/imgbase-copy-bootfiles.service
 install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgbase-generate-iqn.service
 install -Dm 0644 data/imgbase-config-vdsm.service %{buildroot}%{_unitdir}/imgbase-config-vdsm.service
+install -Dm 0644 data/imgbase-relabel-dev.service %{buildroot}%{_unitdir}/imgbase-relabel-dev.service
 install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %make_install
 

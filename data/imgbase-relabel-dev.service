@@ -1,0 +1,11 @@
+[Unit]
+Description=Reconfigure vdsm
+Before=lldpad.service
+
+[Service]
+ExecStart=/usr/sbin/restorecon -rv /dev
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
