@@ -44,6 +44,7 @@ EXTRA_DIST = \
   data/imgbase-fix-new-kernel.service \
   data/imgbase-generate-iqn.service \
   data/imgbase-config-vdsm.service \
+  data/imgbase-relabel-dev.service \
   data/imgbased-pool.profile \
   docs/imgbase-copy-bootfiles.8 \
   docs/imgbase-fix-new-kernel.8 \

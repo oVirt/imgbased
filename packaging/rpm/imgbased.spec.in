@@ -108,6 +108,7 @@ install -Dm 0644 data/imgbase-copy-bootfiles.service %{buildroot}%{_unitdir}/img
 install -Dm 0644 data/imgbase-fix-new-kernel.service %{buildroot}%{_unitdir}/imgbase-fix-new-kernel.service
 install -Dm 0644 data/imgbase-generate-iqn.service %{buildroot}%{_unitdir}/imgbase-generate-iqn.service
 install -Dm 0644 data/imgbase-config-vdsm.service %{buildroot}%{_unitdir}/imgbase-config-vdsm.service
+install -Dm 0644 data/imgbase-relabel-dev.service %{buildroot}%{_unitdir}/imgbase-relabel-dev.service
 install -Dm 0444 data/imgbased-pool.profile %{buildroot}%{_sysconfdir}/lvm/profile/imgbased-pool.profile
 install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %make_install DESTDIR="%{buildroot}"
