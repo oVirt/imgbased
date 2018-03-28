@@ -87,6 +87,19 @@ mktitle ()
 
 title_correction_code=
 
+find_vg ()
+{
+  local ret=
+  local p=$(findmnt -n / | awk '{print $2}')
+  local dm_uuid=$(readlink -f $p | xargs -i{} dmsetup info --noheadings -c -o uuid {} | sed -e 's/LVM-//' | cut -c-32)
+  lvm vgs --noheadings -o vg_name,uuid | while read vg; do
+    local tmp_uuid=$(echo $vg | awk '{print $2}' | sed -e 's/-//g')
+    if echo $dm_uuid | grep $tmp_uuid > /dev/null; then
+      echo $vg | awk '{print $1}'
+    fi
+  done
+}
+
 node_entry ()
 {
   node_version="$1"
@@ -228,7 +241,7 @@ while [ "x$list" != "x" ] ; do
   node_version=`echo "${dirname##*/}"`
   alt_version=`echo $version | sed -e "s,\.old$,,g"`
   linux_root_device_thisversion="${LINUX_ROOT_DEVICE}"
-  vg=$(lvm vgs --noheading -o name | tr -d '[:space:]')
+  vg=$(find_vg)
 
   initrd=
   for i in "initrd.img-${version}" "initrd-${version}.img" "initrd-${version}.gz" \
