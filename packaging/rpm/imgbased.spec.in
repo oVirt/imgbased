@@ -154,6 +154,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Mon Apr 06 2018 Ryan Barry <rbarry@redhat.com> - 1.0.11-0
+- Move /dev relabeling to a service
+
 * Thu Mar 22 2018 Ryan Barry <rbarry@redhat.com> - 1.0.10-0
 - Relabel /dev for lldpad
 
