@@ -107,6 +107,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Sun Apr 08 2018 Ryan Barry <rbarry@redhat.com> - 0.9.57-0
+- Use system-nspawn to fix RPM permissions
+
 * Thu Mar 29 2018 Ryan Barry <rbarry@redhat.com> - 0.9.56-0
 - Relabel /dev at reboot instead of update
 
