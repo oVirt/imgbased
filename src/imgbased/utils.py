@@ -443,6 +443,9 @@ class ExternalBinary(object):
     def mount(self, args, **kwargs):
         return self.call(["mount"] + args, **kwargs)
 
+    def mknod(self, args, **kwargs):
+        return self.call(["mknod"] + args, **kwargs)
+
 
 class LvmBinary(ExternalBinary):
     def call(self, *args, **kwargs):

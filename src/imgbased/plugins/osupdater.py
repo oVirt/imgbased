@@ -99,6 +99,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         # Some change in managed nodes is blapping /dev/mapper. Add it back
         # so LVM and /dev/mapper agree
         LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
+        mknod_dev_urandom(new_lv)
 
         threads = []
         threads.append(ThreadRunner(remediate_etc, imgbase))
@@ -123,6 +124,12 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         raise ConfigMigrationError()
 
     thread_boot_migrator(imgbase, new_lv, previous_layer_lv)
+
+
+def mknod_dev_urandom(new_lv):
+    with mounted(new_lv.path) as new_fs:
+        devurandom = "{}/dev/urandom".format(new_fs.target)
+        utils.ExternalBinary().mknod([devurandom, "c", "1", "9"])
 
 
 def thread_boot_migrator(imgbase, new_lv, previous_layer_lv):
