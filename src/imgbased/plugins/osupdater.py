@@ -642,16 +642,7 @@ def hack_rpm_permissions(new_fs):
     #                  do rpm -qf /$p ; done )
     def just_do(arg, **kwargs):
         DEVNULL = open(os.devnull, "w")
-        arg = ["rpm", "--root=" + new_fs.path("/")] + arg
-        log.debug("Running %s" % arg)
-        proc = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                                stderr=DEVNULL,
-                                **kwargs).communicate()
-        return proc[0]
-
-    def nspawn_do(arg, **kwargs):
-        DEVNULL = open(os.devnull, "w")
-        arg = ["systemd-nspawn", "-D", new_fs.path("/"), "rpm"] + arg
+        arg = ["nsenter", "--root=" + new_fs.path("/"), "--wd=/"] + arg
         log.debug("Running %s" % arg)
         proc = subprocess.Popen(arg, stdout=subprocess.PIPE,
                                 stderr=DEVNULL,
@@ -664,9 +655,7 @@ def hack_rpm_permissions(new_fs):
     incorrect_paths = {"paths": [],
                        "verb": "--setperms"
                        }
-    for line in just_do(["--verify", "-qa", "--nodeps", "--nodigest",
-                         "--nofiledigest", "--noscripts",
-                         "--nosignature"]).splitlines():
+    for line in just_do(["rpm", "--verify", "-qa"]).splitlines():
         _mode, _path = (line[0:13], line[13:])
         if _mode[1] == "M":
             incorrect_paths["paths"].append(_path)
@@ -678,11 +667,11 @@ def hack_rpm_permissions(new_fs):
               str(incorrect_paths["paths"]))
 
     for pgroup in [incorrect_groups, incorrect_paths]:
-        pkgs_req_update = just_do(["-qf", "--queryformat",
+        pkgs_req_update = just_do(["rpm", "-qf", "--queryformat",
                                    "%{NAME}\n"] +
                                   pgroup["paths"]).splitlines()
         pkgs_req_update = list(set(pkgs_req_update))
-        nspawn_do([pgroup["verb"]] + pkgs_req_update)
+        just_do(["rpm", pgroup["verb"]] + pkgs_req_update)
 
 
 def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
