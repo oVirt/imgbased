@@ -461,6 +461,9 @@ class ExternalBinary(object):
     def getenforce(self):
         return self.call(["getenforce"])
 
+    def mknod(self, args, **kwargs):
+        return self.call(["mknod"] + args, **kwargs)
+
 
 class LvmBinary(ExternalBinary):
     def call(self, *args, **kwargs):
