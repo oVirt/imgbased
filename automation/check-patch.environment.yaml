@@ -1,0 +1,7 @@
+---
+- name: GERRIT_BRANCH
+  valueFrom:
+      runtimeEnv: GERRIT_BRANCH
+- name: JOB_URL
+  valueFrom:
+      runtimeEnv: JOB_URL

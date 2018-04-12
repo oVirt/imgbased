@@ -21,3 +21,9 @@ systemd-python3
 pykickstart
 rpm-python
 yum
+wget
+squashfs-tools
+genisoimage
+isomd5sum
+virt-install
+pigz
