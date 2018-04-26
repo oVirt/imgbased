@@ -27,3 +27,4 @@ genisoimage
 isomd5sum
 virt-install
 pigz
+yum-utils

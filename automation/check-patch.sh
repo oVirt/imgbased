@@ -1,14 +1,15 @@
-#!/bin/bash -xe
+#!/bin/bash -ex
 
 ARTIFACTSDIR=$HOME/exported-artifacts
 TMPDIR=$HOME/tmp
 NGNDIR=$TMPDIR/ngn/ovirt-node-ng
+COVDIR=/var/lib/imgbase-coverage
 
 IMG_INI=4
 IMG_UPD=5
 
 save_logs() {
-    cp -fv *.{log,conf} $ARTIFACTSDIR || :
+    cp -fv *.log $ARTIFACTSDIR || :
 }
 
 setup_environ() {
@@ -29,8 +30,10 @@ build_imgbased() {
 }
 
 fetch_node_iso() {
-    local job_url=$(sed -e 's/imgbased/ovirt-node-ng/' \
-                        -e 's/check-patch/build-artifacts/' <<< $JOB_URL)
+    local ver="${GERRIT_BRANCH#*-}"
+    local dist="$(rpm --eval %{dist} | cut -d. -f2)"
+    local arch="$(rpm --eval %{_arch})"
+    local job_url="http://jenkins.ovirt.org/job/ovirt-node-ng_${ver}_build-artifacts-${dist}-${arch}/"
 
     local build_num=$(wget -qO- $job_url/lastSuccessfulBuild/buildNumber)
     local artifacts_url="$job_url/$build_num/api/json?tree=artifacts[fileName]"
@@ -42,9 +45,9 @@ fetch_node_iso() {
         exit 0
     }
 
-    echo "Downloading iso"
-
-    wget -q "${job_url}/${build_num}/artifact/exported-artifacts/${iso}"
+    local iso_url="${job_url}/${build_num}/artifact/exported-artifacts/${iso}"
+    echo "Downloading: $iso_url"
+    wget -q $iso_url
 }
 
 build_test_images() {
@@ -56,16 +59,34 @@ build_test_images() {
     unsquashfs $mntdir/ovirt-node-ng-image.squashfs.img
     umount $mntdir
 
-    # Install imgbased rpms inside the image
+    # Install imgbased and coverage rpms inside the image
     mount squashfs-root/LiveOS/rootfs.img $mntdir
     local rpms=$(find rpmbuild -name "*imgbased*.noarch.rpm")
-    rpm -Uhv --noscripts --force --root=$mntdir $rpms
+    yum-config-manager -q --installroot=$mntdir --enable base,updates
+    yum install --installroot=$mntdir -y python-coverage $rpms
+    yum-config-manager -q --installroot=$mntdir --disable base,updates
+    mkdir -p $mntdir/$COVDIR
+    sed -e '/^$PYTHON/d' -e 's/bash/bash -x/' -i $mntdir/usr/sbin/imgbase
+    cat << EOF >> $mntdir/usr/sbin/imgbase
+export COVERAGE_FILE=\$(mktemp -u $COVDIR/.coverage.imgbase_XXXXXXXXXXXXXX)
+coverage run -m imgbased.__main__ \$@
+EOF
 
     # Build 2 new squashfs images (ver-4 and ver-5)
     for x in {$IMG_INI,$IMG_UPD}
     do
         nvr="ovirt-node-ng-${x}.0.0-0.$(date +%Y%m%d).0"
-        echo -n "$nvr" > $mntdir/usr/share/imgbase/build/meta/nvr
+
+        # Reverse the image state and check image-build
+        chroot $mntdir << EOF
+mknod /dev/urandom c 1 9
+rm -rf /usr/share/factory/{etc,var}
+rm -f /var/lib/{rpm,yum}
+mv /usr/share/{rpm,yum} /var/lib
+touch /etc/{resolv.conf,hostname,iscsi/initiatorname.iscsi}
+imgbase --debug --experimental image-build --postprocess --set-nvr=$nvr
+rm /dev/urandom
+EOF
         sync $mntdir && umount $mntdir
         mksquashfs squashfs-root image.squashfs.${x} -noI -noD -noF -noX
         [[ $x -eq $IMG_INI ]] && mount squashfs-root/LiveOS/rootfs.img $mntdir
@@ -94,14 +115,15 @@ repack_node_artifacts() {
 
     # Repack the iso with the new image
     pushd $extdir
-    mkisofs -o $ARTIFACTSDIR/ovirt-test-installer.iso \
+    mkisofs -o $TMPDIR/ovirt-test-installer.iso \
             -b isolinux/isolinux.bin \
             -c isolinux/boot.cat \
             -no-emul-boot \
+            -quiet \
             -boot-load-size 4 \
             -boot-info-table -J -R -V "$volid" .
     popd
-    implantisomd5 $ARTIFACTSDIR/ovirt-test-installer.iso
+    implantisomd5 $TMPDIR/ovirt-test-installer.iso
     rm -rf $extdir
 
     # Build image-update rpm with the new update squashfs (ver.5)
@@ -110,51 +132,65 @@ repack_node_artifacts() {
     pushd $NGNDIR
     git checkout $GERRIT_BRANCH
     ./autogen.sh
+    sed -i packaging/ovirt-node-ng.spec.in \
+        -e 's/set -e/set -ex/' -e 's/--quiet//' -e 's/null/stdout/'
     touch boot.iso
     touch ovirt-node-ng-image.{squashfs.img,manifest-rpm,unsigned-rpms}
     make rpm PLACEHOLDER_RPM_VERSION=$IMG_UPD PLACEHOLDER_RPM_RELEASE=0
-    find tmp.repos -name "ovirt*image-update*.rpm" -exec mv {} $ARTIFACTSDIR \;
+    find tmp.repos -name "ovirt*image-update*.rpm" -exec mv {} $TMPDIR \;
     git checkout -
     popd
 }
 
-do_ssh() {
-    local ssh_key=$1
-    local ip=$2
+exec_ssh() {
+    local sshkey=$1
+    local addr=$2
     local cmd=$3
-    local lim=${4:-1}
 
-    for i in $(seq 1 $lim)
-    do
-        ssh -q -o "UserKnownHostsFile /dev/null" \
-               -o "StrictHostKeyChecking no" \
-               -i $ssh_key root@$ip $cmd && break ||:
-        sleep 5
-    done
+    ssh -q -o "UserKnownHostsFile /dev/null" \
+           -o "StrictHostKeyChecking no" \
+           -i $sshkey root@$addr "$cmd"
 }
 
 run_nodectl_check() {
-    local name=$1
-    local ssh_key=$2
-    local ip=$3
+    local bootnum=$1
+    local sshkey=$2
+    local addr=$3
     local outfile=$4
-
-    local timeout=120
     local check=""
 
-    while [[ -z "$check" ]]
+    for i in {1..10}
     do
-        [[ $timeout -eq 0 ]] && break
-        check=$(do_ssh $ssh_key $ip "nodectl check" 10 2>&1)
+        bootcur=$(exec_ssh $sshkey $addr "grep BOOT_IMAGE /var/log/messages|wc -l")||:
+        echo "Received bootcur=$bootcur, bootnum=$bootnum"
+        [[ -z "$bootnum" || "$bootcur" = "$bootnum" ]] && {
+            exec_ssh $sshkey $addr "nodectl check" > $outfile 2>&1 ||:
+            grep "Status:" $outfile && break
+        }
         sleep 10
-        timeout=$((timeout - 10))
     done
+}
 
-    echo "$check" > $outfile
+fetch_remote() {
+    local sshkey=$1
+    local addr=$2
+    local path=$3
+    local dest=$4
+    local compress=$5
+
+    scp -o "UserKnownHostsFile /dev/null" \
+        -o "StrictHostKeyChecking no" \
+        -i $sshkey -r root@$addr:$path $dest
+
+    [[ -n $compress ]] && {
+        tar czf $dest.tgz $dest && mv $dest.tgz $ARTIFACTSDIR
+    }||:
 }
 
 validate_nodectl_log() {
     local logfile=$1
+    local sshkey=$2
+    local addr=$3
 
     cat $logfile
 
@@ -166,46 +202,108 @@ validate_nodectl_log() {
 }
 
 iso_install_upgrade() {
+    echo "Installing $TMPDIR/ovirt-test-installer.iso"
     # Install the iso
     $NGNDIR/scripts/node-setup/setup-node-appliance.sh \
-        -i $ARTIFACTSDIR/ovirt-test-installer.iso \
+        -i $TMPDIR/ovirt-test-installer.iso \
         -p ovirt > setup-iso.log 2>&1
 
-    mv *nodectl-check*.log init-nodectl-check.log
-    validate_nodectl_log "init-nodectl-check.log"
+    rm *nodectl-check.log
 
     # Grab name, sshkey and addr, ugly but works
     local name=$(grep available setup-iso.log | cut -d: -f1)
     local addr=$(grep -Po "(?<=at ).*" setup-iso.log)
     local sshkey="/var/lib/virtual-machines/sshkey-${name}"
 
-    # Check the current iso layer name
-    do_ssh $sshkey $addr "imgbase layout; imgbase w" > init-layers.log 2>&1
+    fetch_remote "$sshkey" "$addr" "/var/log" "init_var_log" "1"
 
-    # Copy update rpm to node
+    echo "Validating nodectl check"
+    run_nodectl_check "" "$sshkey" "$addr" "init-nodectl-check.log"
+    validate_nodectl_log "init-nodectl-check.log" "$sshkey" "$addr"
+
+    # Check the current iso layer name
+    exec_ssh $sshkey $addr "imgbase layout; imgbase w" > init-layers.log 2>&1
+
+    # Count boot number
+    local bootnum=$(exec_ssh $sshkey $addr "grep BOOT_IMAGE /var/log/messages|wc -l")
+
+    # Build, send and install imgbased-persist rpm
+    rpmbuild -bb packaging/rpm/imgbased-persist.spec
+    find rpmbuild -name imgbased-persist*.rpm -exec mv {} $TMPDIR \;
+
+    # Copy update and persist rpms to node
     scp -o "UserKnownHostsFile /dev/null" \
         -o "StrictHostKeyChecking no" \
-        -i $sshkey $ARTIFACTSDIR/*.rpm root@$addr:
+        -i $sshkey $TMPDIR/*.rpm root@$addr:
 
     # Install the update rpm
-    do_ssh $sshkey $addr "rpm -Uhv \"*.rpm\""
+    echo "Installing update rpm"
+    exec_ssh $sshkey $addr << EOF 2>&1 || failed=1
+yum install -y imgbased-persist*.rpm
+rm imgbased-persist*.rpm
+rpm -Uhv \"*.rpm\"
+EOF
 
-    # Copy the imgbased.log file
+    # Grab some logs
+    echo "Downloading remote logs"
     local logfile=$(rpm -qp --scripts $ARTIFACTSDIR/*.rpm | \
                     grep imgbased.log | \
                     awk '{print $8}')
 
-    scp -o "UserKnownHostsFile /dev/null" \
-        -o "StrictHostKeyChecking no" \
-        -i $sshkey root@$addr:$logfile .
+    fetch_remote "$sshkey" "$addr" "$logfile" "imgbased.log"
+    fetch_remote "$sshkey" "$addr" "/var/log" "post_upgrade_var_log" "1"
+
+    [[ $failed -eq 1 ]] && {
+        echo "Upgrade rpm failed, check post-upgrade logs for details"
+        exit 1
+    }
 
     # Reboot
-    do_ssh $sshkey $addr "reboot" > /dev/null
-    run_nodectl_check "$name" "$sshkey" "$addr" "upgrade-nodectl-check.log"
-    validate_nodectl_log "upgrade-nodectl-check.log"
+    echo "Rebooting, bootnum=$bootnum"
+    exec_ssh $sshkey $addr "reboot" ||:
 
-    # Check the current iso layer name and layout
-    do_ssh $sshkey $addr "imgbase layout; imgbase w" > upgrade-layers.log 2>&1
+    # Run checks when sshd is up
+    echo "Running some more tests and gathering coverage data"
+    run_nodectl_check "$((bootnum+2))" "$sshkey" "$addr" "upgrade-nodectl-check.log"
+    fetch_remote "$sshkey" "$addr" "/var/log" "post_reboot_var_log" "1"
+    validate_nodectl_log "upgrade-nodectl-check.log" "$sshkey" "$addr"
+
+    local prev_nvr="ovirt-node-ng-${IMG_INI}.0.0-0.$(date +%Y%m%d).0"
+    # Run some imgbase checks to collect more coverage, this will destroy the
+    # vm (make it not bootable), it's OK
+    exec_ssh $sshkey $addr << EOF > post-checks.log 2>&1
+imgbase check
+imgbase layout
+imgbase w
+imgbase --debug layout --free-space
+imgbase --debug layout --bases
+imgbase --debug --experimental volume --list
+imgbase --debug --experimental diff \$(imgbase layout --layers)
+imgbase --debug --experimental factory-diff --config=NA
+imgbase --debug --experimental pkg --diff \$(imgbase layout --layers)
+imgbase --debug --experimental nspawn $prev_nvr ls /
+imgbase --debug rollback --to $prev_nvr
+imgbase --debug base --latest
+imgbase --debug base --remove $prev_nvr
+rpm -q imgbased-persist
+EOF
+
+    fetch_remote "$sshkey" "$addr" "$COVDIR" $ARTIFACTSDIR/coverage-data
+    cp -vr $ARTIFACTSDIR/coverage-data/. .
+    cat << EOF >> .coveragerc
+[run]
+omit =
+    /*/site-packages/six*
+
+[paths]
+source =
+    src/imgbased
+    /usr/lib/python2.7/site-packages/imgbased
+    /tmp/*/usr/lib/python2.7/site-packages/imgbased
+EOF
+
+    coverage combine
+    coverage html -d $ARTIFACTSDIR/coverage-report
 }
 
 main() {

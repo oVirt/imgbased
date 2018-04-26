@@ -105,7 +105,6 @@ check-nosetests: $(SRCFILES)
 	@echo "[CHECK] nosetests"
 	nosetests --no-byte-compile --with-xunit \
 		--with-coverage --cover-erase --cover-tests \
-		--cover-branches --cover-inclusive \
 		--cover-package=imgbased --cover-xml --cover-min-percentage=43 \
 		--with-doctest --doctest-tests
 
