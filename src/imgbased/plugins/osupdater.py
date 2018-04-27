@@ -639,10 +639,26 @@ def run_rpm_selinux_post(new_lv):
         filter_selinux_commands(postin, 1)
         filter_selinux_commands(posttrans, 0)
 
-        with utils.bindmounted("/proc", new_fs.target + "/proc"):
-            with utils.bindmounted("/dev", new_fs.target + "/dev"):
-                for r in run_commands:
-                    just_do(r)
+        with utils.bindmounted("/proc",
+                               new_fs.target + "/proc"):
+            with utils.bindmounted("/dev",
+                                   new_fs.target + "/dev"):
+                with utils.mounted("sys",
+                                   target=new_fs.target + "/sys",
+                                   fstype="sysfs"):
+                    with utils.mounted("selinuxfs",
+                                       target=new_fs.target +
+                                       "/sys/fs/selinux",
+                                       fstype="selinuxfs"):
+                        for r in run_commands:
+                            just_do(r)
+
+        # this can unmount selinux. Make sure it's present
+        if "/sys/fs/selinux" not in File("/proc/mounts").read():
+            subprocess.call(["mount", "-t", "selinuxfs",
+                             "none", "/sys/fs/selinux"])
+
+        subprocess.call(["mount", "-a"])
 
 
 def relocate_var_lib_yum(new_lv):
