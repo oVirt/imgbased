@@ -154,6 +154,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Fri Apr 27 2018 Ryan Barry <rbarry@redhat.com> - 1.0.14-0
+- Improve the grub script logic for LVs
+
 * Tue Apr 10 2018 Ryan Barry <rbarry@redhat.com> - 1.0.13-0
 - systemd-nspawn doesn't work in anaconda. mknod /dev/urandom on new layers
 
