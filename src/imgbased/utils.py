@@ -191,11 +191,12 @@ class MountPoint(object):
     target = None
     tmpdir = None
 
-    def __init__(self, source, options=None, target=None):
+    def __init__(self, source, options=None, target=None, fstype=None):
         self.run = ExternalBinary()
         self.source = source
         self.options = options
         self.target = target
+        self.fstype = fstype
 
     def mount(self):
         # If no target, then create one
@@ -211,6 +212,8 @@ class MountPoint(object):
         cmd = ["mount"]
         if self.options:
             cmd += ["-o%s" % self.options]
+        if self.fstype:
+            cmd += ["-t%s" % self.fstype]
         cmd += [self.source, self.target]
         self.run.call(cmd)
 
@@ -233,8 +236,8 @@ class MountPoint(object):
 
 
 class mounted(object):
-    def __init__(self, source, options=None, target=None):
-        self.mp = MountPoint(source, options, target)
+    def __init__(self, source, options=None, target=None, fstype=None):
+        self.mp = MountPoint(source, options, target, fstype)
 
     def __enter__(self):
         self.mp.mount()
@@ -249,8 +252,9 @@ class mounted(object):
 
 
 @contextmanager
-def bindmounted(source, target, rbind=False):
+def bindmounted(source, target, rbind=False, readonly=False):
     options = "rbind,rprivate" if rbind else "bind,private"
+    options = options + ",ro" if readonly else options
     with mounted(source, target=target, options=options) as mnt:
         yield mnt
     log.debug("Done!")
