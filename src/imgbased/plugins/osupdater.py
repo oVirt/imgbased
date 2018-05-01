@@ -84,6 +84,7 @@ def init(app):
 
 def on_new_layer(imgbase, previous_lv, new_lv):
     log.debug("Got: %s and %s" % (new_lv, previous_lv))
+    LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
 
     # FIXME this can be improved by providing a better methods in .naming
     new_layer = Image.from_lv_name(new_lv.lv_name)
@@ -105,8 +106,6 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     try:
         # Some change in managed nodes is blapping /dev/mapper. Add it back
         # so LVM and /dev/mapper agree
-        LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
-
         set_thinpool_profile(imgbase, new_lv)
         mknod_dev_urandom(new_lv)
 
