@@ -478,7 +478,7 @@ class LvmBinary(ExternalBinary):
 class LvmCLI():
     lvs = LvmBinary().lvs
     vgs = LvmBinary().vgs
-    lvcreate = LvmBinary().lvcreate
+    lvcreate = ExternalBinary().lvcreate
     lvchange = LvmBinary().lvchange
     lvremove = LvmBinary().lvremove
     lvextend = LvmBinary().lvextend
