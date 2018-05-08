@@ -21,6 +21,7 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 
+import filecmp
 import logging
 import glob
 import hashlib
@@ -348,7 +349,11 @@ def remediate_etc(imgbase):
                 copy_to = n.path("/") + c
 
                 log.debug("Copying %s to %s" % (copy_from, copy_to))
-                shutil.copy2(copy_from, copy_to)
+                if not filecmp.cmp(copy_from, copy_to):
+                    shutil.copy2(copy_from, copy_to)
+                else:
+                    log.debug("Unable to copy {} to {}. Symlink from a "
+                              "package rename?".format(copy_from, copy_to))
 
     def analyze_removals(dc, pre_files=None):
         if pre_files is None:
