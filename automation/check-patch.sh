@@ -213,7 +213,8 @@ iso_install_upgrade() {
     # Grab name, sshkey and addr, ugly but works
     local name=$(grep available setup-iso.log | cut -d: -f1)
     local addr=$(grep -Po "(?<=at ).*" setup-iso.log)
-    local sshkey="/var/lib/virtual-machines/sshkey-${name}"
+    local wrkdir=$(grep -Po "(?<=WORKDIR: ).*" setup-iso.log)
+    local sshkey="$wrkdir/sshkey-${name}"
 
     fetch_remote "$sshkey" "$addr" "/var/log" "init_var_log" "1"
 
@@ -246,7 +247,7 @@ EOF
 
     # Grab some logs
     echo "Downloading remote logs"
-    local logfile=$(rpm -qp --scripts $ARTIFACTSDIR/*.rpm | \
+    local logfile=$(rpm -qp --scripts $TMPDIR/ovirt*image-update*.rpm | \
                     grep imgbased.log | \
                     awk '{print $8}')
 
