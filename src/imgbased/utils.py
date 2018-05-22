@@ -1001,6 +1001,8 @@ class Rsync():
     def sync(self, sourcetree, dst):
         assert os.path.isdir(sourcetree), "%s is not a directory" % sourcetree
 
+        self._run(["restorecon", "-Rv", sourcetree])
+
         cmd = ["rsync"]
         cmd += ["-pogAXlHrx"]
         cmd += ["-SWc", "--no-i-r"]
