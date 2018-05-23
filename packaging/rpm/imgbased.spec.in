@@ -154,6 +154,10 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Wed May 23 2018 Ryan Barry <rbarry@redhat.com> - 1.0.17-0
+- Keep contexts when rsyncing
+- Activate imgbased LVs earlier when updating
+
 * Tue May 08 2018 Ryan Barry <rbarry@redhat.com> - 1.0.16-0
 - Use filecmp.cmp when updating /etc
 
