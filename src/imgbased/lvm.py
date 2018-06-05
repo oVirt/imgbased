@@ -51,9 +51,14 @@ class LVM(object):
 
     @staticmethod
     def _list_lv_full_names(filtr=""):
-        cmd = ["--noheadings", "-o", "lv_full_name"]
+        cmd = ["--noheadings", "--ignoreskippedcluster", "-o", "lv_full_name"]
         if filtr:
-            cmd = ["--noheadings", "-o", "lv_full_name", "--select", filtr]
+            cmd = ["--noheadings",
+                   "--ignoreskippedcluster",
+                   "-o",
+                   "lv_full_name",
+                   "--select",
+                   filtr]
         raw = LVM._lvs(cmd)
         names = sorted(n.strip() for n in raw.splitlines())
         log.debug("All LV names: %s" % names)
@@ -111,8 +116,8 @@ class LVM(object):
 
         @staticmethod
         def find_by_tag(tag):
-            vgs = LVM._vgs(["--noheadings", "--select",
-                            "vg_tags = %s" % tag, "-o", "vg_name"])
+            vgs = LVM._vgs(["--noheadings", "--ignoreskippedcluster",
+                            "--select", "vg_tags = %s" % tag, "-o", "vg_name"])
             return [LVM.VG(vg_name.strip()) for vg_name in vgs.splitlines()]
 
         @staticmethod
@@ -131,8 +136,8 @@ class LVM(object):
             LVM._vgchange(["--addtag", tag, self.vg_name])
 
         def tags(self):
-            return LVM._vgs(["--noheadings", "-ovg_tags",
-                            self.vg_name]).split(",")
+            return LVM._vgs(["--noheadings", "--ignoreskippedcluster",
+                             "-ovg_tags", self.vg_name]).split(",")
 
     class LV(object):
         vg_name = None
@@ -146,12 +151,13 @@ class LVM(object):
 
         @property
         def path(self):
-            return LVM._lvs(["--noheadings", "-olv_path", self.lvm_name])
+            return LVM._lvs(["--noheadings", "--ignoreskippedcluster",
+                             "-olv_path", self.lvm_name])
 
         @property
         def size_bytes(self):
-            return LVM._lvs(["--noheadings", "-osize", "--units", "B",
-                             self.lvm_name])
+            return LVM._lvs(["--noheadings", "--ignoreskippedcluster",
+                             "-osize", "--units", "B", self.lvm_name])
 
         @classmethod
         def from_lv_name(cls, vg_name, lv_name):
@@ -180,8 +186,8 @@ class LVM(object):
 
         @classmethod
         def find_by_tag(cls, tag):
-            lvs = LVM._vgs(["--noheadings", "@%s" % tag,
-                            "-o", "lv_full_name"])
+            lvs = LVM._vgs(["--noheadings", "--ignoreskippedcluster",
+                            "@%s" % tag, "-o", "lv_full_name"])
             return [cls.from_lvm_name(lv.strip())
                     for lv in lvs.splitlines()]
 
@@ -207,7 +213,8 @@ class LVM(object):
         def from_path(cls, path):
             """Get an object for the path
             """
-            data = LVM._lvs(["--noheadings", "-ovg_name,lv_name", path])
+            data = LVM._lvs(["--noheadings", "--ignoreskippedcluster",
+                             "-ovg_name,lv_name", path])
             data = data.strip()
             assert data, "Failed to find LV for path: %s" % path
             log.debug("Found LV for path %s: %s" % (path, data))
@@ -246,8 +253,8 @@ class LVM(object):
                            self.lvm_name])
 
         def thinpool(self):
-            pool_lv = LVM._lvs(["--noheadings", "-opool_lv",
-                               self.lvm_name])
+            pool_lv = LVM._lvs(["--noheadings", "--ignoreskippedcluster",
+                                "-opool_lv", self.lvm_name])
             lv = None
             if pool_lv:
                 lv = LVM.LV.from_lv_name(self.vg_name, pool_lv)
@@ -261,8 +268,8 @@ class LVM(object):
             LVM._lvchange(["--addtag", tag, self.lvm_name])
 
         def tags(self):
-            return LVM._lvs(["--noheadings", "-olv_tags",
-                            self.lvm_name]).split(",")
+            return LVM._lvs(["--noheadings", "--ignoreskippedcluster",
+                             "-olv_tags", self.lvm_name]).split(",")
 
         def origin(self):
             lv_name = self.options(["origin"]).pop()
@@ -278,6 +285,7 @@ class LVM(object):
         def options(self, options):
             sep = "$"
             cmd = ["--noheadings",
+                   "--ignoreskippedcluster",
                    "--separator", sep,
                    "-o", ",".join(options),
                    self.lvm_name]
@@ -317,12 +325,14 @@ class LVM(object):
             return vol
 
         def _get_metadata_size(self):
-            args = ["--noheadings", "--nosuffix", "--units", "m",
-                    "-o", "metadata_percent,lv_metadata_size", self.lvm_name]
+            args = ["--noheadings", "--ignoreskippedcluster", "--nosuffix",
+                    "--units", "m", "-o", "metadata_percent,lv_metadata_size",
+                    self.lvm_name]
             return map(float, LVM._lvs(args).split())
 
         def _resize_metadata(self, x_size_mb):
-            free = float(LVM._vgs(["--noheading", "--nosuffix", "-o", "free",
+            free = float(LVM._vgs(["--noheading", "--ignoreskippedcluster",
+                                   "--nosuffix", "-o", "free",
                                    "--units", "m", self.vg_name]))
             if x_size_mb <= free:
                 args = ["--poolmetadatasize", "+{}m".format(x_size_mb),
