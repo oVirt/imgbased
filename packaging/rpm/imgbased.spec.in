@@ -154,6 +154,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Wed Jun 06 2018 Ryan Barry <rbarry@redhat.com> - 1.0.18-0
+- Ignore skipped LVM clusters in LVM commands
+
 * Wed May 23 2018 Ryan Barry <rbarry@redhat.com> - 1.0.17-0
 - Keep contexts when rsyncing
 - Activate imgbased LVs earlier when updating
