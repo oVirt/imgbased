@@ -6,3 +6,5 @@ stage:
       runtime-requirements:
         support-nesting-level: 2
 distro: [el7, fc27]
+release_branches:
+    master: ovirt-master
