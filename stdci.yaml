@@ -1,0 +1,10 @@
+---
+stage:
+  - build-artifacts
+  - check-merged
+  - check-patch:
+      runtime-requirements:
+        support-nesting-level: 2
+distro: [el7, fc27]
+release_branches:
+    ovirt-4.2: ovirt-4.2
