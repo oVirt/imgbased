@@ -1,6 +1,7 @@
 ---
 stage:
   - build-artifacts
+  - build-artifacts-manual
   - check-merged
   - check-patch:
       runtime-requirements:
