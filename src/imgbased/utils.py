@@ -628,7 +628,7 @@ class Fstab(File):
         for line in data.splitlines():
             if line.startswith("#") or line.strip() == "":
                 continue
-            source, target, fs, options, _, _ = shlex.split(line)
+            source, target, fs, options = shlex.split(line)[:4]
             entry = Fstab.Entry()
             entry._index = target  # target is unique
             entry.source = source
