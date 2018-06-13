@@ -7,9 +7,17 @@ export PATH=$PATH:/sbin:/usr/sbin
 
 build() {
   ./autogen.sh
-  make rpm
 
   mkdir "$ARTIFACTSDIR"
+
+  IFS=- read _ _ rel sha <<< $(git describe --tags --match "imgbased*")
+
+  if [[ -n $sha ]]; then # Not tagged, build as before (or add $rel??)
+    make rpm
+  else
+    make rpm DEF_RELEASE='--define "_release 1"'
+    find -name "*.tar.xz" -exec mv -v {} "$ARTIFACTSDIR/" \;
+  fi
 
   find rpmbuild -name "*.rpm" -exec mv -v {} "$ARTIFACTSDIR/" \;
 
