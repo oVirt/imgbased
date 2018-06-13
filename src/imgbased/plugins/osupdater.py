@@ -570,10 +570,6 @@ def fix_systemd_services(old_fs, new_fs):
                         log.debug("Found a disabled systemd service "
                                   "elsewhere. Removing it: %s" % filename)
                         remove_file(os.path.join(root, f))
-                    elif "imgbase-config-vdsm" in f:
-                        log.debug("Removing imgbase-config-vdsm now that "
-                                  "vdsm configures itself")
-                        remove_file(os.path.join(root, f))
         except:
             log.exception("Could not remove %s. Is it a read-only layer?")
 
