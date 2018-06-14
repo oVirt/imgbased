@@ -15,7 +15,7 @@ build() {
   if [[ -n $sha ]]; then # Not tagged, build as before (or add $rel??)
     make rpm
   else
-    make rpm DEF_RELEASE='--define "_release 1"'
+    make rpm DEF_RELEASE=
     find -name "*.tar.xz" -exec mv -v {} "$ARTIFACTSDIR/" \;
   fi
 
