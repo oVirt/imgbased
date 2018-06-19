@@ -154,6 +154,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Tue Jun 19 2018 Ryan Barry <rbarry@redhat.com> - 1.0.20-0
+- Also copy individual files when migrating /var
+
 * Wed Jun 13 2018 Ryan Barry <rbarry@redhat.com> - 1.0.19-0
 - Only configure vdsm on first boots after install or upgrades
 
