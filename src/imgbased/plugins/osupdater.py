@@ -237,6 +237,12 @@ def migrate_var(imgbase, new_lv):
                         shutil.copytree(newlv_path, realpath, symlinks=True)
                     else:
                         shutil.copy2(newlv_path, realpath)
+            for f in files:
+                newlv_path = "/".join([cur, f])
+                realpath = "/".join([strip(cur), f])
+                if not os.path.exists(realpath):
+                    log.debug("Copying {} to {}".format(newlv_path, realpath))
+                    shutil.copy2(newlv_path, realpath)
 
 
 def boot_partition_validation():
