@@ -124,7 +124,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
                                     "/root/"))
         threads.append(ThreadRunner(migrate_state, new_lv, previous_layer_lv,
                                     "/usr/share/rhn/"))
-        threads.append(ThreadRunner(relocate_var_lib_yum, new_lv))
+        threads.append(ThreadRunner(relocate_update_manager, new_lv))
 
         thread_group_handler(threads)
     except:
@@ -671,17 +671,21 @@ def run_rpm_selinux_post(new_lv):
         subprocess.call(["mount", "-a"])
 
 
-def relocate_var_lib_yum(new_lv):
-    path = "/var/lib/yum"
+def relocate_update_manager(new_lv):
+    paths = ["/var/lib/yum", "/var/lib/dnf"]
     # Check whether /var is a symlink to /usr/share, and move it if it is not
     # We could directly check this in new_fs, but this gets tricky with
     # symlinks, and it will already be present on new builds
-    if not os.path.islink(path):
-        log.debug("/var/lib/yum is not a link -- moving it")
-        shutil.rmtree(path)
-        os.mkdir(path)
-        shutil.move(path, "/usr/share/yum")
-        os.symlink("/usr/share/yum", "/var/lib/yum")
+    for path in paths:
+        if not os.path.exists(path):
+            continue
+        usr_share = os.path.join("/usr/share", os.path.basename(path))
+        if not os.path.islink(path):
+            log.debug("%s is not a link -- moving it" % path)
+            shutil.rmtree(path)
+            os.mkdir(path)
+            shutil.move(path, usr_share)
+            os.symlink(usr_share, path)
 
 
 def migrate_ntp_to_chrony(new_lv):
