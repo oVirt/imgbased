@@ -1,6 +1,6 @@
 Name:           imgbased
 Version:        @PACKAGE_RPM_VERSION@
-Release:        %{?_release}%{?!_release:0.1}%{?dist}
+Release:        %{?_release}%{?!_release:1}%{?dist}
 Summary:        Tools to work with an image based rootfs
 
 License:        GPLv2+
@@ -154,6 +154,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Fri Jun 29 2018 Sandro Bonazzola <sbonazzo@redhat.com> - 1.0.21-1
+- Parse fstab file correctly
+
 * Tue Jun 19 2018 Ryan Barry <rbarry@redhat.com> - 1.0.20-0
 - Also copy individual files when migrating /var
 
