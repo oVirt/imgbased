@@ -378,8 +378,19 @@ def remediate_etc(imgbase):
             filename = "{}/{}".format(n.path("/"), f)
             if not os.path.exists("{}/usr/share/factory/{}".format(
                     n.path("/"), f)):
-                log.debug("os.unlink({})".format(filename))
+                delete = False
                 if os.path.isfile(filename):
+                    delete = True
+                elif os.path.islink(filename):
+                    link_path = os.readlink(filename)
+                    if not os.path.exists("{}/{}".format(n.path("/"),
+                                                         link_path)):
+                        log.debug("{} is a broken symlink to {}. Removing "
+                                  "it".format(filename, link_path))
+                    delete = True
+
+                if delete:
+                    log.debug("os.unlink({})".format(filename))
                     os.unlink(filename)
 
     tree = imgbase.naming.tree()
