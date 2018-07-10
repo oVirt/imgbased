@@ -616,7 +616,7 @@ def relabel_selinux(new_fs):
 def run_rpm_selinux_post(new_lv):
     run_commands = []
     critical_commands = ["restorecon", "semodule", "semanage", "fixfiles",
-                         "chcon"]
+                         "chcon", "vdsm-schema-cache-regenerate"]
 
     def just_do(arg, **kwargs):
         DEVNULL = open(os.devnull, "w")
