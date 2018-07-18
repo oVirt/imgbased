@@ -156,7 +156,7 @@ make -C py3 install DESTDIR="%{buildroot}"
 %files -n python-imgbased
 %doc README.md
 %license LICENSE
-%{python_sitelib}/%{name}/
+%{python2_sitelib}/%{name}/
 %endif
 
 %if 0%{?with_python3}
