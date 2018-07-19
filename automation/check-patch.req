@@ -6,6 +6,7 @@ asciidoc
 python-devel
 python-six
 python-coverage
+python3-coverage
 pylint
 python-pep8
 pyflakes
@@ -28,3 +29,8 @@ isomd5sum
 virt-install
 pigz
 yum-utils
+dnf
+dnf-plugins-core
+iputils
+iproute
+expect

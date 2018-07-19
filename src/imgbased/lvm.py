@@ -24,8 +24,8 @@ import os
 import shlex
 import logging
 import re
-from .utils import find_mount_source, LvmCLI, ExternalBinary
-
+from .utils import find_mount_source, unmount, LvmCLI, ExternalBinary
+from operator import itemgetter
 
 log = logging.getLogger(__package__)
 
@@ -48,6 +48,7 @@ class LVM(object):
     _vgcreate = LvmCLI.vgcreate
     _vgchange = LvmCLI.vgchange
     _lvmconfig = LvmCLI.lvmconfig
+    _volume_registry = []
 
     @staticmethod
     def _list_lv_full_names(filtr=""):
@@ -94,6 +95,23 @@ class LVM(object):
             return False
 
         return True
+
+    @staticmethod
+    def register_volume(vol):
+        assert isinstance(vol, LVM.LV)
+        LVM._volume_registry.append(vol)
+        return vol
+
+    @staticmethod
+    def reset_registered_volumes():
+        ExternalBinary().sync([])
+        mtab = dict([itemgetter(9, 4)(m.split())
+                     for m in open("/proc/self/mountinfo")])
+        for lv in LVM._volume_registry:
+            target = mtab.get(lv.dm_path)
+            if target:
+                unmount(target)
+            lv.remove(force=True)
 
     @staticmethod
     def stop_monitoring():
@@ -153,6 +171,11 @@ class LVM(object):
         def path(self):
             return LVM._lvs(["--noheadings", "--ignoreskippedcluster",
                              "-olv_path", self.lvm_name])
+
+        @property
+        def dm_path(self):
+            return LVM._lvs(["--noheadings", "--ignoreskippedcluster",
+                             "-olv_dm_path", self.lvm_name])
 
         @property
         def size_bytes(self):
@@ -226,7 +249,8 @@ class LVM(object):
             LVM._lvcreate(["--snapshot",
                            "--name", new_name,
                            self.lvm_name])
-            return LVM.LV.from_lv_name(self.vg_name, new_name)
+            vol = LVM.LV.from_lv_name(self.vg_name, new_name)
+            return LVM.register_volume(vol)
 
         def remove(self, force=False):
             cmd = ["-f"] if force else []
@@ -322,7 +346,7 @@ class LVM(object):
                            "--virtualsize", volsize,
                            "--name", vol.lv_name,
                            self.lvm_name])
-            return vol
+            return LVM.register_volume(vol)
 
         def _get_metadata_size(self):
             args = ["--noheadings", "--ignoreskippedcluster", "--nosuffix",

@@ -7,6 +7,7 @@ from .. import local
 from ..bootloader import BootConfiguration
 from ..naming import Image
 from ..utils import mounted, Filesystem, BuildMetadata, Tar
+from ..lvm import LVM
 
 log = logging.getLogger(__package__)
 
@@ -53,10 +54,14 @@ def post_argparse(app, args):
 
     elif args.command == "update":
         if args.format == "liveimg":
-            base_lv, _ = LiveimgExtractor(app.imgbase).extract(args.FILENAME)
-            log.info("Update was pulled successfully")
-            keep = app.imgbase.config.section("update").images_to_keep
-            GarbageCollector(app.imgbase).run(base_lv, keep)
+            try:
+                base, _ = LiveimgExtractor(app.imgbase).extract(args.FILENAME)
+                log.info("Update was pulled successfully")
+                keep = app.imgbase.config.section("update").images_to_keep
+                GarbageCollector(app.imgbase).run(base, keep)
+            except Exception:
+                log.error("Update failed, resetting registered LVs")
+                LVM.reset_registered_volumes()
         else:
             log.error("Unknown update format %r" % args.format)
 
@@ -79,10 +84,7 @@ class LiveimgExtractor():
         if not os.path.exists(sourcetree):
             raise RuntimeError("Sourcetree does not exist: %s" % sourcetree)
 
-        new_base = self.imgbase.add_base(size,
-                                         nvr,
-                                         lvs)
-
+        new_base = self.imgbase.add_base(size, nvr, lvs)
         new_base_lv = self.imgbase._lvm_from_layer(new_base)
 
         with new_base_lv.unprotected():
@@ -114,8 +116,7 @@ class LiveimgExtractor():
                 log.debug("Recommeneded base size: %s" % size)
                 log.info("Starting base creation")
                 add_tree = self.add_base_with_tree
-                new_base = add_tree(rootfs.target,
-                                    "%s" % size, nvr)
+                new_base = add_tree(rootfs.target, "%s" % size, nvr)
                 log.info("Files extracted")
         log.debug("Extraction done")
         return new_base

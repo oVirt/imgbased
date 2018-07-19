@@ -2,7 +2,7 @@
 
 ARTIFACTSDIR=$HOME/exported-artifacts
 TMPDIR=$HOME/tmp
-NGNDIR=$TMPDIR/ngn/ovirt-node-ng
+NGNDIR=$TMPDIR/ngn/ovirt-node-ng-image
 COVDIR=/var/lib/imgbase-coverage
 
 IMG_INI=4
@@ -21,6 +21,7 @@ setup_environ() {
     mkdir -p $NGNDIR
 
     export TMPDIR
+    export DIST="$(rpm --eval %{dist} | cut -d. -f2)"
 }
 
 build_imgbased() {
@@ -31,9 +32,8 @@ build_imgbased() {
 
 fetch_node_iso() {
     local ver="${GERRIT_BRANCH#*-}"
-    local dist="$(rpm --eval %{dist} | cut -d. -f2)"
     local arch="$(rpm --eval %{_arch})"
-    local job_url="http://jenkins.ovirt.org/job/ovirt-node-ng_${ver}_build-artifacts-${dist}-${arch}/"
+    local job_url="http://jenkins.ovirt.org/job/ovirt-node-ng_${ver}_build-artifacts-${DIST}-${arch}/"
 
     local build_num=$(wget -qO- $job_url/lastSuccessfulBuild/buildNumber)
     local artifacts_url="$job_url/$build_num/api/json?tree=artifacts[fileName]"
@@ -62,14 +62,33 @@ build_test_images() {
     # Install imgbased and coverage rpms inside the image
     mount squashfs-root/LiveOS/rootfs.img $mntdir
     local rpms=$(find rpmbuild -name "*imgbased*.noarch.rpm")
-    yum-config-manager -q --installroot=$mntdir --enable base,updates
-    yum install --installroot=$mntdir -y python-coverage $rpms
-    yum-config-manager -q --installroot=$mntdir --disable base,updates
+
+    # Free some space for testing
+    rm -rf $mntdir/usr/share/factory/var/cache/*
+    rm -rf $mntdir/usr/share/{locale,xml,doc}
+
+
+    if [[ ${DIST} = fc* ]]; then
+        export PACKAGER=dnf
+        export COVERAGE=coverage3
+        dnf config-manager -q --installroot=$mntdir --set-enabled fedora updates
+        ${PACKAGER} install --installroot=$mntdir -y python3-coverage $rpms
+        ${PACKAGER} clean all --installroot=$mntdir
+        dnf config-manager -q --installroot=$mntdir --set-disabled fedora updates
+    else
+        export PACKAGER=yum
+        export COVERAGE=coverage
+        yum-config-manager -q --installroot=$mntdir --enable base,updates
+        ${PACKAGER} install --installroot=$mntdir -y python-coverage $rpms
+        ${PACKAGER} clean all --installroot=$mntdir
+        yum-config-manager -q --installroot=$mntdir --disable base,updates
+    fi
+
     mkdir -p $mntdir/$COVDIR
     sed -e '/^$PYTHON/d' -e 's/bash/bash -x/' -i $mntdir/usr/sbin/imgbase
     cat << EOF >> $mntdir/usr/sbin/imgbase
 export COVERAGE_FILE=\$(mktemp -u $COVDIR/.coverage.imgbase_XXXXXXXXXXXXXX)
-coverage run -m imgbased.__main__ \$@
+${COVERAGE} run -m imgbased.__main__ \$@
 EOF
 
     # Build 2 new squashfs images (ver-4 and ver-5)
@@ -81,8 +100,8 @@ EOF
         chroot $mntdir << EOF
 mknod /dev/urandom c 1 9
 rm -rf /usr/share/factory/{etc,var}
-rm -f /var/lib/{rpm,yum}
-mv /usr/share/{rpm,yum} /var/lib
+rm -f /var/lib/{rpm,${PACKAGER}}
+mv /usr/share/{rpm,${PACKAGER}} /var/lib
 touch /etc/{resolv.conf,hostname,iscsi/initiatorname.iscsi}
 imgbase --debug --experimental image-build --postprocess --set-nvr=$nvr
 rm /dev/urandom
@@ -127,12 +146,12 @@ repack_node_artifacts() {
     rm -rf $extdir
 
     # Build image-update rpm with the new update squashfs (ver.5)
-    git clone https://gerrit.ovirt.org/ovirt-node-ng $NGNDIR
+    git clone https://gerrit.ovirt.org/ovirt-node-ng-image $NGNDIR
     mv image.squashfs.$IMG_UPD $NGNDIR/ovirt-node-ng-image.squashfs.img
     pushd $NGNDIR
     git checkout $GERRIT_BRANCH
     ./autogen.sh
-    sed -i packaging/ovirt-node-ng.spec.in \
+    sed -i ovirt-node-ng.spec.in \
         -e 's/set -e/set -ex/' -e 's/--quiet//' -e 's/null/stdout/'
     touch boot.iso
     touch ovirt-node-ng-image.{squashfs.img,manifest-rpm,unsigned-rpms}
@@ -161,7 +180,7 @@ run_nodectl_check() {
 
     for i in {1..10}
     do
-        bootcur=$(exec_ssh $sshkey $addr "grep BOOT_IMAGE /var/log/messages|wc -l")||:
+        bootcur=$(exec_ssh $sshkey $addr "journalctl --list-boots | wc -l")||:
         echo "Received bootcur=$bootcur, bootnum=$bootnum"
         [[ -z "$bootnum" || "$bootcur" = "$bootnum" ]] && {
             exec_ssh $sshkey $addr "nodectl check" > $outfile 2>&1 ||:
@@ -225,8 +244,11 @@ iso_install_upgrade() {
     # Check the current iso layer name
     exec_ssh $sshkey $addr "imgbase layout; imgbase w" > init-layers.log 2>&1
 
+    # Make sure we have persistent storage for journalctl
+    exec_ssh $sshkey $addr "mkdir -p /var/log/journal"
+
     # Count boot number
-    local bootnum=$(exec_ssh $sshkey $addr "grep BOOT_IMAGE /var/log/messages|wc -l")
+    local bootnum=$(exec_ssh $sshkey $addr "journalctl --list-boots | wc -l")
 
     # Build, send and install imgbased-persist rpm
     rpmbuild -bb packaging/rpm/imgbased-persist.spec
@@ -240,7 +262,7 @@ iso_install_upgrade() {
     # Install the update rpm
     echo "Installing update rpm"
     exec_ssh $sshkey $addr << EOF 2>&1 || failed=1
-yum install -y imgbased-persist*.rpm
+${PACKAGER} install -y imgbased-persist*.rpm
 rm imgbased-persist*.rpm
 rpm -Uhv \"*.rpm\"
 EOF
@@ -265,7 +287,7 @@ EOF
 
     # Run checks when sshd is up
     echo "Running some more tests and gathering coverage data"
-    run_nodectl_check "$((bootnum+2))" "$sshkey" "$addr" "upgrade-nodectl-check.log"
+    run_nodectl_check "$((bootnum+1))" "$sshkey" "$addr" "upgrade-nodectl-check.log"
     fetch_remote "$sshkey" "$addr" "/var/log" "post_reboot_var_log" "1"
     validate_nodectl_log "upgrade-nodectl-check.log" "$sshkey" "$addr"
 
@@ -295,16 +317,20 @@ EOF
 [run]
 omit =
     /*/site-packages/six*
+    /usr/lib/python3.6/site-packages/pkg_resources*
+    /usr/lib/python3.6/site-packages/six*
 
 [paths]
 source =
     src/imgbased
     /usr/lib/python2.7/site-packages/imgbased
     /tmp/*/usr/lib/python2.7/site-packages/imgbased
+    /usr/lib/python3.6/site-packages/imgbased
+    /tmp/*/usr/lib/python3.6/site-packages/imgbased
 EOF
 
-    coverage combine
-    coverage html -d $ARTIFACTSDIR/coverage-report
+    ${COVERAGE} combine
+    ${COVERAGE} html -d $ARTIFACTSDIR/coverage-report
 }
 
 main() {
