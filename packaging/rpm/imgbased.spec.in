@@ -154,6 +154,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Fri Jul 20 2018 Ryan Barry <rbarry@redhat.com> - 1.0.22-1
+- Re-execute some vdsm %post scripts during upgrades
+
 * Fri Jun 29 2018 Sandro Bonazzola <sbonazzo@redhat.com> - 1.0.21-1
 - Parse fstab file correctly
 
