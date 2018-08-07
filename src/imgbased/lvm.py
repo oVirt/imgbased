@@ -111,7 +111,10 @@ class LVM(object):
             target = mtab.get(lv.dm_path)
             if target:
                 unmount(target)
-            lv.remove(force=True)
+            try:
+                lv.remove(force=True)
+            except Exception:
+                log.debug("Failed removing LV [%s], skipping", lv.dm_path)
 
     @staticmethod
     def stop_monitoring():
