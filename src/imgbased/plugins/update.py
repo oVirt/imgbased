@@ -2,6 +2,8 @@
 import glob
 import logging
 import os
+import sys
+import six
 
 from .. import local
 from ..bootloader import BootConfiguration
@@ -60,8 +62,10 @@ def post_argparse(app, args):
                 keep = app.imgbase.config.section("update").images_to_keep
                 GarbageCollector(app.imgbase).run(base, keep)
             except Exception:
+                exc_info = sys.exc_info()
                 log.error("Update failed, resetting registered LVs")
                 LVM.reset_registered_volumes()
+                six.reraise(*exc_info)
         else:
             log.error("Unknown update format %r" % args.format)
 
