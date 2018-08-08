@@ -64,7 +64,7 @@ WantedBy=local-fs.target
         log.info("Volume for '%s' was created successful" % where)
         self.attach(where, attach_now)
 
-    def remove(self, where):
+    def remove(self, where, force=False):
         assert self.is_volume(where), "Path is no volume: %s" % where
 
         log.warn("Removing the volume will also remove the data "
@@ -72,7 +72,7 @@ WantedBy=local-fs.target
 
         volname = self._volname(where)
         self.detach(where)
-        self.imgbase.lv(volname).remove()
+        self.imgbase.lv(volname).remove(force)
 
         log.info("Volume for '%s' was removed successful" % where)
 

@@ -7,6 +7,7 @@ COVDIR=/var/lib/imgbase-coverage
 
 IMG_INI=4
 IMG_UPD=5
+IMG_TST=6
 
 save_logs() {
     cp -fv *.log $ARTIFACTSDIR || :
@@ -33,7 +34,7 @@ build_imgbased() {
 fetch_node_iso() {
     local ver="${GERRIT_BRANCH#*-}"
     local arch="$(rpm --eval %{_arch})"
-    local job_url="http://jenkins.ovirt.org/job/ovirt-node-ng_${ver}_build-artifacts-${DIST}-${arch}/"
+    local job_url="http://jenkins.ovirt.org/job/ovirt-node-ng-image_${ver}_build-artifacts-${DIST}-${arch}/"
 
     local build_num=$(wget -qO- $job_url/lastSuccessfulBuild/buildNumber)
     local artifacts_url="$job_url/$build_num/api/json?tree=artifacts[fileName]"
@@ -152,7 +153,10 @@ repack_node_artifacts() {
     git checkout $GERRIT_BRANCH
     ./autogen.sh
     sed -i ovirt-node-ng.spec.in \
-        -e 's/set -e/set -ex/' -e 's/--quiet//' -e 's/null/stdout/'
+        -e 's/set -e/set -ex/' \
+        -e 's/--quiet//' \
+        -e 's/null/stdout/' \
+        -e 's#^export PYTHONPATH.*#export PYTHONPATH=$(find $MNTDIR/usr/lib/python* -name imgbased -type d -exec dirname {} \\; | sort | tail -1):$PYTHONPATH#'
     touch boot.iso
     touch ovirt-node-ng-image.{squashfs.img,manifest-rpm,unsigned-rpms}
     make rpm PLACEHOLDER_RPM_VERSION=$IMG_UPD PLACEHOLDER_RPM_RELEASE=0
@@ -178,7 +182,7 @@ run_nodectl_check() {
     local outfile=$4
     local check=""
 
-    for i in {1..10}
+    for i in {1..30}
     do
         bootcur=$(exec_ssh $sshkey $addr "journalctl --list-boots | wc -l")||:
         echo "Received bootcur=$bootcur, bootnum=$bootnum"
@@ -245,7 +249,7 @@ iso_install_upgrade() {
     exec_ssh $sshkey $addr "imgbase layout; imgbase w" > init-layers.log 2>&1
 
     # Make sure we have persistent storage for journalctl
-    exec_ssh $sshkey $addr "mkdir -p /var/log/journal"
+    exec_ssh $sshkey $addr "echo 3 > /proc/sys/vm/drop_caches; mkdir -p /var/log/journal"
 
     # Count boot number
     local bootnum=$(exec_ssh $sshkey $addr "journalctl --list-boots | wc -l")
@@ -291,6 +295,7 @@ EOF
     fetch_remote "$sshkey" "$addr" "/var/log" "post_reboot_var_log" "1"
     validate_nodectl_log "upgrade-nodectl-check.log" "$sshkey" "$addr"
 
+    local test_nvr="ovirt-node-ng-${IMG_TST}.0.0-0.$(date +%Y%m%d).0"
     local prev_nvr="ovirt-node-ng-${IMG_INI}.0.0-0.$(date +%Y%m%d).0"
     # Run some imgbase checks to collect more coverage, this will destroy the
     # vm (make it not bootable), it's OK
@@ -304,7 +309,14 @@ imgbase --debug --experimental volume --list
 imgbase --debug --experimental diff \$(imgbase layout --layers)
 imgbase --debug --experimental factory-diff --config=NA
 imgbase --debug --experimental pkg --diff \$(imgbase layout --layers)
-imgbase --debug --experimental nspawn $prev_nvr ls /
+imgbase --debug --experimental nspawn $prev_nvr+1 ls /
+vg=\$(vgs --noheadings|awk '{print \$1}')
+lvcreate --snapshot --name \$vg/$test_nvr $prev_nvr
+lvcreate --snapshot --name \$vg/$test_nvr+1 $test_nvr
+lvchange --addtag imgbased:layer \$vg/$test_nvr \$vg/$test_nvr+1
+imgbase --debug layout
+imgbase --debug --experimental recover --list
+imgbase --debug --experimental recover --force
 imgbase --debug rollback --to $prev_nvr
 imgbase --debug base --latest
 imgbase --debug base --remove $prev_nvr
@@ -330,7 +342,7 @@ source =
 EOF
 
     ${COVERAGE} combine
-    ${COVERAGE} html -d $ARTIFACTSDIR/coverage-report
+    ${COVERAGE} html -i -d $ARTIFACTSDIR/coverage-report
 }
 
 main() {

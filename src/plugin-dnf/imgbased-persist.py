@@ -31,7 +31,7 @@ class ImgbasedPersist(dnf.Plugin):
 
     name = 'imagebased-persist'
     config_name = 'imgbased-persist'
-    persist_path = "/tmp/persisted-rpms/"
+    persist_path = "/var/imgbased/persisted-rpms/"
 
     excluded_pkgs = []
 
