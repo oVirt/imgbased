@@ -21,6 +21,7 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 
+import errno
 import filecmp
 import logging
 import glob
@@ -242,7 +243,12 @@ def migrate_var(imgbase, new_lv):
                 realpath = "/".join([strip(cur), f])
                 if not os.path.exists(realpath):
                     log.debug("Copying {} to {}".format(newlv_path, realpath))
-                    shutil.copy2(newlv_path, realpath)
+                    try:
+                        shutil.copy2(newlv_path, realpath)
+                    except IOError as e:
+                        log.warn("Copy failed %s, err=%s", newlv_path, e.errno)
+                        if e.errno != errno.ENOENT:
+                            raise
 
 
 def boot_partition_validation():
