@@ -154,6 +154,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Wed Aug 22 2018 Yuval Turgeman <yturgema@redhat.com> - 1.0.24-1
+- Remove broken symlinks when syncing layers (rhbz#1598781)
+
 * Mon Aug 20 2018 Yuval Turgeman <yturgema@redhat.com> - 1.0.23-1
 - Remove LVs on failed upgrades (rhbz#1601633)
 
