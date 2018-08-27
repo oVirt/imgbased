@@ -38,6 +38,7 @@ AC_SUBST([CENTOS], [[`rpm --eval '%{centos}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([PLATFORM])
 AC_SUBST([REVISION], "git"[m4_esyscmd_s([git log -n1 --format=%h])])
 AC_SUBST([RELEASE], [0.[`date '+%Y%m%d%H%M'`]])
+AC_SUBST([am__tar], ['tar -chf - "$$tardir" --mtime 0'])
 
 if test "$FEDORA"; then
     PLATFORM=Fedora$FEDORA
