@@ -10,7 +10,11 @@
 %global with_python2 1
 %endif
 
-%global with_check 1
+%if ! 0%{?rhel}
+%{!?with_check:%global with_check 1}
+%else
+%{!?with_check:%global with_check 0}
+%endif
 %global _configure ../configure
 
 
@@ -57,11 +61,13 @@ layers atop.
 %package -n python-imgbased
 Summary: A python 2 module for imgbased
 Requires:       rpm-python
+BuildRequires:       python-devel
+%if 0%{?with_check}
 BuildRequires:       python-pep8
 BuildRequires:       pyflakes
 BuildRequires:       python-nose
-BuildRequires:       python-devel
 BuildRequires:       python-six
+%endif
 
 %description -n python-imgbased
 python-imgbased is a python 2 library to manage lvm layers
@@ -71,10 +77,12 @@ python-imgbased is a python 2 library to manage lvm layers
 %package -n python%{python3_pkgversion}-imgbased
 Summary: A python 3 module for imgbased
 BuildRequires:       python%{python3_pkgversion}-devel
+%if 0%{?with_check}
 BuildRequires:       python%{python3_pkgversion}-pep8
 BuildRequires:       python%{python3_pkgversion}-pyflakes
 BuildRequires:       python%{python3_pkgversion}-nose
 BuildRequires:       python%{python3_pkgversion}-six
+%endif
 Recommends:          python%{python3_pkgversion}-systemd
 Requires:       python%{python3_pkgversion}-rpm
 
