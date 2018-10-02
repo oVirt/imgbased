@@ -70,7 +70,7 @@ class ImageRecovery:
         for layer in layers:
             if self._prompt("LV", layer, force):
                 print("Removing LV base: [%s]" % layer.base.nvr)
-                self._imgbase.remove_base(layer.base.nvr)
+                self._imgbase.remove_base(layer.base.nvr, force)
 
     def _display_unused(self, layers, volumes):
         if layers:

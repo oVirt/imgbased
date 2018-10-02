@@ -256,7 +256,7 @@ class LVM(object):
             return LVM.register_volume(vol)
 
         def remove(self, force=False):
-            cmd = ["-f"] if force else []
+            cmd = ["-ff"] if force else []
             cmd.append(self.lvm_name)
             LVM._lvremove(cmd)
 
