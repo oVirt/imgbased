@@ -23,6 +23,10 @@ class RollbackFailedError(Exception):
     pass
 
 
+class GCFailedError(Exception):
+    pass
+
+
 def init(app):
     app.hooks.connect("pre-arg-parse", add_argparse)
     app.hooks.connect("post-arg-parse", post_argparse)
@@ -61,6 +65,8 @@ def post_argparse(app, args):
                 log.info("Update was pulled successfully")
                 keep = app.imgbase.config.section("update").images_to_keep
                 GarbageCollector(app.imgbase).run(base, keep)
+            except GCFailedError:
+                log.info("GC failed, skipping")
             except Exception:
                 exc_info = sys.exc_info()
                 log.error("Update failed, resetting registered LVs")
@@ -179,6 +185,12 @@ class GarbageCollector():
         self.imgbase = imgbase
 
     def run(self, new_base_lv, keep):
+        try:
+            self._do_run(new_base_lv, keep)
+        except Exception:
+            raise GCFailedError("GC failed, remember to remove old bases")
+
+    def _do_run(self, new_base_lv, keep):
         log.info("Starting garbage collection")
 
         assert keep > 0
@@ -196,7 +208,7 @@ class GarbageCollector():
 
         for base in remove_bases:
             log.info("Freeing %s" % base)
-            self.imgbase.remove_base(base.nvr)
+            self.imgbase.remove_base(base.nvr, force=True)
 
         log.info("Garbage collection done.")
 

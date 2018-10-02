@@ -317,7 +317,7 @@ class ImageLayers(object):
 
         return new_base
 
-    def remove_base(self, name, with_children=True):
+    def remove_base(self, name, with_children=True, force=False):
         base = Image.from_nvr(name)
         log.debug("Removal candidate base: %r" % base)
 
@@ -328,14 +328,14 @@ class ImageLayers(object):
 
         if with_children:
             for layer in self.naming.layers(for_base=base):
-                self.remove_layer(layer.nvr)
+                self.remove_layer(layer.nvr, force)
 
         base_lv.activate(False)
-        base_lv.remove()
+        base_lv.remove(force)
 
         self.hooks.emit("base-removed", base_lv)
 
-    def remove_layer(self, name):
+    def remove_layer(self, name, force=False):
         layer = Image.from_nvr(name)
         lv = self._lvm_from_layer(layer)
         log.debug("Removal candidate layer: %r" % layer)
@@ -347,7 +347,7 @@ class ImageLayers(object):
 
         log.debug("Removing %s" % layer)
         lv.activate(False)
-        lv.remove()
+        lv.remove(force)
 
         self.hooks.emit("layer-removed", lv)
 
