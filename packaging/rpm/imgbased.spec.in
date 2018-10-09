@@ -154,6 +154,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Tue Oct 09 2018 Yuval Turgeman <yturgema@redhat.com> - 1.0.26-1
+- Use lvremove --force during garbage collection (rhbz#1632585)
+
 * Mon Sep 17 2018 Yuval Turgeman <yturgema@redhat.com> - 1.0.25-1
 - Add `recover` verb (rhbz#1613931)
 - Check if source file exists before copy (rhbz#1614971)
