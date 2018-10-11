@@ -14,3 +14,6 @@ systemd-python
 pykickstart
 rpm-python
 systemd-units
+python-coverage
+python-mock
+yum

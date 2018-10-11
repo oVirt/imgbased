@@ -20,3 +20,6 @@ rpm-build
 rpm-python
 systemd-python3
 systemd-units
+python-coverage
+python-mock
+dnf
