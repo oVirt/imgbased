@@ -175,6 +175,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Sun Oct 14 2018 Yuval Turgeman <yturgema@redhat.com> - 1.1.0-1
+- Initial build for 4.3
+
 * Mon Aug 21 2017 Sandro Bonazzola <sbonazzo@redhat.com> - 1.0.999-0
 - Development for 4.3
 
