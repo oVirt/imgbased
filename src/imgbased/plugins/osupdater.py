@@ -42,7 +42,7 @@ from ..volume import Volumes
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
     find_mount_target, Motd, LvmCLI, SELinuxDomain, ThreadRunner, \
-    thread_group_handler
+    thread_group_handler, systemctl
 
 
 log = logging.getLogger(__package__)
@@ -686,6 +686,11 @@ def relocate_var_lib_yum(new_lv):
 
 
 def migrate_ntp_to_chrony(new_lv):
+    try:
+        systemctl.status("ntpd.service")
+    except:
+        log.debug("ntpd is disabled, not migrating conf to chrony")
+        return
     with mounted(new_lv.path) as new_fs:
         if os.path.exists(new_fs.path("/") + "/etc/ntp.conf"):
             # Create a state directory to track migrations
