@@ -44,6 +44,7 @@ class LVM(object):
     _lvcreate = LvmCLI.lvcreate
     _lvchange = LvmCLI.lvchange
     _lvremove = LvmCLI.lvremove
+    _lvrename = LvmCLI.lvrename
     _lvextend = LvmCLI.lvextend
     _vgcreate = LvmCLI.vgcreate
     _vgchange = LvmCLI.vgchange
@@ -260,6 +261,10 @@ class LVM(object):
             cmd.append(self.lvm_name)
             LVM._lvremove(cmd)
 
+        def rename(self, new_name):
+            LVM._lvrename([self.vg_name, self.lv_name, new_name])
+            self.lv_name = new_name
+
         def activate(self, val, ignoreactivationskip=False):
             assert val in [True, False]
             val = "y" if val else "n"
@@ -290,6 +295,9 @@ class LVM(object):
                 raise MissingLvmThinPool()
 
             return lv
+
+        def deltag(self, tag):
+            LVM._lvchange(["--deltag", tag, self.lvm_name])
 
         def addtag(self, tag):
             LVM._lvchange(["--addtag", tag, self.lvm_name])

@@ -1,9 +1,8 @@
-
 import logging
 import os
-from lvm import LVM
-from .utils import mounted, systemctl, File, mkfs, \
-    Rsync
+import time
+from .lvm import LVM
+from .utils import mounted, systemctl, File, mkfs, Rsync
 
 
 log = logging.getLogger(__package__)
@@ -43,16 +42,24 @@ WantedBy=local-fs.target
         safewhere = self._volname(where).replace("_", "-")
         return File("/etc/systemd/system/%s.%s" % (safewhere, unittype))
 
+    def _rename_volume(self, thinpool, volname):
+        new_name = "%s.%s" % (volname, time.strftime("%Y%m%d%H%M%S"))
+        lv = LVM.LV.from_lv_name(thinpool.vg_name, volname)
+        lv.rename(new_name)
+        lv.deltag(self.tag_volume)
+
     def create(self, where, size, attach_now=True):
-        assert not self.is_volume(where), \
-            "Path is already a volume: %s" % where
         assert where.startswith("/"), "An absolute path is required"
         assert os.path.isdir(where), "Is no dir: %s" % where
 
+        thinpool = self.imgbase._thinpool()
         volname = self._volname(where)
 
+        if self.is_volume(where):
+            self._rename_volume(thinpool, volname)
+
         # Create the vol
-        vol = self.imgbase._thinpool().create_thinvol(volname, size)
+        vol = thinpool.create_thinvol(volname, size)
         vol.addtag(self.tag_volume)
 
         mkfs(vol.path)
