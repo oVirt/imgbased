@@ -124,7 +124,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         threads.append(ThreadRunner(migrate_state, new_lv, previous_layer_lv,
                                     "/root/"))
         threads.append(ThreadRunner(migrate_state, new_lv, previous_layer_lv,
-                                    "/usr/share/rhn/"))
+                                    "/usr/share/rhn/", exclude=["*.py*"]))
         threads.append(ThreadRunner(relocate_update_manager, new_lv))
 
         thread_group_handler(threads)
@@ -211,11 +211,10 @@ def check_nist_layout(imgbase, new_lv):
                 shutil.copy2(new_config, lvm_config_path)
 
 
-def migrate_state(new_lv, previous_lv, path):
+def migrate_state(new_lv, previous_lv, path, exclude=None):
     log.debug("Migrating %s from the old image to the new image" % path)
-    rsync = Rsync()
-    with mounted(new_lv.path) as new_fs,\
-            mounted(previous_lv.path) as old_fs:
+    rsync = Rsync(exclude=exclude)
+    with mounted(new_lv.path) as new_fs, mounted(previous_lv.path) as old_fs:
         old_path = old_fs.path(path)
         if os.path.isdir(old_path):
             rsync.sync(old_path, new_fs.path(path))

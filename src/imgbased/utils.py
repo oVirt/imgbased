@@ -992,8 +992,8 @@ class Rsync():
     existing = False
     update_only = False
 
-    def __init__(self, checksum_only=False, update_only=False, exclude=[]):
-        self.exclude = ["mnt.*/*"] + exclude
+    def __init__(self, checksum_only=False, update_only=False, exclude=None):
+        self.exclude = ["mnt.*/*"] + (exclude or [])
         self.checksum_only = checksum_only
         self.update_only = update_only
 
