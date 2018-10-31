@@ -340,10 +340,10 @@ class ImageLayers(object):
         lv = self._lvm_from_layer(layer)
         log.debug("Removal candidate layer: %r" % layer)
 
-        self.hooks.emit("pre-layer-removed", lv.lvm_name)
-
         assert layer.is_layer()
         assert layer != self.current_layer()
+
+        self.hooks.emit("pre-layer-removed", lv.lvm_name)
 
         log.debug("Removing %s" % layer)
         lv.activate(False)

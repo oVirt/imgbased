@@ -24,9 +24,11 @@
 import functools
 import glob
 import logging
+import tempfile
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import threading
@@ -92,7 +94,18 @@ def grubby(*args, **kwargs):
     # FIXME: hack to work around rhbz#1323842
     args = list(args) + ["--bad-image-okay"]
 
-    return ExternalBinary().grubby(list(args), **kwargs)
+    grubcfg = "/boot/grub2/grub.cfg"
+    tmpcfg = tempfile.mktemp(dir="/boot/grub2", prefix="grub.cfg.")
+
+    shutil.copy2(grubcfg, tmpcfg)
+
+    try:
+        return ExternalBinary().grubby(list(args), **kwargs)
+    finally:
+        if os.stat(grubcfg).st_size == 0:
+            log.debug("Grubby failed, restoring previous grub.cfg")
+            shutil.copy2(tmpcfg, grubcfg)
+        os.unlink(tmpcfg)
 
 
 def grub2_set_default(key):

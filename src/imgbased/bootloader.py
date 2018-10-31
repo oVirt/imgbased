@@ -236,7 +236,11 @@ class Grubby(Bootloader):
         return key
 
     def remove_entry(self, key):
-        entry = self._get_valid_entries().get(key)
+        entries = self._get_valid_entries()
+        entry = entries.pop(key, None)
+        if not entries:
+            log.debug("Not removing %s, no other entries found!", key)
+            return
         if entry:
             log.debug("Removing boot entry: %s" % entry.title)
             log.info("Removing boot entry: %s" % entry.title)
