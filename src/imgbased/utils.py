@@ -350,7 +350,11 @@ class Ext4(Filesystem):
     def randomize_uuid(self):
         cmd = ["e2fsck", "-y", "-f", self.path]
         log.debug("Running: %s" % cmd)
-        call(cmd, stderr=subprocess.STDOUT)
+        try:
+            call(cmd, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            if e.returncode != 1:  # e2fsck returns 1 if the fs was corrected
+                raise
         cmd = ["tune2fs", "-U", "random", self.path]
         log.debug("Running: %s" % cmd)
         call(cmd, stderr=subprocess.STDOUT)
