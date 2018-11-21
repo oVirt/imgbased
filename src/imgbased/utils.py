@@ -866,7 +866,7 @@ class PackageDb():
     def get_packages(self):
         raise NotImplementedError
 
-    def get_files(self, pkgname):
+    def get_files(self, pkgs):
         raise NotImplementedError
 
 
@@ -879,14 +879,53 @@ class RpmPackageDb(PackageDb):
             args += ("--root", self.root)
         return self._rpm_cmd(list(args)).splitlines(False)
 
+    def _get_files_by_tag(self, rpms, tag):
+        return {k: v for k, v in self.get_file_flags(rpms).items() if tag in v}
+
+    def _split_file_line(self, line):
+        attrs, fname = line.split("/", 1)
+        return ("/" + fname.strip(), attrs.strip())
+
+    def get_file_flags(self, rpms):
+        output = self._rpm("-q", "--queryformat",
+                           "[%{FILEFLAGS:fflags} %{FILENAMES}\n]", *rpms)
+        return dict([self._split_file_line(x) for x in output])
+
+    def get_verify(self, rpms):
+        try:
+            output = self._rpm("-V", *rpms)
+        except subprocess.CalledProcessError as e:
+            output = e.output.decode(errors="replace").splitlines()
+            log.debug("Subprocess exception ignored")
+        return dict([self._split_file_line(x) for x in output])
+
+    def get_query_files(self, files):
+        try:
+            output = self._rpm("-qf", *files)
+        except subprocess.CalledProcessError as e:
+            output = e.output.decode(errors="replace").splitlines()
+            log.debug("Subprocess exception ignored")
+        not_owned = [x for x in output if "not owned" in x]
+        rpms = [x for x in output if x not in not_owned]
+        return (rpms, [x.split()[1] for x in not_owned])
+
+    def get_conf_files(self, rpms):
+        return self._get_files_by_tag(rpms, "c")
+
+    def get_ghost_files(self, rpms):
+        return self._get_files_by_tag(rpms, "g")
+
     def get_packages(self, filter="", exclude=None):
         rpms = [p for p in self._rpm("-qa") if filter in p]
 
         return [p for p in rpms if exclude not in p] if exclude is not None \
             else rpms
 
-    def get_files(self, pkgname):
-        return self._rpm("-ql", pkgname)
+    def get_whatprovides(self, cap):
+        return self._rpm("-q", "--qf", "%{name}\\n", "--whatprovides", cap)
+
+    def get_files(self, pkgs):
+        return self._rpm("-ql", *pkgs)
 
     def get_nvr(self, pkgname):
         return self._rpm("-q", pkgname)
