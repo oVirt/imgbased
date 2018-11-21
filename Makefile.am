@@ -16,9 +16,7 @@ pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
 vpath $(srcdir)
 
 dist_sbin_SCRIPTS = \
-  scripts/imgbase \
-  scripts/imgbase-copy-bootfiles \
-  scripts/imgbase-fix-new-kernel
+  scripts/imgbase
 
 dist_pyimagebased_PYTHON = \
   $(srcdir)/src/imgbased/*.py
@@ -39,15 +37,8 @@ EXTRA_DIST = \
   src/plugin-dnf/imgbased-persist.py \
   src/plugin-yum/imgbased-persist.py \
   src/plugin-yum/imgbased-persist.conf \
-  data/imgbase-clean-grub.service \
-  data/imgbase-copy-bootfiles.service \
-  data/imgbase-fix-new-kernel.service \
-  data/imgbase-generate-iqn.service \
-  data/imgbase-config-vdsm.service \
-  data/imgbase-relabel-dev.service \
   data/imgbased-pool.profile \
-  docs/imgbase-copy-bootfiles.8 \
-  docs/imgbase-fix-new-kernel.8 \
+  data/imgbase-setup.service \
   scripts/grub/09_node \
   tests/*.py
   $(NULL)
@@ -57,9 +48,7 @@ dist_doc_DATA = \
   docs/imgbase.8.asc
 
 man8_MANS = \
-  docs/imgbase.8 \
-  docs/imgbase-copy-bootfiles.8 \
-  docs/imgbase-fix-new-kernel.8
+  docs/imgbase.8
 
 doc: $(doc_DATA) $(dist_doc_DATA) $(man8-MANS)
 

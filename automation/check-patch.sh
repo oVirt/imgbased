@@ -32,6 +32,7 @@ build_imgbased() {
     ./autogen.sh
     ./configure
     make -j5 check
+    find rpmbuild -name "*.rpm" -exec cp -vf {} $ARTIFACTSDIR \;
 }
 
 fetch_node_iso() {
@@ -307,6 +308,10 @@ EOF
 imgbase check
 imgbase layout
 imgbase w
+rm /etc/iscsi/initiatorname.iscsi
+touch /var/lib/ngn-vdsm-need-configure
+imgbase --debug service --start
+imgbase --debug service --stop
 imgbase --debug layout --free-space
 imgbase --debug layout --bases
 imgbase --debug --experimental volume --list

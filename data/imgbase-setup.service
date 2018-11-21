@@ -1,0 +1,14 @@
+[Unit]
+Description=Configure Image Layers
+Before=supervdsmd.service lldpad.service iscsi.service iscsid.service
+After=chronyd.service ntpd.service
+
+[Service]
+ExecStartPre=/usr/bin/sleep 2
+ExecStart=/usr/sbin/imgbase service --start
+ExecStop=/usr/sbin/imgbase service --stop
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
