@@ -231,13 +231,56 @@ def migrate_state(new_lv, previous_lv, path, exclude=None):
             rsync.sync(old_path, new_fs.path(path))
 
 
+def migrate_rpm_files(new_root, files):
+    if not files:
+        log.debug("No rpm files to migrate")
+        return
+    log.debug("Migrating files by rpm databases: %s", files)
+    rpmdb = RpmPackageDb()
+    rpmdb.root = new_root
+    rpms, unknown = rpmdb.get_query_files(files)
+    ghost_files = {}
+    conf_files = {}
+    if rpms:
+        ghost_files = rpmdb.get_ghost_files(rpms)
+        conf_files = rpmdb.get_conf_files(rpms)
+    for dst in files:
+        if dst in ghost_files.keys() + unknown:
+            log.debug("Skip %s, fflags=[%s]", dst, ghost_files.get(dst, ""))
+            continue
+        src = new_root + "/" + dst
+        if os.path.islink(src):
+            src_lnk = os.readlink(src)
+            if os.path.islink(dst):
+                if src_lnk != os.readlink(dst):
+                    os.rename(dst, dst + ".imglnk")
+                    os.symlink(src_lnk, dst)
+                    log.debug("Updated symlink %s -> %s", dst, src_lnk)
+            else:
+                os.rename(dst, dst + ".imgbak")
+                os.symlink(src_lnk, dst)
+                log.debug("Updated symlink %s -> %s", dst, src_lnk)
+            continue
+        if os.path.samefile(src, dst) or filecmp.cmp(src, dst):
+            continue
+        dst_conf = conf_files.get(dst)
+        if dst_conf and "n" in dst_conf:  # %config(noreplace)
+            shutil.copy2(src, dst + ".imgnew")
+            log.debug("Saved config file to %s.imgnew", dst)
+            continue
+        os.rename(dst, dst + ".imgbak")
+        shutil.copy2(src, dst)
+        log.debug("Updated file %s", dst)
+
+
 def migrate_var(imgbase, new_lv):
     def strip(s):
         return re.sub(r'^/tmp/mnt.*?/', '', s)
 
-    log.debug("Syncing items present in the new /var which are not "
-              "present in the existing FS")
+    log.debug("Syncing items from the new /var")
+
     with mounted(new_lv.path) as new_fs:
+        xfiles = []
         for cur, _dirs, files in os.walk(new_fs.path("/var")):
             for d in _dirs:
                 newlv_path = "/".join([cur, d])
@@ -259,6 +302,9 @@ def migrate_var(imgbase, new_lv):
                         log.warn("Copy failed %s, err=%s", newlv_path, e.errno)
                         if e.errno != errno.ENOENT:
                             raise
+                else:
+                    xfiles.append(realpath)
+        migrate_rpm_files(new_fs.path("/"), xfiles)
 
 
 def boot_partition_validation():
@@ -888,10 +934,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             pkgs = RpmPackageDb()
             pkgs.root = newroot
 
-            pkgfiles = []
-            for k in pkgs.get_whatprovides("kernel"):
-                pkgfiles += pkgs.get_files(k)
-
+            pkgfiles = pkgs.get_files(pkgs.get_whatprovides("kernel"))
             if not pkgfiles:
                 log.info("No kernel found on %s" % new_lv)
                 return
