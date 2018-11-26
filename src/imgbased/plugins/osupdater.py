@@ -132,7 +132,18 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         log.exception("Failed to migrate etc")
         raise ConfigMigrationError()
 
-    thread_boot_migrator(imgbase, new_lv, previous_layer_lv)
+    reconfigure_vdsm(new_lv)
+    migrate_boot(imgbase, new_lv, previous_layer_lv)
+
+
+def reconfigure_vdsm(new_lv):
+    env = os.environ.copy()
+    env["SYSTEMD_IGNORE_CHROOT"] = "1"
+    with mounted(new_lv.path) as new_fs:
+        with utils.bindmounted("/proc", new_fs.target + "/proc"):
+            with utils.bindmounted("/run", new_fs.target + "/run"):
+                just_do(["vdsm-tool", "configure", "--force"],
+                        new_root=new_fs.path("/"), environ=env)
 
 
 def mknod_dev_urandom(new_lv):
@@ -141,7 +152,7 @@ def mknod_dev_urandom(new_lv):
         utils.ExternalBinary().mknod([devurandom, "c", "1", "9"])
 
 
-def thread_boot_migrator(imgbase, new_lv, previous_layer_lv):
+def migrate_boot(imgbase, new_lv, previous_layer_lv):
     try:
         adjust_mounts_and_boot(imgbase, new_lv, previous_layer_lv)
     except:
@@ -629,23 +640,24 @@ def relabel_selinux(new_fs):
                     log.debug("{} not found in new fs, skipping".format(fc))
 
 
+def just_do(arg, new_root=None, shell=False, environ=None):
+    DEVNULL = open(os.devnull, "w")
+    if new_root:
+        if shell:
+            arg = "nsenter --root=%s --wd=/ %s" % (new_root, arg)
+        else:
+            arg = ["nsenter", "--root=" + new_root, "--wd=/"] + arg
+    log.debug("Running %s" % arg)
+    environ = environ or os.environ
+    proc = subprocess.Popen(arg, stdout=subprocess.PIPE, env=environ,
+                            stderr=DEVNULL, shell=shell).communicate()
+    return proc[0]
+
+
 def run_rpm_selinux_post(new_lv):
     run_commands = []
     critical_commands = ["restorecon", "semodule", "semanage", "fixfiles",
                          "chcon", "vdsm-schema-cache-regenerate"]
-
-    def just_do(arg, **kwargs):
-        DEVNULL = open(os.devnull, "w")
-        arg = "nsenter --root=%s --wd=/ %s" % (new_fs.path("/"), arg)
-        log.debug("Running %s" % arg)
-
-        # shell=True is bad! But we're executing RPM %post scripts
-        # directly and imgbased can't learn every possible way bash
-        # can be written in order to make it sane
-        proc = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                                stderr=DEVNULL, shell=True,
-                                **kwargs).communicate()
-        return proc[0]
 
     def filter_selinux_commands(rpms, scr_arg):
         for pkg, v in rpms.items():
@@ -677,7 +689,7 @@ def run_rpm_selinux_post(new_lv):
                                        "/sys/fs/selinux",
                                        fstype="selinuxfs"):
                         for r in run_commands:
-                            just_do(r)
+                            just_do(r, new_root=rpmdb.root, shell=True)
 
         # this can unmount selinux. Make sure it's present
         if "/sys/fs/selinux" not in File("/proc/mounts").read():
@@ -737,24 +749,16 @@ def hack_rpm_permissions(new_fs):
     # rpm --setperms $(rpm --verify -qa | grep "^\.M\."
     #                  | cut -d "/" -f2- | while read p ;
     #                  do rpm -qf /$p ; done )
-    def just_do(arg, **kwargs):
-        DEVNULL = open(os.devnull, "w")
-        arg = ["nsenter", "--root=" + new_fs.path("/"), "--wd=/"] + arg
-        log.debug("Running %s" % arg)
-        proc = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                                stderr=DEVNULL,
-                                **kwargs).communicate()
-        return proc[0]
-
     incorrect_groups = {"paths": [],
                         "verb": "--setugids"
                         }
     incorrect_paths = {"paths": [],
                        "verb": "--setperms"
                        }
+    new_root = new_fs.path("/")
     for line in just_do(["rpm", "--verify", "-qa", "--nodeps", "--nodigest",
                          "--nofiledigest", "--noscripts",
-                         "--nosignature"]).splitlines():
+                         "--nosignature"], new_root=new_root).splitlines():
         _mode, _path = (line[0:13], line[13:])
         if _mode[1] == "M":
             incorrect_paths["paths"].append(_path)
@@ -767,10 +771,12 @@ def hack_rpm_permissions(new_fs):
 
     for pgroup in [incorrect_groups, incorrect_paths]:
         pkgs_req_update = just_do(["rpm", "-qf", "--queryformat",
-                                   "%{NAME}\n"] +
-                                  pgroup["paths"]).splitlines()
+                                  "%{NAME}\n"] + pgroup["paths"],
+                                  new_root=new_root).splitlines()
         pkgs_req_update = list(set(pkgs_req_update))
-        just_do(["rpm", pgroup["verb"]] + pkgs_req_update)
+        if pkgs_req_update:
+            just_do(["rpm", pgroup["verb"]] + pkgs_req_update,
+                    new_root=new_root)
 
 
 def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
