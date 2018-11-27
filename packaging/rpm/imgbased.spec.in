@@ -154,6 +154,13 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Tue Nov 27 2018 Yuval Turgeman <yturgema@redhat.com> - 1.0.30-1
+- Bindmount /sys on upgrade for SELinux (rhbz#1571607)
+- Migrate ntp.conf only if ntp is enabled (rhbz#1638606)
+- Reconfigure vdsm on upgrade (rhbz#1636028)
+- Migrate insights-clients files on upgrade (rhbz#1649658)
+- Sync existing /var files from new image (rhbz#1643733)
+
 * Tue Oct 23 2018 Yuval Turgeman <yturgema@redhat.com> - 1.0.29-1
 - Rename and untag volumes on upgrades (rhbz#1641543)
 
