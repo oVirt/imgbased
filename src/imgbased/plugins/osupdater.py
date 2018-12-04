@@ -592,10 +592,6 @@ def migrate_etc(imgbase, new_lv, previous_lv):
 
         thread_group_handler(threads)
 
-        # This needs to be called after calling the selinux post install
-        # scripts in case someone added a file context and needs a relabeling
-        relabel_selinux(new_fs)
-
         Motd(new_etc + "/motd").clear_motd()
 
 
@@ -652,39 +648,6 @@ def fix_systemd_services(old_fs, new_fs):
                         remove_file(os.path.join(root, f))
         except:
             log.exception("Could not remove %s. Is it a read-only layer?")
-
-
-def relabel_selinux(new_fs):
-    ctx_files = ["/etc/selinux/targeted/contexts/files/file_contexts",
-                 "/etc/selinux/targeted/contexts/files/file_contexts.homedirs",
-                 "/etc/selinux/targeted/contexts/files/file_contexts.local"]
-
-    dirs = ["/etc",
-            "/usr/bin",
-            "/usr/libexec",
-            "/usr/sbin",
-            "/usr/share",
-            "/var"]
-
-    exclude_dirs = ["/usr/share/factory"]
-
-    # Reduce the list to something subprocess can use directly
-
-    new_root = new_fs.path("/")
-
-    log.debug("Relabeling selinux")
-
-    with SELinuxDomain("setfiles_t") as dom:
-        with utils.bindmounted("/var", target=new_fs.path("/") + "/var",
-                               rbind=True):
-            for fc in ctx_files:
-                if os.path.exists(new_root + "/" + fc):
-                    excludes = sum([["-e", d] for d in exclude_dirs], [])
-                    dom.runcon(["chroot", new_root, "setfiles", "-v", fc] +
-                               excludes +
-                               dirs)
-                else:
-                    log.debug("{} not found in new fs, skipping".format(fc))
 
 
 def just_do(arg, new_root=None, shell=False, environ=None):
@@ -1055,6 +1018,33 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         loader.add_entry(new_lv.lv_name, title, vmlinuz, initrd, append)
         loader.set_default(new_lv.lv_name)
 
+    def relabel_selinux(newroot):
+        files = ["/etc/selinux/targeted/contexts/files/file_contexts",
+                 "/etc/selinux/targeted/contexts/files/file_contexts.homedirs",
+                 "/etc/selinux/targeted/contexts/files/file_contexts.local"]
+
+        dirs = ["/etc",
+                "/usr/bin",
+                "/usr/libexec",
+                "/usr/sbin",
+                "/usr/share",
+                "/var"]
+
+        exclude_dirs = ["/usr/share/factory"]
+
+        # Reduce the list to something subprocess can use directly
+
+        log.debug("Relabeling selinux")
+
+        with SELinuxDomain("setfiles_t") as dom:
+            for fc in files:
+                if os.path.exists(newroot + "/" + fc):
+                    excludes = sum([["-e", d] for d in exclude_dirs], [])
+                    dom.runcon(["chroot", newroot, "setfiles", "-v", fc] +
+                               excludes + dirs)
+                else:
+                    log.debug("{} not found in new fs, skipping".format(fc))
+
     with mounted(new_lv.path) as newroot:
         with utils.bindmounted("/var", target=newroot.target + "/var",
                                rbind=True):
@@ -1062,15 +1052,14 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             update_grub_default(newroot.target)
             copy_kernel(newroot.target)
             add_bootentry(newroot.target)
+            relabel_selinux(newroot.target)
 
             try:
                 boot_partition_validation()
             except:
                 raise
 
-    imgbase.hooks.emit("os-upgraded",
-                       previous_lv.lv_name,
-                       new_lvm_name)
+    imgbase.hooks.emit("os-upgraded", previous_lv.lv_name, new_lvm_name)
 
 
 def on_remove_layer(imgbase, lv_fullname):
