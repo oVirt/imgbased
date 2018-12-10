@@ -154,6 +154,9 @@ install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 %endif
 
 %changelog
+* Mon Dec 10 2018 Yuval Turgeman <yturgema@redhat.com> - 1.0.31-1
+- On upgrade, relabel files for SELinux last (rhbz#1655003)
+
 * Tue Nov 27 2018 Yuval Turgeman <yturgema@redhat.com> - 1.0.30-1
 - Bindmount /sys on upgrade for SELinux (rhbz#1571607)
 - Migrate ntp.conf only if ntp is enabled (rhbz#1638606)
