@@ -133,7 +133,18 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         raise ConfigMigrationError()
 
     reconfigure_vdsm(new_lv)
+    disable_os_probes(new_lv)
     migrate_boot(imgbase, new_lv, previous_layer_lv)
+    imgbase.protect_init_lv()
+
+
+def disable_os_probes(new_lv):
+    grub_scripts = ["10_linux", "30_os-prober"]
+    with mounted(new_lv.path) as new_fs:
+        for scr in grub_scripts:
+            f = File(new_fs.path(os.path.join("/etc/grub.d", scr)))
+            if f.exists():
+                f.chmod(0o644)
 
 
 def reconfigure_vdsm(new_lv):
@@ -1053,8 +1064,8 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             update_fstab(newroot.target)
             update_grub_default(newroot.target)
             copy_kernel(newroot.target)
-            add_bootentry(newroot.target)
             relabel_selinux(newroot.target)
+            add_bootentry(newroot.target)
 
             try:
                 boot_partition_validation()

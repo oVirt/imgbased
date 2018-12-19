@@ -281,8 +281,11 @@ class LVM(object):
 
         def permission(self, val):
             assert val in ["r", "rw"]
-            LVM._lvchange(["--permission", val,
-                           self.lvm_name])
+            attr = val if val == "r" else "w"
+            perm = LVM._lvs(["--noheadings", "-oattr", self.lvm_name])[1]
+            if perm == attr:
+                return
+            LVM._lvchange(["--permission", val, self.lvm_name])
 
         def thinpool(self):
             pool_lv = LVM._lvs(["--noheadings", "--ignoreskippedcluster",

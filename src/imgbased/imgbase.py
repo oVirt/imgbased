@@ -317,6 +317,12 @@ class ImageLayers(object):
 
         return new_base
 
+    def protect_init_lv(self):
+        try:
+            LVM.LV.from_tag(self.lv_init_tag).protect()
+        except Exception as e:
+            log.warn("Could not protect init LV: %s", str(e))
+
     def remove_base(self, name, with_children=True, force=False):
         base = Image.from_nvr(name)
         log.debug("Removal candidate base: %r" % base)

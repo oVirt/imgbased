@@ -16,6 +16,9 @@ save_logs() {
 setup_environ() {
     seq 0 9 | xargs -I {} mknod /dev/loop{} b 7 {} || :
     mknod /dev/kvm c 10 232 || :
+    mknod /dev/vhost-net c 10 238 || :
+    mkdir /dev/net || :
+    mknod /dev/net/tun c 10 200 || :
 
     mkdir $ARTIFACTSDIR || :
     rm -rf $TMPDIR && mkdir $TMPDIR
@@ -108,7 +111,7 @@ imgbase --debug --experimental image-build --postprocess --set-nvr=$nvr
 rm /dev/urandom
 EOF
         sync $mntdir && umount $mntdir
-        mksquashfs squashfs-root image.squashfs.${x} -noI -noD -noF -noX
+        mksquashfs squashfs-root image.squashfs.${x}
         [[ $x -eq $IMG_INI ]] && mount squashfs-root/LiveOS/rootfs.img $mntdir
     done
 
@@ -161,6 +164,7 @@ repack_node_artifacts() {
     touch ovirt-node-ng-image.{squashfs.img,manifest-rpm,unsigned-rpms}
     make rpm PLACEHOLDER_RPM_VERSION=$IMG_UPD PLACEHOLDER_RPM_RELEASE=0
     find tmp.repos -name "ovirt*image-update*.rpm" -exec mv {} $TMPDIR \;
+    cp -fv $TMPDIR/*.noarch.rpm $ARTIFACTSDIR
     git checkout -
     popd
 }

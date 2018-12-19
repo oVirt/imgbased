@@ -345,10 +345,10 @@ class Filesystem():
 
     @staticmethod
     def mkfs(path, debug=False):
-        raise NotImplemented
+        raise NotImplementedError
 
     def randomize_uuid(self):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class Ext4(Filesystem):
@@ -521,7 +521,7 @@ class SELinuxDomain(object):
 
     def __init__(self, domain):
         self._domain = domain
-        self._disabled = self._getenforce() == "Disabled"
+        self._disabled = self._getenforce() in ("Disabled", "Permissive")
         self._exists = self._check_domain()
 
     def _check_domain(self):
