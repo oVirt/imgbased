@@ -39,6 +39,8 @@ from ..config import paths
 from ..lvm import LVM
 from ..naming import Image
 from ..volume import Volumes
+from ..command import just_do
+from ..openscap import OSCAPScanner
 from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
     File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
     find_mount_target, Motd, LvmCLI, SELinuxDomain, ThreadRunner, \
@@ -133,6 +135,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         raise ConfigMigrationError()
 
     reconfigure_vdsm(new_lv)
+    apply_scap_profile(new_lv)
     disable_os_probes(new_lv)
     migrate_boot(imgbase, new_lv, previous_layer_lv)
     imgbase.protect_init_lv()
@@ -145,6 +148,11 @@ def disable_os_probes(new_lv):
             f = File(new_fs.path(os.path.join("/etc/grub.d", scr)))
             if f.exists():
                 f.chmod(0o644)
+
+
+def apply_scap_profile(new_lv):
+    with mounted(new_lv.path) as new_fs:
+        OSCAPScanner().process(new_fs.path("/"))
 
 
 def reconfigure_vdsm(new_lv):
@@ -658,20 +666,6 @@ def fix_systemd_services(old_fs, new_fs):
                         remove_file(os.path.join(root, f))
         except:
             log.exception("Could not remove %s. Is it a read-only layer?")
-
-
-def just_do(arg, new_root=None, shell=False, environ=None):
-    DEVNULL = open(os.devnull, "w")
-    if new_root:
-        if shell:
-            arg = "nsenter --root=%s --wd=/ %s" % (new_root, arg)
-        else:
-            arg = ["nsenter", "--root=" + new_root, "--wd=/"] + arg
-    log.debug("Running %s" % arg)
-    environ = environ or os.environ
-    proc = subprocess.Popen(arg, stdout=subprocess.PIPE, env=environ,
-                            stderr=DEVNULL, shell=shell).communicate()
-    return proc[0]
 
 
 def run_rpm_selinux_post(new_lv):

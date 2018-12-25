@@ -70,7 +70,7 @@ build_test_images() {
 
     # Free some space for testing
     rm -rf $mntdir/usr/share/factory/var/cache/*
-    rm -rf $mntdir/usr/share/{locale,xml,doc}
+    rm -rf $mntdir/usr/share/{locale,doc}
 
 
     if [[ ${DIST} = fc* ]]; then
@@ -208,7 +208,7 @@ fetch_remote() {
 
     scp -o "UserKnownHostsFile /dev/null" \
         -o "StrictHostKeyChecking no" \
-        -i $sshkey -r root@$addr:$path $dest
+        -i $sshkey -r root@$addr:$path $dest ||:
 
     [[ -n $compress ]] && {
         tar czf $dest.tgz $dest && mv $dest.tgz $ARTIFACTSDIR
@@ -232,11 +232,11 @@ validate_nodectl_log() {
 iso_install_upgrade() {
     echo "Installing $TMPDIR/ovirt-test-installer.iso"
     # Install the iso
-    $NGNDIR/scripts/node-setup/setup-node-appliance.sh \
+    ISO_INSTALL_TIMEOUT=45 $NGNDIR/scripts/node-setup/setup-node-appliance.sh \
         -i $TMPDIR/ovirt-test-installer.iso \
-        -p ovirt > setup-iso.log 2>&1
+        -p ovirt > setup-iso.log 2>&1 || setup_rc=$?
 
-    rm *nodectl-check.log
+    rm -f *nodectl-check.log
 
     # Grab name, sshkey and addr, ugly but works
     local name=$(grep available setup-iso.log | cut -d: -f1)
@@ -244,7 +244,14 @@ iso_install_upgrade() {
     local wrkdir=$(grep -Po "(?<=WORKDIR: ).*" setup-iso.log)
     local sshkey="$wrkdir/sshkey-${name}"
 
+    fetch_remote "$sshkey" "$addr" "/tmp" "init_tmp" "1"
     fetch_remote "$sshkey" "$addr" "/var/log" "init_var_log" "1"
+
+    [[ $setup_rc -ne 0 ]] && {
+        mv $TMPDIR/ovirt-test-installer.iso $ARTIFACTSDIR
+        echo "ISO install failed, exiting"
+        exit 1
+    }
 
     echo "Validating nodectl check"
     run_nodectl_check "" "$sshkey" "$addr" "init-nodectl-check.log"
@@ -302,6 +309,8 @@ EOF
 
     local test_nvr="ovirt-node-ng-${IMG_TST}.0.0-0.$(date +%Y%m%d).0"
     local prev_nvr="ovirt-node-ng-${IMG_INI}.0.0-0.$(date +%Y%m%d).0"
+    local scap_ds="/usr/share/xml/scap/ssg/content/ssg-centos7-ds.xml"
+    local scap_profile="xccdf_org.ssgproject.content_profile_stig-rhel7-disa"
     # Run some imgbase checks to collect more coverage, this will destroy the
     # vm (make it not bootable), it's OK
     exec_ssh $sshkey $addr << EOF > post-checks.log 2>&1
@@ -312,6 +321,11 @@ rm /etc/iscsi/initiatorname.iscsi
 touch /var/lib/ngn-vdsm-need-configure
 imgbase --debug service --start
 imgbase --debug service --stop
+imgbase --debug openscap --register $scap_ds $scap_profile
+imgbase --debug openscap --list
+imgbase --debug openscap --all
+imgbase --debug openscap --scan /
+imgbase --debug openscap --unregister $scap_profile
 imgbase --debug layout --free-space
 imgbase --debug layout --bases
 imgbase --debug --experimental volume --list

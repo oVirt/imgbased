@@ -19,6 +19,7 @@ python3-pep8
 python3-pyflakes
 python3-nose
 systemd-python3
+systemd-python
 pykickstart
 rpm-python
 yum

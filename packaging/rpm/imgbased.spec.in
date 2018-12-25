@@ -61,12 +61,14 @@ layers atop.
 %package -n python-imgbased
 Summary: A python 2 module for imgbased
 Requires:       rpm-python
+Requires:       systemd-python
 BuildRequires:       python-devel
 %if 0%{?with_check}
 BuildRequires:       python-pep8
 BuildRequires:       pyflakes
 BuildRequires:       python-nose
 BuildRequires:       python-six
+BuildRequires:       systemd-python
 %endif
 
 %description -n python-imgbased
@@ -82,8 +84,9 @@ BuildRequires:       python%{python3_pkgversion}-pep8
 BuildRequires:       python%{python3_pkgversion}-pyflakes
 BuildRequires:       python%{python3_pkgversion}-nose
 BuildRequires:       python%{python3_pkgversion}-six
+BuildRequires:       python%{python3_pkgversion}-systemd
 %endif
-Recommends:          python%{python3_pkgversion}-systemd
+Requires:          python%{python3_pkgversion}-systemd
 Requires:       python%{python3_pkgversion}-rpm
 
 %description -n python%{python3_pkgversion}-imgbased
