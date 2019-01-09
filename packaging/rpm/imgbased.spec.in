@@ -175,6 +175,13 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Wed Jan 09 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.2-1
+- Disable grub os probes (rhbz#1501236)
+- Call relabel_selinux at the very end of the update (rhbz#1655003)
+- Copy insights files to new location (rhbz#1649658)
+- Sync existing files in /var (rhbz#1643733)
+- Reconfigure vdsm in upgrade (rhbz#1636028)
+
 * Tue Nov 20 2018 Yuval Turgeman <yturgema@redhat.com> - 1.1.1-1
 - Rename volumes bz#1641543
 - Conditionally migrate ntp to chrony bz#1638606
