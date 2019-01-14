@@ -521,7 +521,7 @@ class SELinuxDomain(object):
 
     def __init__(self, domain):
         self._domain = domain
-        self._disabled = self._getenforce() in ("Disabled", "Permissive")
+        self._mode = self._getenforce()
         self._exists = self._check_domain()
 
     def _check_domain(self):
@@ -529,7 +529,7 @@ class SELinuxDomain(object):
         Checks if the domain is permissive, or if SELinux is disabled.  If any
         of the the checks are True, we should not call `semanage permissive`.
         """
-        if self._disabled:
+        if self._mode in ("Disabled", "Permissive"):
             return True
         domains = self._semanage(["permissive", "-nl"])
         return self._domain in domains.split()
@@ -545,7 +545,7 @@ class SELinuxDomain(object):
         self._semanage(["permissive", "-d", self._domain])
 
     def runcon(self, args):
-        if self._disabled:
+        if self._mode == "Disabled":
             return
         self._runcon(["-t", self._domain, "--"] + args)
 
