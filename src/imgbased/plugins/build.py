@@ -5,7 +5,7 @@ import shutil
 import glob
 import subprocess
 import json
-from ..utils import Rsync, File, BuildMetadata
+from ..utils import Rsync, File, BuildMetadata, systemctl
 
 
 log = logging.getLogger(__package__)
@@ -207,6 +207,12 @@ def remove_iscsi_initiator_iqn():
     fn = "/etc/iscsi/initiatorname.iscsi"
     if os.path.exists(fn):
         os.unlink(fn)
+
+
+@Postprocessor.add_step
+def systemctl_mask_lvmetad():
+    if not File("/etc/fedora-release").exists():
+        systemctl.mask("lvm2-lvmetad.service", "lvm2-lvmetad.socket")
 
 
 # vim: sw=4 et sts=4
