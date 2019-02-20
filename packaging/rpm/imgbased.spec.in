@@ -169,6 +169,11 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Wed Feb 20 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.4-1
+- Added imgbase-setup.service
+- Apply registered OpenSCAP profile on updates (rhbz#1654253)
+- Mask lvm2-lvmetad on build (rhbz#1652795)
+
 * Tue Jan 15 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.3-1
 - Relabel for selinux in permissive (rhbz#1655003)
 
