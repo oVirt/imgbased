@@ -921,8 +921,9 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
         def chroot(*args):
             log.debug("Running: %s" % str(args))
-            with utils.bindmounted(bootdir, newroot + "/boot"):
-                return utils.nsenter(args, root=newroot)
+            with utils.bindmounted("/proc", newroot + "/proc"):
+                with utils.bindmounted(bootdir, newroot + "/boot"):
+                    return utils.nsenter(args, root=newroot)
 
         kvers = kernel_versions_in_path(bootdir)
         kver = kvers.pop()
