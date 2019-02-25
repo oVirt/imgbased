@@ -929,7 +929,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         log.debug("Found kvers: %s" % kvers)
         log.debug("Using kver: %s" % kver)
         initrd = "/boot/initramfs-%s.img" % kver
-        chroot("dracut", "-f", initrd, "--kver", kver, "--hostonly")
+        chroot("dracut", "-f", initrd, "--kver", kver)
 
         # Copy the .hmac file for FIPS until rhbz#1415032 is resolved
         # Since .hmac is a plain checksum pointing at a bare path in /boot,
