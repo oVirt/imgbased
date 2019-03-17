@@ -246,6 +246,7 @@ iso_install_upgrade() {
 
     fetch_remote "$sshkey" "$addr" "/tmp" "init_tmp" "1"
     fetch_remote "$sshkey" "$addr" "/var/log" "init_var_log" "1"
+    fetch_remote "$sshkey" "$addr" "/etc" "init_etc" "1"
 
     [[ $setup_rc -ne 0 ]] && {
         mv $TMPDIR/ovirt-test-installer.iso $ARTIFACTSDIR
@@ -291,6 +292,7 @@ EOF
 
     fetch_remote "$sshkey" "$addr" "$logfile" "imgbased.log"
     fetch_remote "$sshkey" "$addr" "/var/log" "post_upgrade_var_log" "1"
+    fetch_remote "$sshkey" "$addr" "/etc" "post_upgrade_etc" "1"
 
     [[ $failed -eq 1 ]] && {
         echo "Upgrade rpm failed, check post-upgrade logs for details"
@@ -305,6 +307,7 @@ EOF
     echo "Running some more tests and gathering coverage data"
     run_nodectl_check "$((bootnum+1))" "$sshkey" "$addr" "upgrade-nodectl-check.log"
     fetch_remote "$sshkey" "$addr" "/var/log" "post_reboot_var_log" "1"
+    fetch_remote "$sshkey" "$addr" "/etc" "post_reboot_etc" "1"
     validate_nodectl_log "upgrade-nodectl-check.log" "$sshkey" "$addr"
 
     local test_nvr="ovirt-node-ng-${IMG_TST}.0.0-0.$(date +%Y%m%d).0"

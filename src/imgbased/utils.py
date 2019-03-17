@@ -585,7 +585,7 @@ class File(object):
             dst.write(data)
 
     def writen(self, data, mode="w"):
-        self.write(data + "\n")
+        self.write(data + "\n", mode)
 
     def remove(self):
         os.unlink(self.filename)
