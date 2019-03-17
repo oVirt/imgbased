@@ -62,6 +62,7 @@ layers atop.
 Summary: A python 2 module for imgbased
 Requires:       rpm-python
 Requires:       systemd-python
+Requires:       yum-plugin-versionlock
 BuildRequires:       python-devel
 %if 0%{?with_check}
 BuildRequires:       python-pep8
@@ -88,6 +89,7 @@ BuildRequires:       python%{python3_pkgversion}-systemd
 %endif
 Requires:          python%{python3_pkgversion}-systemd
 Requires:       python%{python3_pkgversion}-rpm
+Requires:       dnf-plugin-versionlock
 
 %description -n python%{python3_pkgversion}-imgbased
 python%{python3_pkgversion}-imgbased is a python 3 library to manage lvm layers

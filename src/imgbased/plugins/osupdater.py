@@ -28,6 +28,7 @@ import glob
 import hashlib
 import os
 import re
+import rpm
 import shutil
 import subprocess
 
@@ -519,6 +520,30 @@ def migrate_etc(imgbase, new_lv, previous_lv):
             for d in dc.subdirs.values():
                 changed_and_new(d)
 
+    def configure_versionlock():
+        log.info("Configuring versionlock for %s" % new_fs.source)
+        fmt = "{0}:{1.name}-{1.version}-{1.release}.{1.arch}\n"
+        data = "# imgbased: versionlock begin for layer %s\n" % new_fs.source
+        rpm.addMacro("_dbpath", new_fs.path("/usr/share/rpm"))
+        for hdr in rpm.TransactionSet().dbMatch():
+            if "image-update" in hdr.name.decode("utf-8"):
+                continue
+            data += fmt.format(hdr.epoch or "0", hdr)
+        rpm.delMacro("_dbpath")
+        data += "# imgbased: versionlock end\n"
+        # versionlock.list must exist, so find which one should we use
+        for d in ("/etc/yum/pluginconf.d", "/etc/dnf/plugins/"):
+            f = File(os.path.join(new_fs.path(d), "versionlock.list"))
+            if f.exists():
+                f.write(data)
+        # Make sure we follow obsoletes for `yum versionlock`
+        conf = File(new_fs.path("/etc/yum/pluginconf.d/versionlock.conf"))
+        if conf.exists():
+            data = conf.contents.splitlines()
+            pattern = re.compile("^follow_obsoletes\s*=\s*1")
+            if not [x for x in data if pattern.search(x)]:
+                conf.writen("follow_obsoletes = 1", mode="a")
+
     log.debug("Migrating etc (%s -> %s)" % (previous_lv, new_lv))
     with mounted(new_lv.path) as new_fs,\
             mounted(previous_lv.path) as old_fs:
@@ -599,6 +624,8 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                         old_etc + "/passwd",
                         old_etc + "/shadow",
                         old_etc + "/group"])
+
+        configure_versionlock()
 
         log.info("Migrating /root")
 
