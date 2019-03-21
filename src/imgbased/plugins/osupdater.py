@@ -138,6 +138,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     reconfigure_vdsm(new_lv)
     apply_scap_profile(new_lv)
     disable_os_probes(new_lv)
+    clear_libvirt_cache()
     migrate_boot(imgbase, new_lv, previous_layer_lv)
     imgbase.protect_init_lv()
 
@@ -293,6 +294,21 @@ def migrate_rpm_files(new_root, files):
         log.debug("Updated file %s", dst)
 
 
+def clear_libvirt_cache():
+    log.debug("Clearing the libvirt cache")
+    cachedir = "/var/cache/libvirt/qemu/capabilities"
+    if not os.path.isdir(cachedir):
+        return
+    for f in os.listdir(cachedir):
+        path = os.path.join(cachedir, f)
+        try:
+            if os.path.isfile(path):
+                os.unlink(path)
+        except OSError as e:
+            log.warn("Failed to remove libvirt cache file %s, err=%s",
+                     path, e.errno)
+
+
 def migrate_var(imgbase, new_lv):
     def strip(s):
         return re.sub(r'^/tmp/mnt.*?/', '', s)
@@ -305,7 +321,14 @@ def migrate_var(imgbase, new_lv):
             for d in _dirs:
                 newlv_path = "/".join([cur, d])
                 realpath = "/".join([strip(cur), d])
-                if not os.path.exists(realpath):
+                # Don't copy the libvirt/qemu cache to new layers on upgrades.
+                # This is supposed to be checked by qemu/libvirt through a
+                # ctime comparison, but is also cleared on RPM upgrades.
+                #
+                # Instead of deleting it, we can just skip the copy
+
+                if not os.path.exists(realpath) and \
+                        "cache/libvirt/qemu/capabilities" not in realpath:
                     log.debug("Copying {} to {}".format(newlv_path, realpath))
                     if os.path.isdir(newlv_path):
                         shutil.copytree(newlv_path, realpath, symlinks=True)
