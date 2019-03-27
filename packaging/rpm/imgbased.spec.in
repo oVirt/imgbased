@@ -171,6 +171,10 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Wed Mar 27 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.6-1
+- Clear libvirt/qemu cache on updates (rhbz#1674265)
+- Lock image packages in layer (rhbz#1688835)
+
 * Mon Feb 25 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.5-1
 - Do not use hostonly when generating an initrd (rhbz#1652519)
 
