@@ -135,42 +135,76 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         log.exception("Failed to migrate etc")
         raise ConfigMigrationError()
 
-    reconfigure_vdsm(new_lv)
-    apply_scap_profile(new_lv)
-    disable_os_probes(new_lv)
-    clear_libvirt_cache()
+    postprocess(new_lv)
     migrate_boot(imgbase, new_lv, previous_layer_lv)
     imgbase.protect_init_lv()
-
-
-def disable_os_probes(new_lv):
-    grub_scripts = ["10_linux", "30_os-prober"]
-    with mounted(new_lv.path) as new_fs:
-        for scr in grub_scripts:
-            f = File(new_fs.path(os.path.join("/etc/grub.d", scr)))
-            if f.exists():
-                f.chmod(0o644)
-
-
-def apply_scap_profile(new_lv):
-    with mounted(new_lv.path) as new_fs:
-        OSCAPScanner().process(new_fs.path("/"))
-
-
-def reconfigure_vdsm(new_lv):
-    env = os.environ.copy()
-    env["SYSTEMD_IGNORE_CHROOT"] = "1"
-    with mounted(new_lv.path) as new_fs:
-        with utils.bindmounted("/proc", new_fs.target + "/proc"):
-            with utils.bindmounted("/run", new_fs.target + "/run"):
-                just_do(["vdsm-tool", "configure", "--force"],
-                        new_root=new_fs.path("/"), environ=env)
 
 
 def mknod_dev_urandom(new_lv):
     with mounted(new_lv.path) as new_fs:
         devurandom = "{}/dev/urandom".format(new_fs.target)
         utils.ExternalBinary().mknod([devurandom, "c", "1", "9"])
+
+
+def postprocess(new_lv):
+    def _reconfigure_vdsm():
+        env = os.environ.copy()
+        env["SYSTEMD_IGNORE_CHROOT"] = "1"
+        with utils.bindmounted("/proc", new_fs.target + "/proc"):
+            with utils.bindmounted("/run", new_fs.target + "/run"):
+                just_do(["vdsm-tool", "configure", "--force"],
+                        new_root=new_fs.path("/"), environ=env)
+
+    def _apply_scap_profile():
+        OSCAPScanner().process(new_fs.path("/"))
+
+    def _permit_root_login():
+        f = File(new_fs.path("/etc/ssh/sshd_config"))
+        regex = re.compile("\s*(PermitRootLogin)\s+(yes|no|without-password)")
+        data = ""
+        updated = False
+        for line in f.lines():
+            line = line.strip()
+            if line and line[0] == "#":
+                data += line + "\n"
+                continue
+            if regex.search(line):
+                if not updated:
+                    data += "PermitRootLogin yes\n"
+                    updated = True
+            else:
+                data += line + "\n"
+        if not updated:
+            data += "PermitRootLogin yes\n"
+        f.write(data)
+
+    def _disable_os_probes():
+        grub_scripts = ["10_linux", "30_os-prober"]
+        for scr in grub_scripts:
+            f = File(new_fs.path(os.path.join("/etc/grub.d", scr)))
+            if f.exists():
+                f.chmod(0o644)
+
+    def _clear_libvirt_cache():
+        log.debug("Clearing the libvirt cache")
+        cachedir = "/var/cache/libvirt/qemu/capabilities"
+        if not os.path.isdir(cachedir):
+            return
+        for f in os.listdir(cachedir):
+            path = os.path.join(cachedir, f)
+            try:
+                if os.path.isfile(path):
+                    os.unlink(path)
+            except OSError as e:
+                log.warn("Failed to remove libvirt cache file %s, err=%s",
+                         path, e.errno)
+
+    with mounted(new_lv.path) as new_fs:
+        _reconfigure_vdsm()
+        _apply_scap_profile()
+        _permit_root_login()
+        _disable_os_probes()
+    _clear_libvirt_cache()
 
 
 def migrate_boot(imgbase, new_lv, previous_layer_lv):
@@ -292,21 +326,6 @@ def migrate_rpm_files(new_root, files):
         os.rename(dst, dst + ".imgbak")
         shutil.copy2(src, dst)
         log.debug("Updated file %s", dst)
-
-
-def clear_libvirt_cache():
-    log.debug("Clearing the libvirt cache")
-    cachedir = "/var/cache/libvirt/qemu/capabilities"
-    if not os.path.isdir(cachedir):
-        return
-    for f in os.listdir(cachedir):
-        path = os.path.join(cachedir, f)
-        try:
-            if os.path.isfile(path):
-                os.unlink(path)
-        except OSError as e:
-            log.warn("Failed to remove libvirt cache file %s, err=%s",
-                     path, e.errno)
 
 
 def migrate_var(imgbase, new_lv):
