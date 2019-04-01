@@ -14,5 +14,9 @@ echo "Nothing to see here" >  empty.file
 %install
 install -Dm 666 empty.file %{buildroot}/var/lib/%{name}/empty.file
 
+%post
+FQDN=`hostname -f`
+echo "{\"test hostname in persist\":\"$FQDN\"}" > /etc/imgbased-persist.host
+
 %files
 /var/lib/%{name}/empty.file

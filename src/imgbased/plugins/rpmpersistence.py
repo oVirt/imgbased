@@ -25,6 +25,7 @@ import os
 import uuid
 import logging
 import glob
+import socket
 import subprocess
 
 from .. import utils
@@ -95,8 +96,10 @@ def install_rpms(new_fs):
     # set up a local repo and `yum -y localinstall foo bar quux`, with
     # the deps autoresolving
     def install(args):
-        nsid = str(uuid.uuid4()).replace("-", "")
-        cmd = ["systemd-nspawn", "--uuid", nsid, "-D", new_fs.path("/")] + args
+        cmd = ["systemd-nspawn",
+               "--uuid", str(uuid.uuid4()).replace("-", ""),
+               "--machine", socket.getfqdn(),
+               "-D", new_fs.path("/")] + args
         log.debug("Running %s" % cmd)
         try:
             subprocess.check_output(cmd, stderr=subprocess.STDOUT)
