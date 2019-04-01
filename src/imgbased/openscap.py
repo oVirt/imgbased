@@ -10,7 +10,7 @@ from .command import just_do
 log = logging.getLogger(__package__)
 
 
-SCAP_BASEDIR = "/var/lib/imgbased/openscap"
+SCAP_BASEDIR = "/var/imgbased/openscap"
 SCAP_REPORTSDIR = SCAP_BASEDIR + "/reports"
 SCAP_REPORT_FMT = SCAP_REPORTSDIR + "/scap-report-%s.html"
 
