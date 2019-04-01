@@ -49,6 +49,7 @@ Requires:            util-linux
 Requires:            augeas
 Requires:            rsync
 Requires:            tar
+Requires:            openscap-scanner
 
 %{!?_licensedir:%global license %%doc}
 
