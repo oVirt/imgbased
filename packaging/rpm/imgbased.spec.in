@@ -172,6 +172,11 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Tue Apr 02 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.7-1
+- Use FQDN for machine name in systemd-nspawn (rhbz#1693710)
+- Move openscap directory to existing /var/imgbased
+- Handle PermitRootLogin in sshd_config
+
 * Wed Mar 27 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.6-1
 - Clear libvirt/qemu cache on updates (rhbz#1674265)
 - Lock image packages in layer (rhbz#1688835)
