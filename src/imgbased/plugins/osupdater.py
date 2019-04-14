@@ -1094,6 +1094,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         loader = bootloader.Grubby()
         loader.add_entry(new_lv.lv_name, title, vmlinuz, initrd, append)
         loader.set_default(new_lv.lv_name)
+        loader.remove_other_entries()
 
     def relabel_selinux(newroot):
         files = ["/etc/selinux/targeted/contexts/files/file_contexts",
