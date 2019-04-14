@@ -68,18 +68,20 @@ mktitle ()
 {
   local title_type
   local node_version
+  local kernel_version
 
   title_type=$1 && shift
-  node_version=$1 && shift
+  node_version=${1%+*} && shift
+  kernel_version=$1 && shift
 
   case $title_type in
     recovery)
       title=$(printf '%s (recovery mode)' \
-                     "${node_version}")
+                     "${node_version} (${kernel_version})")
       ;;
     *)
       title=$(printf '%s' \
-                     "${node_version}")
+                     "${node_version} (${kernel_version})")
       ;;
   esac
   echo -n ${title}
@@ -129,7 +131,7 @@ node_entry ()
       boot_device_id="$(grub_get_device_id "${GRUB_DEVICE}")"
   fi
   if [ x$type != xsimple ] ; then
-      title=$(mktitle "$type" "$node_version")
+      title=$(mktitle "$type" "$node_version" "$version")
       if [ x"$title" = x"$GRUB_ACTUAL_DEFAULT" ] || [ x"Previous Linux versions>$title" = x"$GRUB_ACTUAL_DEFAULT" ]; then
          replacement_title="$(echo "Advanced options for ${OS}" | sed 's,>,>>,g')>$(echo "$title" | sed 's,>,>>,g')"
          quoted="$(echo "$GRUB_ACTUAL_DEFAULT" | grub_quote)"

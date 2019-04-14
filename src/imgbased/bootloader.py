@@ -93,11 +93,11 @@ class Grubby(Bootloader):
         ... root=/dev/mapper/centos_installed-root
         ... initrd=\
         ... /boot/ovirt-node-4.0+1/initramfs-3.10.0-327.4.5.el7.x86_64.img
-        ... title=ovirt-node-4.0+1'''
+        ... title=ovirt-node-4.0+1 (3.10.0-327.4.5.el7.x86_64)'''
 
         >>> parsed = Grubby.GrubbyEntry.parse(entry)
         >>> parsed.title
-        'ovirt-node-4.0+1'
+        'ovirt-node-4.0+1 (3.10.0-327.4.5.el7.x86_64)'
         >>> parsed.root
         '/dev/mapper/centos_installed-root'
 
@@ -214,18 +214,23 @@ class Grubby(Bootloader):
                 other_entries.append(entry)
                 continue
 
-            entrymap[key] = entry
+            entries = entrymap.setdefault(key, [])
+            entries.append(entry)
 
         log.debug("Found valid entries: %s" % entrymap)
+        log.debug("Found other entries: %s" % other_entries)
 
         return (entrymap, other_entries)
 
     def add_entry(self, key, title, linux, initramfs, append):
-        log.debug("Adding entry: %s" % key)
-
         assert " " not in key
+        log.debug("Adding entry: %s" % key)
         keyarg = " %s=%s" % (self._keyarg, key)
         append += keyarg
+
+        if "(" not in title:
+            kver = "-".join(os.path.basename(linux).rsplit("-")[-2:])
+            title += " (%s)" % kver
 
         grubby("--copy-default",
                "--add-kernel", "/boot/%s" % linux,
@@ -237,17 +242,19 @@ class Grubby(Bootloader):
 
     def remove_entry(self, key):
         entries = self._get_valid_entries()
-        entry = entries.pop(key, None)
+        key_entries = entries.pop(key, None)
         if not entries:
             log.debug("Not removing %s, no other entries found!", key)
             return
-        if entry:
-            log.debug("Removing boot entry: %s" % entry.title)
-            log.info("Removing boot entry: %s" % entry.title)
-            grubby("--remove-kernel", entry.kernel)
+        if key_entries:
+            for ke in key_entries:
+                log.debug("Removing boot entry: %s" % ke.title)
+                log.info("Removing boot entry: %s" % ke.title)
+                grubby("--remove-kernel", ke.kernel)
 
     def set_default(self, key):
-        entry = self._get_valid_entries()[key]
+        boot_entries = self._get_valid_entries()[key]
+        entry = sorted(boot_entries, reverse=True)[0]
         log.debug("Making default: %s" % entry.title)
         grubby("--set-default", entry.kernel)
 
@@ -256,7 +263,8 @@ class Grubby(Bootloader):
         kernel = grubby("--default-kernel")
         entries = self._get_valid_entries()
         try:
-            entry = [e for e in entries if entries[e].kernel == kernel][0]
+            entry = [b for e in entries for b in entries[e]
+                     if b.kernel == kernel][0].title
         except IndexError:
             # Installing new kernels means we miss this. Check the others
             entry = [e for e in self._get_other_entries()

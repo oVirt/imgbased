@@ -61,7 +61,6 @@ class ServiceHandler(object):
 class Startup(ServiceHandler):
     def run(self):
         self._config_vdsm()
-        self._clean_grub()
         self._relabel_dev()
         self._copy_files_to_boot()
         self._generate_iqn()
@@ -94,10 +93,6 @@ class Startup(ServiceHandler):
         [self._safe_copy_file(x, "/boot") for x in glob(dirname + "/init*")]
         [os.unlink(x) for x in glob("%s/%s.*" % (dirname, self._tmp_prefix))]
 
-    def _clean_grub(self):
-        log.debug("Remove non-imgbased entries from grub")
-        self._boot.remove_other_entries()
-
     def _relabel_dev(self):
         log.debug("Relabeling /dev")
         call(["restorecon", "-rv", "/dev"])
@@ -110,38 +105,55 @@ class Shutdown(ServiceHandler):
     def run(self):
         self._fix_new_kernel()
         self._copy_files_from_boot()
+        self._clean_grub()
+
+    def _clean_grub(self):
+        log.debug("Remove non-imgbased entries from grub")
+        self._boot.remove_other_entries()
 
     def _copy_files_from_boot(self):
         kernel = self._get_kernel()
         dirname, basename = os.path.split(kernel)
         log.debug("Copying files from /boot to %s", dirname)
         self._safe_copy_file("/boot/" + basename, dirname)
-        initrds = [os.path.basename(x) for x in glob(dirname + "/init*")]
+        # Copy the initrd for the running kernel version only
+        initrds = glob("{}/init*{}*".format(dirname, os.uname()[2]))
+        initrds = [os.path.basename(x) for x in initrds]
         [self._safe_copy_file("/boot/" + x, dirname) for x in initrds]
 
     def _fix_new_kernel(self):
         new_kernel_installed, new_version = self._check_new_kernel()
         if new_kernel_installed:
             self._fix_new_kernel_boot(new_version)
+        else:
+            log.debug("No new kernel was found")
 
     def _check_new_kernel(self):
-        # Compare the current kernel to the one from the factory
-        current_kernel = call(["rpm", "-q", "kernel"]).strip()
+        # Compare the current kernels to the one from the factory
+        kernels = call(["rpm", "-q", "--whatprovides",
+                        "kernel"]).strip().split()
         stock_kernel = call(["rpm", "-q", "--dbpath",
                              "/usr/share/factory/var/lib/rpm",
-                             "kernel"]).strip()
-        current_kernel = re.sub(r'^kernel-', '', current_kernel)
-        stock_kernel = re.sub(r'^kernel-', '', stock_kernel)
+                             "--whatprovides", "kernel"]).strip()
+        # Extract version-release.arch
+        installed_versions = ["-".join(k.rsplit("-")[-2:]) for k in kernels]
+        stock_version = "-".join(stock_kernel.rsplit("-")[-2:])
+        new_versions = [v for v in installed_versions if v != stock_version]
+        log.debug("Detected new kernel versions: %s", new_versions)
         # Also make sure that the users have not reverted the
         # changes from new-kernel-pkg
-        dflt_kernel = self._boot.get_default()
-        if current_kernel != stock_kernel and current_kernel in dflt_kernel:
-            return (True, current_kernel)
-        return (False, current_kernel)
+        if new_versions:
+            dflt_kernel = self._boot.get_default()
+            if not re.search("(node|rhvh)", dflt_kernel):
+                for kver in new_versions:
+                    if kver in dflt_kernel:
+                        return (True, kver)
+        return (False, None)
 
     def _fix_new_kernel_boot(self, new_kernel_version):
         # new-kernel-pkg erases our kernels from /boot
         # put them back for now so virt-v2v and friends still work
+        log.debug("Fixing new kernel for version %s", new_kernel_version)
         old_kernels = glob("/boot/{}/vmlinuz*".format(self._layer))
         old_initrds = glob("/boot/{}/init*".format(self._layer))
 
@@ -158,6 +170,7 @@ class Shutdown(ServiceHandler):
         verrel = "{}-{}".format(v, r)
 
         new_kernel_files = glob("/boot/*{}*".format(verrel))
+        new_kernel_files += glob("/boot/.*{}*.hmac".format(verrel))
 
         for f in new_kernel_files:
             log.info("Copying %s to %s" % (f, "/boot/{}".format(self._layer)))

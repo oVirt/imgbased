@@ -54,15 +54,15 @@ class GrubbyTestCase(unittest.TestCase):
     def test_simple_flow(self):
         loader = Grubby()
 
-        r = loader.add_entry("a", "a-title", "a-linux", "a-initramfs",
+        r = loader.add_entry("a", "a-title", "vmlinuz-1.2-3", "a-initramfs",
                              "a-append")
         self.assertEquals(r, "a")
         self.assertEquals(_fake_grubby.last_data,
                           (('--copy-default', '--add-kernel',
-                            '/boot/a-linux', '--initrd',
+                            '/boot/vmlinuz-1.2-3', '--initrd',
                             '/boot/a-initramfs', '--args',
                             'a-append img.bootid=a', '--title',
-                            'a-title'),
+                            'a-title (1.2-3)'),
                            {}))
 
         r = loader.remove_entry("a")
