@@ -199,11 +199,16 @@ def postprocess(new_lv):
                 log.warn("Failed to remove libvirt cache file %s, err=%s",
                          path, e.errno)
 
+    def _run_ldconfig():
+        log.debug("Running ldconfig on new layer")
+        utils.ExternalBinary().ldconfig(["-r", new_fs.path("/")])
+
     with mounted(new_lv.path) as new_fs:
         _reconfigure_vdsm()
         _apply_scap_profile()
         _permit_root_login()
         _disable_os_probes()
+        _run_ldconfig()
     _clear_libvirt_cache()
 
 
