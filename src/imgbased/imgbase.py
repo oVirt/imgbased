@@ -25,6 +25,7 @@ from .hooks import Hooks
 from . import naming, utils, local
 from .naming import Image
 from .lvm import LVM, MissingLvmThinPool
+from .volume import Volumes
 
 import logging
 
@@ -59,10 +60,10 @@ class ImageLayers(object):
 
     vg_tag = "imgbased:vg"
     thinpool_tag = "imgbased:pool"
-    thinpool_profile = "imgbased-pool"
     lv_init_tag = "imgbased:init"
     lv_base_tag = "imgbased:base"
     lv_layer_tag = "imgbased:layer"
+    thinpool_profile = "imgbased-pool"
 
     naming = None
 
@@ -121,21 +122,37 @@ class ImageLayers(object):
     def _lvm_from_layer(self, layer):
         return self.lv(layer.lv_name)
 
-    def has_tags(self):
-        try:
-            self._vg()
-        except AssertionError:
-            return False
-        for tag in [self.thinpool_tag, self.lv_init_tag]:
-            try:
-                LVM.LV.from_tag(tag)
-            except AssertionError:
+    def _assert_tags(self, lv):
+        vg = LVM.VG.from_vg_name(lv.vg_name)
+        if self.vg_tag not in vg.tags():
+            return
+        pool = lv.thinpool()
+        for tag, _lv in [(self.thinpool_tag, pool), (self.lv_init_tag, lv)]:
+            if tag not in _lv.tags():
                 raise VgTaggedLvNotTagged(
                     "\nA tagged volume group was found, but no "
                     "logical volumes were tagged with: %s\n"
                     "Please remove tags from volume groups "
                     "and logical volumes, then retry" % tag)
-        return True
+        raise ExistingImgbaseWithTags(
+            "Looks like the system already has imgbase working properly.\n"
+            "However, imgbase was called with --init. If this was "
+            "intentional, please untag the existing "
+            "volumes and try again."
+        )
+
+    def _reclaim_tags(self):
+        try:
+            self._vg().deltag(self.vg_tag)
+            self._thinpool().deltag(self.thinpool_tag)
+        except AssertionError:
+            pass
+        lv_tags = (self.lv_init_tag, self.lv_base_tag, self.lv_layer_tag,
+                   Volumes.tag_volume)
+        filtr = " || ".join(["lv_tags = %s" % x for x in lv_tags])
+        for lv in LVM.list_lvs(filtr=filtr):
+            for tag in lv.tags():
+                lv.deltag(tag)
 
     def lv_from_layer(self, layer):
         return self._lvm_from_layer(layer)
@@ -232,6 +249,12 @@ class ImageLayers(object):
 
     def init_tags_on(self, lv):
         lv = lv if type(lv) in [LVM.LV] else LVM.LV.try_find(lv)
+        self._assert_tags(lv)
+        # No tags are found on `lv`, but we may have imgbased tags laying
+        # around somewhere on other disks from previous installations and since
+        # imgbased can't handle multipe vg/thinpools, dont touch the data, but
+        # just untag those from imgbased.
+        self._reclaim_tags()
         log.debug("Tagging LV: %s" % lv)
         lv.addtag(self.lv_init_tag)
 
@@ -256,14 +279,6 @@ class ImageLayers(object):
     def init_layout_from(self, lvm_name_or_mount_target, initial_nvr):
         """Create a snapshot from an existing thin LV to make it suitable
         """
-        if self.has_tags():
-            raise ExistingImgbaseWithTags(
-                "Looks like the system already has imgbase working properly.\n"
-                "However, imgbase was called with --init. If this was "
-                "intentional, please untag the existing "
-                "volumes and try again."
-            )
-
         log.info("Trying to create a manageable base from '%s'" %
                  lvm_name_or_mount_target)
 
