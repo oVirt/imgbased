@@ -491,6 +491,9 @@ class ExternalBinary(object):
     def mknod(self, args, **kwargs):
         return self.call(["mknod"] + args, **kwargs)
 
+    def ldconfig(self, args, **kwargs):
+        return self.call(["ldconfig"] + args, **kwargs)
+
     def sync(self, args, **kwargs):
         return self.call(["sync"] + args, **kwargs)
 
