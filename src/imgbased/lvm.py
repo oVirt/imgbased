@@ -154,6 +154,9 @@ class LVM(object):
             LVM._vgcreate([vg_name] + pv_paths)
             return LVM.VG(vg_name)
 
+        def deltag(self, tag):
+            LVM._vgchange(["--deltag", tag, self.vg_name])
+
         def addtag(self, tag):
             LVM._vgchange(["--addtag", tag, self.vg_name])
 
