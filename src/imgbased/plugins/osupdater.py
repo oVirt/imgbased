@@ -748,6 +748,8 @@ def run_rpm_selinux_post(new_lv):
                 log.debug("Found a critical command in %s", pkg)
                 run_commands.append("bash -c '{}' -- {}".format(v, scr_arg))
 
+    selinux_enabled = utils.ExternalBinary().getenforce() != "Disabled"
+
     with mounted(new_lv.path) as new_fs:
         log.debug("Checking whether any %post scripts from the new image must "
                   "be run")
@@ -767,17 +769,19 @@ def run_rpm_selinux_post(new_lv):
                 with utils.mounted("sys",
                                    target=new_fs.target + "/sys",
                                    fstype="sysfs"):
-                    with utils.mounted("selinuxfs",
-                                       target=new_fs.target +
-                                       "/sys/fs/selinux",
-                                       fstype="selinuxfs"):
-                        for r in run_commands:
-                            just_do(r, new_root=rpmdb.root, shell=True)
+                    if selinux_enabled:
+                        with utils.mounted("selinuxfs",
+                                           target=new_fs.target +
+                                           "/sys/fs/selinux",
+                                           fstype="selinuxfs"):
+                            for r in run_commands:
+                                just_do(r, new_root=rpmdb.root, shell=True)
 
-        # this can unmount selinux. Make sure it's present
-        if "/sys/fs/selinux" not in File("/proc/mounts").read():
-            subprocess.call(["mount", "-t", "selinuxfs",
-                             "none", "/sys/fs/selinux"])
+        if selinux_enabled:
+            # this can unmount selinux. Make sure it's present
+            if "/sys/fs/selinux" not in File("/proc/mounts").read():
+                subprocess.call(["mount", "-t", "selinuxfs",
+                                 "none", "/sys/fs/selinux"])
 
         subprocess.call(["mount", "-a"])
 
