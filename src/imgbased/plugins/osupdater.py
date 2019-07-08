@@ -1004,11 +1004,11 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                     return utils.nsenter(args, root=newroot)
 
         kvers = kernel_versions_in_path(bootdir)
-        kver = kvers.pop()
         log.debug("Found kvers: %s" % kvers)
-        log.debug("Using kver: %s" % kver)
-        initrd = "/boot/initramfs-%s.img" % kver
-        chroot("dracut", "-f", initrd, "--kver", kver)
+        for kver in kvers:
+            log.debug("Using kver: %s" % kver)
+            initrd = "/boot/initramfs-%s.img" % kver
+            chroot("dracut", "-f", initrd, "--kver", kver)
 
         # Copy the .hmac file for FIPS until rhbz#1415032 is resolved
         # Since .hmac is a plain checksum pointing at a bare path in /boot,
@@ -1048,9 +1048,10 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         return kfiles
 
     def add_bootentry(newroot):
-        def _find_kfile(entry, kfiles):
-            return [f for f in kfiles if entry in f].pop()\
-                .replace("/boot", "").lstrip("/")
+        def _find_kfiles(entry, kfiles):
+            return sorted([f.replace("/boot", "").lstrip("/")
+                           for f in kfiles if entry in f])
+
         if not File("%s/boot" % newroot).exists():
             log.info("New root does not contain a /boot, skipping.")
             return
@@ -1091,8 +1092,8 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         kfiles = glob.glob(bootdir + "/*")
         # For the loader we are relative to /boot and need to
         # strip this part from the paths
-        vmlinuz = _find_kfile("vmlinuz", kfiles)
-        initrd = _find_kfile("initramfs", kfiles)
+        kernels = _find_kfiles("vmlinuz", kfiles)
+        ramdisks = _find_kfiles("initramfs", kfiles)
         # FIXME default/grub cmdine and /etc/kernel… /var/kernel…
         grub_append = ShellVarFile("%s/etc/default/grub" % newroot)\
             .get("GRUB_CMDLINE_LINUX", "").strip('"').split()
@@ -1101,8 +1102,9 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         # Make sure we don't have duplicate args
         append = " ".join(list(set(grub_append).union(set(append))))
         loader = bootloader.Grubby()
-        loader.add_entry(new_lv.lv_name, title, vmlinuz, initrd, append)
-        loader.set_default(new_lv.lv_name)
+        for vmlinuz, initrd in zip(kernels, ramdisks):
+            loader.add_entry(new_lv.lv_name, title, vmlinuz, initrd, append)
+            loader.set_default(new_lv.lv_name)
         loader.remove_other_entries()
 
     def relabel_selinux(newroot):
@@ -1132,6 +1134,8 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 else:
                     log.debug("{} not found in new fs, skipping".format(fc))
 
+    imgbase.hooks.emit("os-upgraded", previous_lv.lv_name, new_lvm_name)
+
     with mounted(new_lv.path) as newroot:
         with utils.bindmounted("/var", target=newroot.target + "/var",
                                rbind=True):
@@ -1145,8 +1149,6 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 boot_partition_validation()
             except:
                 raise
-
-    imgbase.hooks.emit("os-upgraded", previous_lv.lv_name, new_lvm_name)
 
 
 def on_remove_layer(imgbase, lv_fullname):

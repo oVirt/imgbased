@@ -952,7 +952,9 @@ class RpmPackageDb(PackageDb):
             else rpms
 
     def get_whatprovides(self, cap):
-        return self._rpm("-q", "--qf", "%{name}\\n", "--whatprovides", cap)
+        return self._rpm("-q", "--qf",
+                         "%{name}-%{version}-%{release}.%{arch}\\n",
+                         "--whatprovides", cap)
 
     def get_files(self, pkgs):
         return self._rpm("-ql", *pkgs)

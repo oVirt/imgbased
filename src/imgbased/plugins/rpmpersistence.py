@@ -69,32 +69,25 @@ def reinstall_rpms(imgbase, new_lv, previous_lv):
     if "inst.ks" not in File('/proc/cmdline').contents:
         with mounted(new_lv.path) as new_fs:
             new_etc = new_fs.path("/etc")
-
             new_rel = SystemRelease(new_etc + "/system-release-cpe")
 
             if not new_rel.is_supported_product():
                 log.error("Unsupported product: %s" % new_rel)
                 raise RpmPersistenceError()
 
-            with utils.bindmounted("/var", target=new_fs.target + "/var"):
+            with utils.bindmounted("/var", new_fs.path("/var"), rbind=True):
                 install_rpms(new_fs)
 
+        imgbase.hooks.emit("rpms-persisted", previous_lv.lv_name,
+                           new_lv.lvm_name)
+    else:
         log.info("Not reinstalling RPMs during system installation")
-
-    imgbase.hooks.emit("rpms-persisted",
-                       previous_lv.lv_name,
-                       new_lv.lvm_name)
 
 
 def install_rpms(new_fs):
-    # Just use `rpm -Uvh`, so we can avoid setting up a local yum repo
-    # all dependencies will be saved anyway, and a local yum repo doesn't
-    # add a significant benefit unless we also track a list of packages
-    # somewhere
-    #
-    # e.g. `yum install zsh` keeps track of `zsh` in some file, then we
-    # set up a local repo and `yum -y localinstall foo bar quux`, with
-    # the deps autoresolving
+    # Using `yum -y install` on the persisted rpms to avoid rewriting the logic
+    # that yum uses when installing "installyonlypkgs" like kernel etc.
+    # Using --noplugins will disable versionlocking or re-persisting the rpms
     def install(args):
         cmd = ["systemd-nspawn",
                "--uuid", str(uuid.uuid4()).replace("-", ""),
@@ -113,5 +106,5 @@ def install_rpms(new_fs):
         backup = machine_id + ".bak"
         os.rename(machine_id, backup)
         with SELinuxDomain("systemd_machined_t"):
-            install(['rpm', '-Uvh'] + rpms)
+            install(["yum", "install", "-y", "--noplugins"] + rpms)
         os.rename(backup, machine_id)
