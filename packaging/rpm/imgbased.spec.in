@@ -172,6 +172,12 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Tue Jul 09 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.8-1
+- Fix upgrades on systems with SELinux disabled (rhbz#1724102)
+- Support multiple kernel packages on a single layer (rhbz#1727859)
+- Reclaim stale imgbased tags on re-installation (rhbz#1720310)
+- Run ldconfig on upgrades (rhbz#1726534)
+
 * Tue Apr 02 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.7-1
 - Use FQDN for machine name in systemd-nspawn (rhbz#1693710)
 - Move openscap directory to existing /var/imgbased
