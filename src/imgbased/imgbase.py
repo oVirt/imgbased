@@ -127,7 +127,7 @@ class ImageLayers(object):
         if self.vg_tag not in vg.tags():
             return
         pool = lv.thinpool()
-        for tag, _lv in [(self.thinpool_tag, pool), (self.lv_init_tag, lv)]:
+        for tag, _lv in [(self.thinpool_tag, pool), (self.lv_layer_tag, lv)]:
             if tag not in _lv.tags():
                 raise VgTaggedLvNotTagged(
                     "\nA tagged volume group was found, but no "
