@@ -1564,7 +1564,8 @@ class ThreadRunner(threading.Thread):
 
 
 def thread_group_handler(threads, exc=None):
-    [t.start() for t in threads]
+    threaded = not os.getenv("IMGBASED_DISABLE_THREADS")
+    [getattr(t, "start" if threaded else "run")() for t in threads]
 
     for t in threads:
         try:
