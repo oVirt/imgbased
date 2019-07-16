@@ -172,6 +172,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Tue Jul 16 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.9-1
+- Check for layer tag on managed LVs (rhbz#1729023)
+
 * Tue Jul 09 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.8-1
 - Fix upgrades on systems with SELinux disabled (rhbz#1724102)
 - Support multiple kernel packages on a single layer (rhbz#1727859)
