@@ -5,7 +5,7 @@ import shutil
 import glob
 import subprocess
 import json
-from ..utils import Rsync, File, BuildMetadata, systemctl
+from ..utils import Rsync, File, BuildMetadata, systemctl, ShellVarFile
 
 
 log = logging.getLogger(__package__)
@@ -211,7 +211,9 @@ def remove_iscsi_initiator_iqn():
 
 @Postprocessor.add_step
 def systemctl_mask_lvmetad():
-    if not File("/etc/fedora-release").exists():
+    osrel = ShellVarFile("/etc/os-release").parse()
+    os_id, os_verid = osrel["ID"], osrel["VERSION_ID"]
+    if os_id in ("centos", "rhel") and os_verid.startswith("7"):
         systemctl.mask("lvm2-lvmetad.service", "lvm2-lvmetad.socket")
 
 
