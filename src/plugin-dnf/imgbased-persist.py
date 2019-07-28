@@ -23,41 +23,48 @@ import shutil
 
 import dnf
 
+from imgbased.bootsetup import BootSetupHandler
+
 logger = logging.getLogger('dnf.plugin')
 logger.setLevel(logging.INFO)
 
 
 class ImgbasedPersist(dnf.Plugin):
-
-    name = 'imagebased-persist'
+    name = 'imgbased-persist'
     config_name = 'imgbased-persist'
     persist_path = "/var/imgbased/persisted-rpms/"
-
     excluded_pkgs = []
+    bootsetup_pkgs = []
 
     def __init__(self, base, cli):
         super(ImgbasedPersist, self).__init__(base, cli)
         self.base = base
-
         cp = self.read_config(self.base.conf)
         self.excluded_pkgs = cp.get("main", "exclude_pkgs").split(',')
+        self.bootsetup_pkgs = cp.get("main", "bootsetup_pkgs").split(',')
 
     def check_excludes(self, name):
-        if name in self.excluded_pkgs:
-            return True
-        return False
+        return name in self.excluded_pkgs
+
+    def check_bootsetup(self, name):
+        return name in self.bootsetup_pkgs
 
     def transaction(self):
         if self.base.transaction.install_set:
             if not os.path.isdir(self.persist_path):
                 os.makedirs(self.persist_path)
-
+            bootsetup = False
             for p in self.base.transaction.install_set:
+                if self.check_bootsetup(p.name):
+                    bootsetup = True
                 if self.check_excludes(p.name):
                     continue
                 rpm = p.localPkg()
                 logger.info("Persisting: %s" % os.path.basename(rpm))
                 shutil.copy2(rpm, self.persist_path + os.path.basename(rpm))
+            if bootsetup:
+                logger.info("Updating boot configuration")
+                BootSetupHandler().setup()
 
         if self.base.transaction.remove_set:
             for p in self.base.transaction.remove_set:

@@ -21,16 +21,14 @@
 # Author(s): Ryan Barry <rbarry@redhat.com>
 #
 
-import os
-import uuid
-import logging
 import glob
+import logging
+import os
 import socket
 import subprocess
+import uuid
 
-from .. import utils
-from ..utils import File, mounted, SystemRelease, SELinuxDomain
-
+from .. import constants, utils
 
 log = logging.getLogger(__package__)
 
@@ -64,12 +62,10 @@ def on_os_upgraded(imgbase, previous_lv_name, new_lv_name):
 
 
 def reinstall_rpms(imgbase, new_lv, previous_lv):
-    # FIXME: this should get moved to a generalized plugin. We need to check
-    # it in multiple places
-    if "inst.ks" not in File('/proc/cmdline').contents:
-        with mounted(new_lv.path) as new_fs:
+    if imgbase.mode == constants.IMGBASED_MODE_UPDATE:
+        with utils.mounted(new_lv.path) as new_fs:
             new_etc = new_fs.path("/etc")
-            new_rel = SystemRelease(new_etc + "/system-release-cpe")
+            new_rel = utils.SystemRelease(new_etc + "/system-release-cpe")
 
             if not new_rel.is_supported_product():
                 log.error("Unsupported product: %s" % new_rel)
@@ -105,6 +101,6 @@ def install_rpms(new_fs):
         machine_id = new_fs.path("/etc") + "/machine-id"
         backup = machine_id + ".bak"
         os.rename(machine_id, backup)
-        with SELinuxDomain("systemd_machined_t"):
+        with utils.SELinuxDomain("systemd_machined_t"):
             install(["yum", "install", "-y", "--noplugins"] + rpms)
         os.rename(backup, machine_id)

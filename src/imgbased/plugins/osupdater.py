@@ -23,39 +23,35 @@
 
 import errno
 import filecmp
-import logging
 import glob
 import hashlib
+import logging
 import os
 import re
-import rpm
 import shutil
 import subprocess
-
 from filecmp import dircmp
 from tempfile import mkdtemp
 
-from .. import bootloader, timeserver, utils
+import rpm
+
+from .. import bootloader, constants, timeserver, utils
+from ..bootsetup import BootSetupHandler
+from ..command import nsenter
 from ..config import paths
 from ..lvm import LVM
 from ..naming import Image
-from ..volume import Volumes
-from ..command import just_do
 from ..openscap import OSCAPScanner
-from ..utils import mounted, ShellVarFile, RpmPackageDb, copy_files, Fstab,\
-    File, SystemRelease, Rsync, kernel_versions_in_path, IDMap, remove_file, \
-    find_mount_target, Motd, LvmCLI, SELinuxDomain, ThreadRunner, \
-    thread_group_handler, systemctl
-
+from ..utils import (File, Fstab, IDMap, LvmCLI, Motd, RpmPackageDb, Rsync,
+                     SELinux, SELinuxDomain, ShellVarFile, SystemRelease,
+                     ThreadRunner, copy_files, mounted, remove_file, systemctl,
+                     thread_group_handler)
+from ..volume import Volumes
 
 log = logging.getLogger(__package__)
 
 
 class SeparateVarPartition(Exception):
-    pass
-
-
-class BootPartitionRequires1G(Exception):
     pass
 
 
@@ -152,7 +148,7 @@ def postprocess(new_lv):
         env["SYSTEMD_IGNORE_CHROOT"] = "1"
         with utils.bindmounted("/proc", new_fs.target + "/proc"):
             with utils.bindmounted("/run", new_fs.target + "/run"):
-                just_do(["vdsm-tool", "configure", "--force"],
+                nsenter(["vdsm-tool", "configure", "--force"],
                         new_root=new_fs.path("/"), environ=env)
 
     def _apply_scap_profile():
@@ -178,13 +174,6 @@ def postprocess(new_lv):
             data += "PermitRootLogin yes\n"
         f.write(data)
 
-    def _disable_os_probes():
-        grub_scripts = ["10_linux", "30_os-prober"]
-        for scr in grub_scripts:
-            f = File(new_fs.path(os.path.join("/etc/grub.d", scr)))
-            if f.exists():
-                f.chmod(0o644)
-
     def _clear_libvirt_cache():
         log.debug("Clearing the libvirt cache")
         cachedir = "/var/cache/libvirt/qemu/capabilities"
@@ -207,7 +196,6 @@ def postprocess(new_lv):
         _reconfigure_vdsm()
         _apply_scap_profile()
         _permit_root_login()
-        _disable_os_probes()
         _run_ldconfig()
     _clear_libvirt_cache()
 
@@ -305,7 +293,7 @@ def migrate_rpm_files(new_root, files):
         ghost_files = rpmdb.get_ghost_files(rpms)
         conf_files = rpmdb.get_conf_files(rpms)
     for dst in files:
-        if dst in ghost_files.keys() + unknown:
+        if dst in list(ghost_files.keys()) + unknown:
             log.debug("Skip %s, fflags=[%s]", dst, ghost_files.get(dst, ""))
             continue
         src = new_root + "/" + dst
@@ -372,33 +360,6 @@ def migrate_var(imgbase, new_lv):
                 else:
                     xfiles.append(realpath)
         migrate_rpm_files(new_fs.path("/"), xfiles)
-
-
-def boot_partition_validation():
-    """
-    Function to validate all requirements for /boot partition
-    """
-    boot_dir = None
-    bytes_in_1G = 1000**3
-
-    for target in find_mount_target():
-        if "boot" in target:
-            boot_dir = target
-            break
-
-    if boot_dir is None:
-        raise RuntimeError("findmnt: error, unable to find boot partition"
-                           " in target!")
-
-    st = os.statvfs(boot_dir)
-    bytes_in_boot_partition = st.f_blocks * st.f_frsize
-
-    if bytes_in_boot_partition < bytes_in_1G:
-        # 1G is 1073741824 bytes. However, if users use size=1000
-        # in anaconda kickstart won't work. Based on that, let's
-        # inform to users it's required 1.1G (size=1100).
-        log.error("New /boot must have at least 1.1G size")
-        raise BootPartitionRequires1G
 
 
 def remediate_etc(imgbase):
@@ -753,7 +714,7 @@ def run_rpm_selinux_post(new_lv):
                 log.debug("Found a critical command in %s", pkg)
                 run_commands.append("bash -c '{}' -- {}".format(v, scr_arg))
 
-    selinux_enabled = utils.ExternalBinary().getenforce() != "Disabled"
+    selinux_enabled = SELinux.enabled()
 
     with mounted(new_lv.path) as new_fs:
         log.debug("Checking whether any %post scripts from the new image must "
@@ -780,7 +741,7 @@ def run_rpm_selinux_post(new_lv):
                                            "/sys/fs/selinux",
                                            fstype="selinuxfs"):
                             for r in run_commands:
-                                just_do(r, new_root=rpmdb.root, shell=True)
+                                nsenter(r, new_root=rpmdb.root, shell=True)
 
         if selinux_enabled:
             # this can unmount selinux. Make sure it's present
@@ -848,9 +809,9 @@ def hack_rpm_permissions(new_fs):
                        "verb": "--setperms"
                        }
     new_root = new_fs.path("/")
-    for line in just_do(["rpm", "--verify", "-qa", "--nodeps", "--nodigest",
-                         "--nofiledigest", "--noscripts",
-                         "--nosignature"], new_root=new_root).splitlines():
+    for line in nsenter(["rpm", "--verify", "-qa", "--nodeps", "--nodigest",
+                         "--nofiledigest", "--noscripts", "--nosignature"],
+                        new_root=new_root).splitlines():
         _mode, _path = (line[0:13], line[13:])
         if _mode[1] == "M":
             incorrect_paths["paths"].append(_path)
@@ -862,48 +823,50 @@ def hack_rpm_permissions(new_fs):
               str(incorrect_paths["paths"]))
 
     for pgroup in [incorrect_groups, incorrect_paths]:
-        pkgs_req_update = just_do(["rpm", "-qf", "--queryformat",
-                                  "%{NAME}\n"] + pgroup["paths"],
+        pkgs_req_update = nsenter(["rpm", "-qf", "--queryformat",
+                                   "%{NAME}\n"] + pgroup["paths"],
                                   new_root=new_root).splitlines()
         pkgs_req_update = list(set(pkgs_req_update))
         if pkgs_req_update:
-            just_do(["rpm", pgroup["verb"]] + pkgs_req_update,
+            nsenter(["rpm", pgroup["verb"]] + pkgs_req_update,
                     new_root=new_root)
 
 
 def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
-    log.info("Inspecting if the layer contains OS data")
+    """Add a new boot entry and update the layers /etc/fstab"""
 
-    """Add a new boot entry and update the layers /etc/fstab
+    def _update_grub_cmdline(newroot):
+        with mounted(previous_lv.path) as oldrootmnt:
+            # Grab root from previous fstab and find its LV
+            oldfstab = Fstab(oldrootmnt.path("/etc/fstab"))
+            if not oldfstab.exists():
+                log.warn("No old fstab found, skipping os-upgrade")
+                return
+            log.debug("Found old fstab: %s" % oldfstab)
+            rootentry = oldfstab.by_target("/")
+            log.debug("Found old rootentry: %s" % rootentry)
+            oldrootsource = rootentry.source
+            log.debug("Old root source: %s" % oldrootsource)
+            oldrootlv = LVM.LV.try_find(oldrootsource)
+            # Now, update grub cmdline by either replacing the existing lvm
+            # entries or by adding a new entry
+            old_grub = ShellVarFile(oldrootmnt.path("/etc/default/grub"))
+            if not old_grub.exists():
+                log.debug("Previous default grub file not found")
+                return
+            old_cmdline = old_grub.get("GRUB_CMDLINE_LINUX", "").strip('"')
+            log.debug("Previous GRUB_CMDLINE_LINUX: %s", old_cmdline)
+            defgrub = ShellVarFile(newroot + "/etc/default/grub")
+            defgrub.set("GRUB_CMDLINE_LINUX", old_cmdline)
+            defgrub.set("GRUB_DISABLE_OS_PROBER", "true", force=True)
+            if oldrootlv.lvm_name in old_cmdline:
+                log.info("Updating default/grub of new layer")
+                defgrub.replace(oldrootlv.lvm_name, new_lv.lvm_name)
+            else:
+                new_cmdline = old_cmdline + " rd.lvm.lv=" + new_lv.lvm_name
+                defgrub.set("GRUB_CMDLINE_LINUX", new_cmdline)
 
-    Another option is to use BLS - but it has issues with EFI:
-    http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec/
-    """
-    log.info("Adjusting mount and boot related points")
-
-    new_lvm_name = new_lv.lvm_name
-
-    oldrootsource = None
-    with mounted(previous_lv.path) as oldrootmnt:
-        oldfstab = Fstab("%s/etc/fstab" % oldrootmnt.target)
-        if not oldfstab.exists():
-            log.warn("No old fstab found, skipping os-upgrade")
-            return
-
-        log.debug("Found old fstab: %s" % oldfstab)
-        rootentry = oldfstab.by_target("/")
-        log.debug("Found old rootentry: %s" % rootentry)
-        oldrootsource = rootentry.source
-        log.debug("Old root source: %s" % oldrootsource)
-
-        old_grub = ShellVarFile("%s/etc/default/grub" % oldrootmnt.target)
-        old_grub_append = ""
-        if old_grub.exists():
-            old_grub_append = \
-                old_grub.get("GRUB_CMDLINE_LINUX", "")
-            log.debug("Old def grub: %s" % old_grub_append)
-
-    def update_fstab(newroot):
+    def _update_fstab(newroot):
         newfstab = Fstab("%s/etc/fstab" % newroot)
 
         if not newfstab.exists():
@@ -928,7 +891,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             except KeyError:
                 # Created with imgbased.volume?
                 log.debug("{} not found in /etc/fstab. "
-                          "ot created by Anaconda".format(tgt))
+                          "not created by Anaconda".format(tgt))
                 from six.moves.configparser import ConfigParser
                 c = ConfigParser()
                 c.optionxform = str
@@ -945,169 +908,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 with open(fname, 'w') as mountfile:
                     c.write(mountfile)
 
-    def update_grub_default(newroot):
-        defgrub = ShellVarFile("%s/etc/default/grub" % newroot)
-
-        if not defgrub.exists():
-            log.info("No grub foo found, not updating and not " +
-                     "creating a boot entry.")
-            return
-
-        log.debug("Checking grub defaults: %s" % defgrub)
-        defgrub.set("GRUB_CMDLINE_LINUX", old_grub_append)
-        oldrootlv = LVM.LV.try_find(oldrootsource)
-        log.debug("Found old root lv: %s" % oldrootlv)
-        # FIXME this is quite greedy
-        if oldrootlv.lvm_name in defgrub.contents:
-            log.info("Updating default/grub of new layer")
-            defgrub.replace(oldrootlv.lvm_name,
-                            new_lvm_name)
-        else:
-            log.info("No LVM part found in grub default")
-            log.debug("Contents: %s" % defgrub.contents)
-            oldcmd = defgrub.get("GRUB_CMDLINE_LINUX", "")
-            defgrub.set("GRUB_CMDLINE_LINUX",
-                        oldcmd.replace('"', "") + " rd.lvm.lv=" + new_lvm_name)
-
-    def copy_kernel(newroot):
-        if not File("%s/boot" % newroot).exists():
-            log.info("New root does not contain a kernel, skipping.")
-            return
-
-        bootdir = "/boot/%s" % new_lv.lv_name
-        try:
-            # FIXME we could work with globbing as well
-            pkgs = RpmPackageDb()
-            pkgs.root = newroot
-
-            pkgfiles = pkgs.get_files(pkgs.get_whatprovides("kernel"))
-            if not pkgfiles:
-                log.info("No kernel found on %s" % new_lv)
-                return
-
-            kfiles = __check_kernel_files(pkgfiles, newroot)
-
-            if not os.path.exists(bootdir):
-                os.mkdir(bootdir)
-            copy_files(bootdir, kfiles)
-        except Exception:
-            log.warn("No kernel found in %s" % new_lv, exc_info=True)
-            log.debug("Kernel copy failed", exc_info=True)
-            return
-
-        log.info("Regenerating initramfs ...")
-
-        def chroot(*args):
-            log.debug("Running: %s" % str(args))
-            with utils.bindmounted("/proc", newroot + "/proc"):
-                with utils.bindmounted(bootdir, newroot + "/boot"):
-                    return utils.nsenter(args, root=newroot)
-
-        kvers = kernel_versions_in_path(bootdir)
-        log.debug("Found kvers: %s" % kvers)
-        for kver in kvers:
-            log.debug("Using kver: %s" % kver)
-            initrd = "/boot/initramfs-%s.img" % kver
-            chroot("dracut", "-f", initrd, "--kver", kver)
-
-        # Copy the .hmac file for FIPS until rhbz#1415032 is resolved
-        # Since .hmac is a plain checksum pointing at a bare path in /boot,
-        # we need to copy everything
-        with utils.bindmounted("/boot", newroot + "/boot"):
-            log.debug("Copying FIPS files")
-            files = glob.glob("/boot/%s/*" % new_lv.lv_name) + \
-                glob.glob("/boot/%s/.*" % new_lv.lv_name)
-            log.debug(files)
-            for f in files:
-                log.debug("Copying %s to /boot" % f)
-                shutil.copy2(f, "/boot")
-
-    def __check_kernel_files(pkgfiles, newroot):
-        kfiles = ["%s/%s" % (newroot, f)
-                  for f in pkgfiles
-                  if f.startswith("/boot/")]
-
-        log.debug("Found kernel files: %s" % kfiles)
-        log.debug("Making sure kernel files exist")
-
-        if os.path.ismount("/boot"):
-            log.info("/boot is mounted. Checking for the files there")
-
-            bootfiles = [f for f in pkgfiles if f.startswith("/boot")]
-
-            if all([File(f).exists() for f in bootfiles]):
-                log.info("All kernel files found on the mounted /boot "
-                         "filesystem. Using those")
-                kfiles = bootfiles
-
-        if not all([File(f).exists() for f in kfiles]):
-            log.info("Some kernel files are not found on %s and /boot"
-                     % newroot)
-            raise MissingKernelFilesError("Failed to find kernel and initrd")
-
-        return kfiles
-
-    def add_bootentry(newroot):
-        def _find_kfiles(entry, kfiles):
-            return sorted([f.replace("/boot", "").lstrip("/")
-                           for f in kfiles if entry in f])
-
-        if not File("%s/boot" % newroot).exists():
-            log.info("New root does not contain a /boot, skipping.")
-            return
-
-        bootdir = "/boot/%s" % new_lv.lv_name
-        log.debug("Looking for kernel dir %s" % bootdir)
-        if not os.path.isdir(bootdir):
-            log.warn("No kernel found, a boot entry "
-                     "was *not* created")
-            return
-
-        title = None
-        try:
-            title = utils.BuildMetadata(newroot).get("nvr")
-        except Exception:
-            log.warn("Failed to retrieve metadata", exc_info=True)
-
-        if not title:
-            log.debug("Checking OS release")
-            osrel = ShellVarFile("%s/etc/os-release" % newroot)
-            if osrel.exists():
-                name = osrel.parse()["PRETTY_NAME"].strip()
-                title = "%s (%s)" % (new_lvm_name, name)
-
-        if not title:
-            log.debug("Checking system release")
-            sysrel = File("%s/etc/system-release" % newroot)
-            if sysrel.exists():
-                title = "%s (%s)" % (new_lvm_name,
-                                     sysrel.contents.strip())
-
-        if not title:
-            log.warn("Failed to create pretty name, falling back to "
-                     "volume name.")
-            title = new_lvm_name
-
-        log.info("Adding a boot entry")
-        kfiles = glob.glob(bootdir + "/*")
-        # For the loader we are relative to /boot and need to
-        # strip this part from the paths
-        kernels = _find_kfiles("vmlinuz", kfiles)
-        ramdisks = _find_kfiles("initramfs", kfiles)
-        # FIXME default/grub cmdine and /etc/kernel… /var/kernel…
-        grub_append = ShellVarFile("%s/etc/default/grub" % newroot)\
-            .get("GRUB_CMDLINE_LINUX", "").strip('"').split()
-        append = "rd.lvm.lv={0} root=/dev/{0}".format(new_lvm_name)\
-            .split()
-        # Make sure we don't have duplicate args
-        append = " ".join(list(set(grub_append).union(set(append))))
-        loader = bootloader.Grubby()
-        for vmlinuz, initrd in zip(kernels, ramdisks):
-            loader.add_entry(new_lv.lv_name, title, vmlinuz, initrd, append)
-            loader.set_default(new_lv.lv_name)
-        loader.remove_other_entries()
-
-    def relabel_selinux(newroot):
+    def _relabel_selinux(newroot):
         files = ["/etc/selinux/targeted/contexts/files/file_contexts",
                  "/etc/selinux/targeted/contexts/files/file_contexts.homedirs",
                  "/etc/selinux/targeted/contexts/files/file_contexts.local"]
@@ -1119,7 +920,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 "/usr/share",
                 "/var"]
 
-        exclude_dirs = ["/usr/share/factory"]
+        exclude_dirs = ["/usr/share/factory", "/var/cache/app-info"]
 
         # Reduce the list to something subprocess can use directly
 
@@ -1134,21 +935,21 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 else:
                     log.debug("{} not found in new fs, skipping".format(fc))
 
-    imgbase.hooks.emit("os-upgraded", previous_lv.lv_name, new_lvm_name)
+    log.info("Adjusting mount and boot related points")
+    imgbase.hooks.emit("os-upgraded", previous_lv.lv_name, new_lv.lvm_name)
 
     with mounted(new_lv.path) as newroot:
         with utils.bindmounted("/var", target=newroot.target + "/var",
                                rbind=True):
-            update_fstab(newroot.target)
-            update_grub_default(newroot.target)
-            copy_kernel(newroot.target)
-            relabel_selinux(newroot.target)
-            add_bootentry(newroot.target)
-
-            try:
-                boot_partition_validation()
-            except Exception:
-                raise
+            _update_grub_cmdline(newroot.target)
+            _update_fstab(newroot.target)
+            _relabel_selinux(newroot.target)
+            BootSetupHandler(
+                root=newroot.target,
+                mkconfig=(imgbase.mode == constants.IMGBASED_MODE_INIT),
+                mkinitrd=(imgbase.mode == constants.IMGBASED_MODE_UPDATE)
+            ).setup()
+            bootloader.BootConfiguration.validate()
 
 
 def on_remove_layer(imgbase, lv_fullname):

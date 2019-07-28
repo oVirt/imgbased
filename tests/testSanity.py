@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 # vim: et ts=4 sw=4 sts=4
 
-import unittest
+import logging
 import subprocess
 import sys
-import logging
-from logging import debug
-from mock import patch
-from StringIO import StringIO
+import unittest
 from collections import namedtuple
+from logging import debug
+from StringIO import StringIO
 
-from fakelvm import FakeLVM
-from imgbased import utils
+from mock import patch
 
-from imgbased import CliApplication
 import imgbased
 import imgbased.lvm
+from fakelvm import FakeLVM
+from imgbased import CliApplication, utils
 
 
 class ImgbaseTestCase(unittest.TestCase):
@@ -42,6 +41,7 @@ class CliTestCase(ImgbaseTestCase):
         debug("$ imgbased %s" % str(args))
         with \
                 patch("imgbased.utils.subprocess"), \
+                patch("imgbased.command.subprocess"), \
                 patch("imgbased.lvm.LVM", FakeLVM), \
                 patch("imgbased.imgbase.LVM", FakeLVM), \
                 patch("imgbased.imgbase.Hooks"), \

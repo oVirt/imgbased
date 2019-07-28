@@ -74,8 +74,5 @@ class GrubbyTestCase(unittest.TestCase):
 
         r = loader.set_default("a")
         self.assertEquals(_fake_grubby.last_data,
-                          (('--set-default',
-                            '/boot/ovirt-node-4.0+1/vmlinuz-3.10.0-327'
-                            '.4.5.el7.x86_64'),
-                           {}))
+                          (('--set-default-index', '0'), {}))
 # vim: sw=4 et sts=4:

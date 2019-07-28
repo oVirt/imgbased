@@ -1,12 +1,12 @@
 
+import glob
+import json
 import logging
 import os
 import shutil
-import glob
 import subprocess
-import json
-from ..utils import Rsync, File, BuildMetadata, systemctl, ShellVarFile
 
+from ..utils import BuildMetadata, File, Rsync, ShellVarFile, systemctl
 
 log = logging.getLogger(__package__)
 
@@ -215,6 +215,12 @@ def systemctl_mask_lvmetad():
     os_id, os_verid = osrel["ID"], osrel["VERSION_ID"]
     if os_id in ("centos", "rhel") and os_verid.startswith("7"):
         systemctl.mask("lvm2-lvmetad.service", "lvm2-lvmetad.socket")
+
+
+@Postprocessor.add_step
+def handle_bls_system():
+    for entry in glob.glob("/boot/loader/entries/*"):
+        os.unlink(entry)
 
 
 # vim: sw=4 et sts=4

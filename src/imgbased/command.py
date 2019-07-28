@@ -1,12 +1,23 @@
+import logging
 import os
 import subprocess
-import logging
 
 log = logging.getLogger(__package__)
 
 
-# TODO: make this more generic and deprecate utils.call()
-def just_do(arg, new_root=None, shell=False, environ=None):
+def call(*args, **kwargs):
+    kwargs["close_fds"] = True
+    if "stderr" not in kwargs:
+        kwargs["stderr"] = subprocess.STDOUT
+    log.debug("Calling: %s %s" % (args, kwargs))
+    try:
+        return subprocess.check_output(*args, **kwargs).strip()
+    except subprocess.CalledProcessError as e:
+        log.debug("Exception! %s" % e.output)
+        raise
+
+
+def nsenter(arg, new_root=None, shell=False, environ=None):
     DEVNULL = open(os.devnull, "w")
     if new_root:
         if shell:
@@ -20,3 +31,7 @@ def just_do(arg, new_root=None, shell=False, environ=None):
     ret = proc[0]
     log.debug("Result: %s", repr(ret))
     return ret
+
+
+def chroot(args, root):
+    return call(["chroot", root] + args)

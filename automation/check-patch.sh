@@ -347,6 +347,7 @@ imgbase --debug rollback --to $prev_nvr
 imgbase --debug base --latest
 imgbase --debug base --remove $prev_nvr
 imgbase --debug --experimental volume --create /var/crash 1G
+imgbase --debug boot --setup /
 rpm -q imgbased-persist
 EOF
 

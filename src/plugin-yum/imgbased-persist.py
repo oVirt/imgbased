@@ -23,6 +23,7 @@ import logging
 import os
 import shutil
 
+from imgbased.bootsetup import BootSetupHandler
 from yum.plugins import TYPE_CORE, TYPE_INTERACTIVE
 
 requires_api_version = '2.3'
@@ -38,9 +39,12 @@ yumlogger.setLevel(logging.INFO)
 
 def check_excluded(conduit, pkg):
     excluded_pkgs = conduit.confString("main", "excluded_pkgs").split(',')
-    if pkg.po.name in excluded_pkgs:
-        return True
-    return False
+    return pkg.po.name in excluded_pkgs
+
+
+def check_bootsetup(conduit, pkg):
+    bootsetup_pkgs = conduit.confString("main", "bootsetup_pkgs").split(',')
+    return pkg.po.name in bootsetup_pkgs
 
 
 def pretrans_hook(conduit):
@@ -48,7 +52,6 @@ def pretrans_hook(conduit):
     if ts.installed:
         if not os.path.isdir(persist_path):
             os.makedirs(persist_path)
-
         for pkg in ts.installed + ts.depinstalled + ts.depupdated:
             if check_excluded(conduit, pkg):
                 continue
@@ -68,3 +71,11 @@ def posttrans_hook(conduit):
             except Exception:
                 # Has probably never been persisted before. Manual RPM install?
                 pass
+    if ts.installed:
+        bootsetup = False
+        for pkg in ts.installed:
+            if check_bootsetup(conduit, pkg):
+                bootsetup = True
+        if bootsetup:
+            yumlogger.info("Updating boot configuration")
+            BootSetupHandler().setup()

@@ -50,6 +50,7 @@ Requires:            augeas
 Requires:            rsync
 Requires:            tar
 Requires:            openscap-scanner
+Requires:            grubby
 
 %{!?_licensedir:%global license %%doc}
 
@@ -57,6 +58,7 @@ Requires:            openscap-scanner
 This tool enforces a special usage pattern for LVM.
 Basically this is about having read-only bases and writable
 layers atop.
+
 
 %if 0%{?with_python2}
 %package -n python-imgbased
@@ -129,7 +131,6 @@ install -Dm 0644 src/plugin-yum/imgbased-persist.conf \
 %endif
 install -Dm 0644 data/imgbase-setup.service %{buildroot}%{_unitdir}/imgbase-setup.service
 install -Dm 0444 data/imgbased-pool.profile %{buildroot}%{_sysconfdir}/lvm/profile/imgbased-pool.profile
-install -Dm 0755 scripts/grub/09_node %{buildroot}%{_sysconfdir}/grub.d/09_node
 
 %if 0%{?with_python2}
 make -C py2 install DESTDIR="%{buildroot}"
@@ -148,7 +149,6 @@ make -C py3 install DESTDIR="%{buildroot}"
 %{_mandir}/man8/imgbase.8*
 /%{_docdir}/%{name}/*.asc
 %{_unitdir}/imgbase-setup.service
-%{_sysconfdir}/grub.d/09_node
 %{_sysconfdir}/lvm/profile/imgbased-pool.profile
 %if 0%{?fedora} || 0%{?rhel} >= 8
 %{_sysconfdir}/dnf/plugins/imgbased-persist.conf

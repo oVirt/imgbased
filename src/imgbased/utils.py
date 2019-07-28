@@ -21,23 +21,22 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 
-import functools
 import glob
 import logging
-import tempfile
 import os
 import re
 import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import traceback
-
 from contextlib import contextmanager
-from collections import deque
+
 from six.moves.queue import Queue
 
+from . import command, constants
 
 log = logging.getLogger(__package__)
 
@@ -50,18 +49,6 @@ except NameError:
 
 class FilesystemNotSupported(Exception):
     pass
-
-
-class HumanReadableError(Exception):
-    pass
-
-
-def mkfs(device, fs="ext4"):
-    return ExternalBinary().call(["mkfs.%s" % fs, device])
-
-
-def augtool(*args):
-    return ExternalBinary().augtool(list(args))
 
 
 def remove_file(path, dir=False, *args):
@@ -81,128 +68,74 @@ def copy_files(dst, srcs, *args):
     return cp(args)
 
 
-def size_of_fstree(path):
-    """Returns the size of the tree in bytes
+def safe_copy_file(src, dst):
+    log.debug("safe_copy_file: %s to %s", src, dst)
+    dname = os.path.dirname(dst)
+    fname = dst
+    if os.path.isdir(dst):
+        dname = dst
+        fname = dst + "/" + os.path.basename(src)
+    tmp = tempfile.mktemp(dir=dname, prefix=constants.IMGBASED_TMPFILE_PREFIX)
+    shutil.copy2(src, tmp)
+    os.rename(tmp, fname)
 
-    The size of sparse files is used, not the allocated amount.
-    """
-    du = ExternalBinary().du
-    return int(du(["-sxb", path]).split()[0])
+
+def grub_cfg_path():
+    grub_efi_cfg = "/etc/grub2-efi.cfg"
+    if os.path.isdir("/sys/firmware/efi") and os.path.exists(grub_efi_cfg):
+        return os.path.realpath(grub_efi_cfg)
+    grub_cfg = "/etc/grub2.cfg"
+    if os.path.exists(grub_cfg):
+        return os.path.realpath(grub_cfg)
+    raise RuntimeError("No grub conf found")
 
 
+def safe_grub_call(func):
+    def wrapper(*args, **kwargs):
+        grubcfg = grub_cfg_path()
+        tmpcfg = tempfile.mktemp(dir=os.path.dirname(grubcfg),
+                                 prefix="grub.cfg.")
+        shutil.copy2(grubcfg, tmpcfg)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            if os.stat(grubcfg).st_size == 0:
+                log.debug("grub call failed, restoring previous grub.cfg")
+                shutil.copy2(tmpcfg, grubcfg)
+            os.unlink(tmpcfg)
+    return wrapper
+
+
+@safe_grub_call
 def grubby(*args, **kwargs):
-    # FIXME: hack to work around rhbz#1323842
-    args = list(args) + ["--bad-image-okay"]
-
-    grubcfg = "/boot/grub2/grub.cfg"
-    tmpcfg = tempfile.mktemp(dir="/boot/grub2", prefix="grub.cfg.")
-
-    shutil.copy2(grubcfg, tmpcfg)
-
-    try:
-        return ExternalBinary().grubby(list(args), **kwargs)
-    finally:
-        if os.stat(grubcfg).st_size == 0:
-            log.debug("Grubby failed, restoring previous grub.cfg")
-            shutil.copy2(tmpcfg, grubcfg)
-        os.unlink(tmpcfg)
+    return ExternalBinary().grubby(list(args) + ["--bad-image-okay"], **kwargs)
 
 
-def grub2_set_default(key):
-    ExternalBinary().grub2_set_default([key])
+@safe_grub_call
+def grub2_mkconfig():
+    ExternalBinary().grub2_mkconfig(["-o", grub_cfg_path()])
 
 
-def findmnt(options, path=None):
-    findmnt = ExternalBinary().findmnt
-
-    opts_cmd = ["-n", "-o"]
-    opts_cmd.extend(options)
-
+def findmnt(options, path=None, raise_on_error=False):
+    opts_cmd = ["-no"] + options
     if path is not None:
-        opts_cmd.extend(path)
-
+        opts_cmd.append(path)
     try:
-        return findmnt(opts_cmd)
+        return ExternalBinary().findmnt(opts_cmd)
     except Exception:
-        return None
-
-
-def unmount(path):
-    umount = ExternalBinary().umount
-    return umount([path])
+        if raise_on_error:
+            raise
 
 
 def find_mount_target():
     return findmnt(["TARGET", "-l"]).split()
 
 
-def find_mount_source(path):
-    mnt_source = findmnt(["SOURCE", path])
-
+def find_mount_source(path, raise_on_error=False):
+    mnt_source = findmnt(["SOURCE"], path=path, raise_on_error=raise_on_error)
     if mnt_source is not None:
         return mnt_source.strip()
-
-    return mnt_source
-
-
-def memoize(obj):
-    cache = obj.cache = {}
-
-    @functools.wraps(obj)
-    def memoizer(*args, **kwargs):
-        key = str(args) + str(kwargs)
-        if key not in cache:
-            cache[key] = obj(*args, **kwargs)
-        return cache[key]
-    return memoizer
-
-
-def uuid():
-    raw = File("/proc/sys/kernel/random/uuid").contents
-    return raw.replace("-", "").strip()
-
-
-def call(*args, **kwargs):
-    kwargs["close_fds"] = True
-    if "stderr" not in kwargs:
-        kwargs["stderr"] = subprocess.STDOUT
-    log.debug("Calling: %s %s" % (args, kwargs))
-    try:
-        return subprocess.check_output(*args, **kwargs).strip()
-    except subprocess.CalledProcessError as e:
-        log.debug("Exception! %s" % e.output)
-        raise
-
-
-def format_to_pattern(fmt):
-    """Take a format string and make a pattern from it
-    https://docs.python.org/2/library/re.html#simulating-scanf
-
-    >>> fmt = "Bar-%d"
-    >>> pat = format_to_pattern(fmt)
-    >>> pat
-    'Bar-([-+]?\\\\d+)'
-
-    >>> re.search(pat, "Bar-01").groups()
-    ('01',)
-
-    >>> fmt = "%s-%d"
-    >>> pat = format_to_pattern(fmt)
-    >>> pat
-    '([\\\\S.]+)-([-+]?\\\\d+)'
-    >>> re.search(pat, "org.Node-01").groups()
-    ('org.Node', '01')
-    """
-    pat = fmt
-    pat = pat.replace("%d", r"([-+]?\d+)")
-    pat = pat.replace("%s", r"([\S.]+)")
-    return pat
-
-
-def remount(target, opts=""):
-    ExternalBinary().call(["mount", "-oremount" + opts, target])
-
-    target = None
+    return None
 
 
 class MountPoint(object):
@@ -278,34 +211,6 @@ def bindmounted(source, target, rbind=False, readonly=False):
     log.debug("Done!")
 
 
-def sorted_versions(versions, delim="."):
-    return sorted(list(versions),
-                  key=lambda s: list(map(int, s.split(delim))))
-
-
-def kernel_versions_in_path(path):
-    files = glob.glob("%s/vmlinu?-*" % path)
-    versions = [os.path.basename(f).partition("-")[2] for f in files]
-    return versions
-
-
-def nsenter(args, root=None, wd="/"):
-    def _add_arg(k, v, a):
-        return a + ["--%s=%s" % (k, v)]
-    _args = ["nsenter"]
-
-    _args = _add_arg("root", root, _args)
-    _args = _add_arg("wd", wd, _args)
-
-    args = _args + list(args)
-
-    return ExternalBinary().call(args)
-
-
-def source_of_mountpoint(path):
-    return ExternalBinary().findmnt(["--noheadings", "-o", "SOURCE", path])
-
-
 class Filesystem():
 
     @classmethod
@@ -334,7 +239,7 @@ class Filesystem():
 
     @classmethod
     def from_mountpoint(cls, path):
-        source = source_of_mountpoint(path)
+        source = find_mount_source(path, raise_on_error=True)
         assert source
         return cls.from_device(source)
 
@@ -358,19 +263,19 @@ class Ext4(Filesystem):
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
-        call(cmd, stderr=subprocess.STDOUT)
+        command.call(cmd, stderr=subprocess.STDOUT)
 
     def randomize_uuid(self):
         cmd = ["e2fsck", "-y", "-f", self.path]
         log.debug("Running: %s" % cmd)
         try:
-            call(cmd, stderr=subprocess.STDOUT)
+            command.call(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             if e.returncode != 1:  # e2fsck returns 1 if the fs was corrected
                 raise
         cmd = ["tune2fs", "-U", "random", self.path]
         log.debug("Running: %s" % cmd)
-        call(cmd, stderr=subprocess.STDOUT)
+        command.call(cmd, stderr=subprocess.STDOUT)
 
 
 class XFS(Filesystem):
@@ -380,7 +285,7 @@ class XFS(Filesystem):
         if not debug:
             cmd.append("-q")
         log.debug("Running: %s" % cmd)
-        call(cmd, stderr=subprocess.STDOUT)
+        command.call(cmd, stderr=subprocess.STDOUT)
 
     def randomize_uuid(self):
         with mounted(self.path, options="nouuid"):
@@ -389,7 +294,7 @@ class XFS(Filesystem):
             pass
         cmd = ["xfs_admin", "-U", "generate", self.path]
         log.debug("Running: %s" % cmd)
-        call(cmd, stderr=subprocess.STDOUT)
+        command.call(cmd, stderr=subprocess.STDOUT)
 
 
 def findls(path):
@@ -401,11 +306,10 @@ class ExternalBinary(object):
     squash_output = False
 
     def call(self, *args, **kwargs):
-        log.debug("Calling binary: %s %s" % (args, kwargs))
         stdout = bytes()
         if not self.dry:
-            stdout = call(*args, **kwargs)
-            if not self.squash_output:
+            stdout = command.call(*args, **kwargs)
+            if stdout and not self.squash_output:
                 log.debug("Returned: %s" % stdout[0:1024])
         return stdout.decode(errors="replace").strip()
 
@@ -451,18 +355,15 @@ class ExternalBinary(object):
     def cp(self, args, **kwargs):
         return self.call(["cp"] + args, **kwargs)
 
-    def augtool(self, args, **kwargs):
-        return self.call(["augtool"] + args, **kwargs)
-
     def rpm(self, args, **kwargs):
         self.squash_output = True
         return self.call(["rpm"] + args, **kwargs)
 
-    def grub2_set_default(self, args, **kwargs):
-        return self.call(["grub2-set-default"] + args, **kwargs)
-
     def grubby(self, args, **kwargs):
         return self.call(["grubby"] + args, **kwargs)
+
+    def grub2_mkconfig(self, args, **kwargs):
+        return self.call(["grub2-mkconfig"] + args, **kwargs)
 
     def systemctl(self, args, **kwargs):
         return self.call(["systemctl"] + args, **kwargs)
@@ -530,6 +431,10 @@ class SELinux(object):
     def disabled(mode=None):
         mode = mode or SELinux.mode()
         return (mode == SELinux.SELINUX_DISABLED)
+
+    @staticmethod
+    def enabled(mode=None):
+        return (not SELinux.disabled(mode))
 
     @staticmethod
     def permissive(mode=None):
@@ -829,8 +734,11 @@ class ShellVarFile(File):
     def get(self, key, default):
         return self.parse().get(key, default)
 
-    def set(self, key, val):
+    def set(self, key, val, force=False):
         self.sub(r"%s=.*" % key, "%s=%r" % (key, str(val)))
+        if force:
+            if not self.get(key, None):
+                self.write("%s=%r\n" % (key, str(val)), mode="a")
 
 
 class Motd(File):
@@ -913,6 +821,7 @@ def fileMappedPropperty(key, default=None):
 
 class PackageDb():
     root = None
+    dbpath = None
 
     def get_packages(self):
         raise NotImplementedError
@@ -923,13 +832,16 @@ class PackageDb():
 
 class RpmPackageDb(PackageDb):
     def _rpm_cmd(self, a):
-        for dbf in glob.glob((self.root or '') + "/var/lib/rpm/__db*"):
+        rpmdb = self.dbpath or (self.root or "") + "/var/lib/rpm"
+        for dbf in glob.glob(rpmdb + "/__db*"):
             os.unlink(dbf)
         return ExternalBinary().rpm(a)
 
     def _rpm(self, *args, **kwargs):
         if self.root:
             args += ("--root", self.root)
+        if self.dbpath:
+            args += ("--dbpath", self.dbpath)
         return self._rpm_cmd(list(args)).splitlines(False)
 
     def _get_files_by_tag(self, rpms, tag):
@@ -959,8 +871,8 @@ class RpmPackageDb(PackageDb):
             output = e.output.decode(errors="replace").splitlines()
             log.debug("Subprocess exception ignored")
         not_owned = [x for x in output if "not owned" in x]
-        rpms = [x for x in output if x not in not_owned]
-        return (rpms, [x.split()[1] for x in not_owned])
+        rpms = list(set([x for x in output if x not in not_owned]))
+        return (rpms, list(set([x.split()[1] for x in not_owned])))
 
     def get_conf_files(self, rpms):
         return self._get_files_by_tag(rpms, "c")
@@ -1052,7 +964,7 @@ class Tar():
 
     def sync(self, source, dst):
         default_args = ["--selinux", "--xattrs", "--acls",
-                        "--xattrs-include=*"]
+                        "--xattrs-include=*", "--warning=no-timestamp"]
         srccmd = ["tar", "cf", "-"] + default_args + ["-C", source, "."]
         log.debug("Calling binary: %s" % srccmd)
         src = subprocess.Popen(srccmd, stdout=subprocess.PIPE)
@@ -1076,7 +988,7 @@ class Rsync():
 
     def _run(self, cmd):
         log.debug("Running: %s" % cmd)
-        call(cmd)
+        command.call(cmd)
 
     def sync(self, sourcetree, dst):
         assert os.path.isdir(sourcetree), "%s is not a directory" % sourcetree
@@ -1597,117 +1509,4 @@ def thread_group_handler(threads, exc=None):
             log.debug(traceback.format_exc())
             sys.exit(1)
 
-
-class ExitStack(object):
-    """Context manager for dynamic management of a stack of exit callbacks
-
-    For example:
-
-        with ExitStack() as stack:
-            files = [stack.enter_context(open(fname)) for fname in filenames]
-            # All opened files will automatically be closed at the end of
-            # the with statement, even if attempts to open files later
-            # in the list raise an exception
-
-    """
-    def __init__(self):
-        self._exit_callbacks = deque()
-
-    def pop_all(self):
-        """Preserve the context stack by transferring it to a new instance"""
-        new_stack = type(self)()
-        new_stack._exit_callbacks = self._exit_callbacks
-        self._exit_callbacks = deque()
-        return new_stack
-
-    def _push_cm_exit(self, cm, cm_exit):
-        """Helper to correctly register callbacks to __exit__ methods"""
-        def _exit_wrapper(*exc_details):
-            return cm_exit(cm, *exc_details)
-        _exit_wrapper.__self__ = cm
-        self.push(_exit_wrapper)
-
-    def push(self, exit):
-        """Registers a callback with the standard __exit__ method signature
-
-        Can suppress exceptions the same way __exit__ methods can.
-
-        Also accepts any object with an __exit__ method (registering a call
-        to the method instead of the object itself)
-        """
-        # We use an unbound method rather than a bound method to follow
-        # the standard lookup behaviour for special methods
-        _cb_type = type(exit)
-        try:
-            exit_method = _cb_type.__exit__
-        except AttributeError:
-            # Not a context manager, so assume its a callable
-            self._exit_callbacks.append(exit)
-        else:
-            self._push_cm_exit(exit, exit_method)
-        return exit  # Allow use as a decorator
-
-    def callback(self, callback, *args, **kwds):
-        """Registers an arbitrary callback and arguments.
-
-        Cannot suppress exceptions.
-        """
-        def _exit_wrapper(exc_type, exc, tb):
-            callback(*args, **kwds)
-        # We changed the signature, so using @wraps is not appropriate, but
-        # setting __wrapped__ may still help with introspection
-        _exit_wrapper.__wrapped__ = callback
-        self.push(_exit_wrapper)
-        return callback  # Allow use as a decorator
-
-    def enter_context(self, cm):
-        """Enters the supplied context manager
-
-        If successful, also pushes its __exit__ method as a callback and
-        returns the result of the __enter__ method.
-        """
-        # We look up special methods on the type to match the with statement
-        _cm_type = type(cm)
-        _exit = _cm_type.__exit__
-        result = _cm_type.__enter__(cm)
-        self._push_cm_exit(cm, _exit)
-        return result
-
-    def close(self):
-        """Immediately unwind the context stack"""
-        self.__exit__(None, None, None)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc_details):
-        # We manipulate the exception state so it behaves as though
-        # we were actually nesting multiple with statements
-        frame_exc = sys.exc_info()[1]
-
-        def _fix_exception_context(new_exc, old_exc):
-            while 1:
-                exc_context = new_exc.__context__
-                if exc_context in (None, frame_exc):
-                    break
-                new_exc = exc_context
-            new_exc.__context__ = old_exc
-
-        # Callbacks are invoked in LIFO order to match the behaviour of
-        # nested context managers
-        suppressed_exc = False
-        while self._exit_callbacks:
-            cb = self._exit_callbacks.pop()
-            try:
-                if cb(*exc_details):
-                    suppressed_exc = True
-                    exc_details = (None, None, None)
-            except Exception:
-                new_exc_details = sys.exc_info()
-                # simulate the stack of exceptions by setting the context
-                _fix_exception_context(new_exc_details[1], exc_details[1])
-                if not self._exit_callbacks:
-                    raise
-                exc_details = new_exc_details
-        return suppressed_exc
 # vim: sw=4 et sts=4

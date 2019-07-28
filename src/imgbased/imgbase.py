@@ -20,15 +20,14 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import re
-from .hooks import Hooks
-from . import naming, utils, local
-from .naming import Image
-from .lvm import LVM, MissingLvmThinPool
-from .volume import Volumes
-
 import logging
+import re
 
+from . import constants, local, naming, utils
+from .hooks import Hooks
+from .lvm import LVM, MissingLvmThinPool
+from .naming import Image
+from .volume import Volumes
 
 log = logging.getLogger(__package__)
 
@@ -54,6 +53,7 @@ class ImageLayers(object):
 
     debug = False
     dry = False
+    mode = None
 
     hooks = None
     hooksdir = "/usr/lib/imgbased/hooks.d/"
@@ -93,6 +93,10 @@ class ImageLayers(object):
                           ("existing_lv", "new_base", "new_layer"))
 
         self.naming = naming.NvrNaming(datasource=self.list_our_lv_names)
+
+    def set_mode(self, mode):
+        assert mode in constants.IMGBASED_MODES
+        self.mode = mode
 
     def list_our_lv_names(self):
         filtr = "lv_tags = {} || lv_tags = {}".format(self.lv_base_tag,
@@ -282,6 +286,8 @@ class ImageLayers(object):
         log.info("Trying to create a manageable base from '%s'" %
                  lvm_name_or_mount_target)
 
+        self.set_mode(constants.IMGBASED_MODE_INIT)
+
         existing_lv = LVM.LV.try_find(lvm_name_or_mount_target)
         self.init_tags_on(existing_lv)
 
@@ -396,7 +402,7 @@ class ImageLayers(object):
     def current_layer(self):
         path = "/"
         log.debug("Fetching image for '%s'" % path)
-        lv = utils.source_of_mountpoint(path)
+        lv = utils.find_mount_source(path)
         log.debug("Found '%s'" % lv)
         try:
             return self.image_from_path(lv)

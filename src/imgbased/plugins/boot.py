@@ -1,8 +1,9 @@
 
 import logging
-from ..bootloader import BootConfiguration
-from ..naming import Layer
 
+from ..bootloader import BootConfiguration
+from ..bootsetup import BootSetupHandler
+from ..naming import Layer
 
 log = logging.getLogger(__package__)
 
@@ -13,9 +14,6 @@ def init(app):
 
 
 def add_argparse(app, parser, subparsers):
-    if not app.experimental:
-        return
-
     s = subparsers.add_parser("boot",
                               help="Manage the bootloader")
     s.add_argument("--list", action="store_true",
@@ -26,6 +24,8 @@ def add_argparse(app, parser, subparsers):
                    help="Get the default layer")
     s.add_argument("--set-default", nargs=1, metavar="NVR",
                    help="Set the default layer")
+    s.add_argument("--setup", metavar="PATH", default="/",
+                   help="Setup bootloader entries from PATH")
 
 
 def post_argparse(app, args):
@@ -40,6 +40,8 @@ def post_argparse(app, args):
             print(boot.set_default(layer))
         elif args.remove_other_boot_entries:
             boot.remove_other_entries()
+        elif args.setup:
+            BootSetupHandler(args.setup).setup()
 
 
 class BootConfig():

@@ -1,9 +1,9 @@
 import logging
 import os
 import time
-from .lvm import LVM
-from .utils import mounted, systemctl, File, mkfs, Rsync
 
+from .lvm import LVM
+from .utils import File, Filesystem, Rsync, mounted, systemctl
 
 log = logging.getLogger(__package__)
 
@@ -26,14 +26,7 @@ WantedBy=local-fs.target
 
     def __init__(self, imgbase):
         self.imgbase = imgbase
-
-    def volumes(self):
-        lvs = LVM.LV.find_by_tag(self.tag_volume)
-        return ["/" + lv.lv_name.replace("_", "/").replace("--", "-")
-                for lv in lvs]
-
-    def is_volume(self, where):
-        return where.rstrip("/") in self.volumes()
+        self.fs = Filesystem.from_mountpoint("/")
 
     def _volname(self, where):
         return where.strip("/").replace("-", "--").replace("/", "_")
@@ -47,6 +40,14 @@ WantedBy=local-fs.target
         lv = LVM.LV.from_lv_name(thinpool.vg_name, volname)
         lv.rename(new_name)
         lv.deltag(self.tag_volume)
+
+    def volumes(self):
+        lvs = LVM.LV.find_by_tag(self.tag_volume)
+        return ["/" + lv.lv_name.replace("_", "/").replace("--", "-")
+                for lv in lvs]
+
+    def is_volume(self, where):
+        return where.rstrip("/") in self.volumes()
 
     def create(self, where, size, attach_now=True):
         assert where.startswith("/"), "An absolute path is required"
@@ -62,7 +63,7 @@ WantedBy=local-fs.target
         vol = thinpool.create_thinvol(volname, size)
         vol.addtag(self.tag_volume)
 
-        mkfs(vol.path)
+        self.fs.mkfs(vol.path)
 
         # Populate
         with mounted(vol.path) as mount:

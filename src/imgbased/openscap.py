@@ -1,11 +1,12 @@
+import logging
 import os
 import time
-import logging
-from systemd import journal
-from six.moves.configparser import ConfigParser
-from .utils import File, bindmounted
-from .command import just_do
 
+from six.moves.configparser import ConfigParser
+from systemd import journal
+
+from .command import nsenter
+from .utils import File, bindmounted
 
 log = logging.getLogger(__package__)
 
@@ -118,7 +119,7 @@ class OSCAPScanner(object):
         args.append(self._config.datastream)
         with bindmounted("/proc", path + "/proc"):
             with bindmounted("/var", path + "/var", rbind=True):
-                just_do(args)
+                nsenter(args)
         log.info("Report available at %s", report)
 
     def profiles(self, datastream=None):
@@ -126,7 +127,7 @@ class OSCAPScanner(object):
             datastream = self._config.datastream
         if not datastream or not File(datastream).exists():
             raise ScapDatastreamError("Datastream not found: %s" % datastream)
-        stdout = just_do(["oscap", "info", "--profiles", datastream])
+        stdout = nsenter(["oscap", "info", "--profiles", datastream])
         profiles = dict([x.split(":") for x in stdout.splitlines()])
         log.debug("Collected OSCAP profiles: %s", profiles)
         return profiles

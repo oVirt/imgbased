@@ -20,13 +20,16 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
+import glob
 import logging
+import operator
 import os
 import re
 import shutil
-from .utils import grubby
-from .naming import Layer
+import tempfile
 
+from .naming import Layer
+from .utils import File, find_mount_target, grub2_mkconfig, grubby
 
 log = logging.getLogger(__package__)
 
@@ -40,6 +43,10 @@ class InvalidBootEntryError(BootloaderError):
 
 
 class NoKeyFoundError(BootloaderError):
+    pass
+
+
+class BootPartitionRequires1G(BootloaderError):
     pass
 
 
@@ -83,6 +90,7 @@ class Grubby(Bootloader):
     """This class can do bootloader configuration by using grubby
     """
     _keyarg = "img.bootid"
+    _DEVNULL = open(os.devnull, 'w')
 
     class GrubbyEntry(object):
         """Simple class to parse out grubby entries
@@ -93,11 +101,14 @@ class Grubby(Bootloader):
         ... root=/dev/mapper/centos_installed-root
         ... initrd=\
         ... /boot/ovirt-node-4.0+1/initramfs-3.10.0-327.4.5.el7.x86_64.img
-        ... title=ovirt-node-4.0+1 (3.10.0-327.4.5.el7.x86_64)'''
+        ... title=ovirt-node-4.0+1 (3.10.0-327.4.5.el7.x86_64)
+        ... id="my-custom-bls-id"'''
 
         >>> parsed = Grubby.GrubbyEntry.parse(entry)
         >>> parsed.title
         'ovirt-node-4.0+1 (3.10.0-327.4.5.el7.x86_64)'
+        >>> parsed.blsid
+        'my-custom-bls-id'
         >>> parsed.root
         '/dev/mapper/centos_installed-root'
 
@@ -114,7 +125,9 @@ class Grubby(Bootloader):
         >>> parsed.initrd
         '/boot/initramfs-4.0.0.fc23.x86_64.img'
         >>> parsed.args
-        '"ro console=ttyS0"'
+        'ro console=ttyS0'
+        >>> parsed.blsid
+        ''
 
         >>> entry = '''index=1
         ... non linux entry'''
@@ -145,6 +158,7 @@ class Grubby(Bootloader):
         1
         """
 
+        blsid = None
         args = None
         root = None
         index = None
@@ -161,16 +175,26 @@ class Grubby(Bootloader):
                                (?:(?:args=)?(.*?)\n)?
                                (?:(?:root=)?(.*?)\n)?
                                (?:(?:initrd=)?(.*?)\n)?
-                               (?:(?:title=)?(.*))?
+                               (?:(?:title=)?(.*)\n?)?
+                               (?:(?:id=)?(.*))?
                             """, re.VERBOSE)
             matches = r.match(entry)
-            g.index, g.kernel, g.args, g.root, g.initrd, g.title = \
-                matches.groups()
+            g.index, g.kernel, g.args, g.root, g.initrd, g.title, g.blsid = \
+                [x.strip('"') if x else x for x in matches.groups()]
 
             if not all([g.kernel, g.args, g.initrd]):
                 raise InvalidBootEntryError()
 
             return g
+
+        def bls_conf_path(self):
+            if not self.blsid:
+                raise RuntimeError("Missing bls id for %s" % self)
+            return "/boot/loader/entries/%s.conf" % self.blsid
+
+    def __init__(self):
+        Bootloader.__init__(self)
+        self._use_bls = os.access("/usr/libexec/grubby/grubby-bls", os.X_OK)
 
     def _parse_key_from_args(self, args):
         """
@@ -188,10 +212,12 @@ class Grubby(Bootloader):
         return matches[0]
 
     def _get_valid_entries(self):
-        return self._parse_entries(grubby("--info=ALL"))[0]
+        return self._parse_entries(grubby("--info=ALL",
+                                          stderr=self._DEVNULL))[0]
 
     def _get_other_entries(self):
-        return self._parse_entries(grubby("--info=ALL"))[1]
+        return self._parse_entries(grubby("--info=ALL",
+                                          stderr=self._DEVNULL))[1]
 
     def _parse_entries(self, data):
         """Returns (valid_entries_map, other_entires_list)
@@ -222,21 +248,45 @@ class Grubby(Bootloader):
 
         return (entrymap, other_entries)
 
+    def _remove_entry(self, entry):
+        if self._use_bls:
+            os.unlink(entry.bls_conf_path())
+        else:
+            grubby("--remove-kernel", entry.kernel)
+
     def add_entry(self, key, title, linux, initramfs, append):
         assert " " not in key
         log.debug("Adding entry: %s" % key)
         keyarg = " %s=%s" % (self._keyarg, key)
         append += keyarg
 
+        kver = "-".join(os.path.basename(linux).rsplit("-")[-2:])
         if "(" not in title:
-            kver = "-".join(os.path.basename(linux).rsplit("-")[-2:])
             title += " (%s)" % kver
 
-        grubby("--copy-default",
-               "--add-kernel", "/boot/%s" % linux,
-               "--initrd", "/boot/%s" % initramfs,
-               "--args", append,
-               "--title", title)
+        args = ["--copy-default",
+                "--add-kernel", "/boot/%s" % linux,
+                "--initrd", "/boot/%s" % initramfs,
+                "--args", append,
+                "--title", title]
+
+        if self._use_bls:
+            tmpdir = tempfile.mkdtemp()
+            args += ["--bls-directory", tmpdir]
+
+        grubby(*args)
+
+        # Modify bls entry as grubby removes all the leading paths for the
+        # kernel and initrd.  This is a workaround until
+        # https://github.com/rhboot/grubby/pull/47 gets merged
+        if self._use_bls:
+            fname = glob.glob(tmpdir + "/*.conf")[0]
+            f = File(fname)
+            f.sub("\nlinux.*\n", "\nlinux /%s\n" % linux)
+            f.sub("\ninitrd.*\n", "\ninitrd /%s\n" % initramfs)
+            blsfname = "/boot/loader/entries/%s-%s.conf" % (key, kver)
+            shutil.copy2(fname, blsfname)
+            shutil.rmtree(tmpdir)
 
         return key
 
@@ -248,15 +298,15 @@ class Grubby(Bootloader):
             return
         if key_entries:
             for ke in key_entries:
-                log.debug("Removing boot entry: %s" % ke.title)
                 log.info("Removing boot entry: %s" % ke.title)
-                grubby("--remove-kernel", ke.kernel)
+                self._remove_entry(ke)
 
     def set_default(self, key):
         boot_entries = self._get_valid_entries()[key]
-        entry = sorted(boot_entries, reverse=True)[0]
+        entry = sorted(boot_entries, key=operator.attrgetter('title'),
+                       reverse=True)[0]
         log.debug("Making default: %s" % entry.title)
-        grubby("--set-default", entry.kernel)
+        grubby("--set-default-index", entry.index)
 
     def get_default(self):
         log.debug("Getting default")
@@ -278,29 +328,19 @@ class Grubby(Bootloader):
     def list_other(self):
         return self._get_other_entries()
 
-    def _backup(self):
-        # The links in /etc are relative for some reason...
-        os.chdir("/")
-
-        path = None
-        paths = ["/etc/grub2.cfg", "/etc/grub2-efi.cfg"]
-
-        for p in paths:
-            if os.path.exists(p):
-                path = os.path.abspath(os.readlink(p))
-                break
-
-        log.info("Backing up the grub configuration")
-        log.debug("Copying %s to %s" % (path, path+".bak"))
-        shutil.copy2(path, path + ".bak")
-
     def remove_other_entries(self):
         log.info("Removing other boot entries")
-        self._backup()
         entries = self._get_other_entries()
         for e in entries:
             log.debug("Removing other boot entry: %s" % e.title)
-            grubby("--remove-kernel", e.kernel)
+            self._remove_entry(e)
+
+    def make_config(self):
+        # UUID for /boot is set during build and never gets updated when using
+        # BLS - this is bad, so we need to adjust our grub.cfg
+        if self._use_bls:
+            log.debug("BLS enabled, regenerating grub config file")
+            grub2_mkconfig()
 
 
 class BootConfiguration():
@@ -319,6 +359,10 @@ class BootConfiguration():
         key = layer.lv_name
         assert " " not in key
         return key
+
+    @staticmethod
+    def kernel_version(kernel):
+        return "-".join(os.path.basename(kernel).rsplit("-")[-2:])
 
     def list(self):
         return self.bootloader.list()
@@ -343,5 +387,26 @@ class BootConfiguration():
 
     def get_default(self):
         return self.bootloader.get_default()
+
+    def make_config(self):
+        return self.bootloader.make_config()
+
+    @staticmethod
+    def validate():
+        bytes_in_1G = 1000**3
+        dirs = [d for d in find_mount_target() if "boot" in d]
+        boot_dir = dirs[0] if dirs else None
+        if boot_dir is None:
+            raise RuntimeError("findmnt: error, unable to find boot partition"
+                               " in target!")
+        st = os.statvfs(boot_dir)
+        bytes_in_boot_partition = st.f_blocks * st.f_frsize
+        if bytes_in_boot_partition < bytes_in_1G:
+            # 1G is 1073741824 bytes. However, if users use size=1000
+            # in anaconda kickstart won't work. Based on that, let's
+            # inform to users it's required 1.1G (size=1100).
+            log.error("New /boot must have at least 1.1G size")
+            raise BootPartitionRequires1G
+
 
 # vim: sw=4 et sts=4:

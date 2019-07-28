@@ -6,7 +6,7 @@ import sys
 
 import six
 
-from .. import local
+from .. import constants, local
 from ..bootloader import BootConfiguration
 from ..lvm import LVM
 from ..naming import Image
@@ -60,6 +60,7 @@ def post_argparse(app, args):
         rollback(app, args.to)
 
     elif args.command == "update":
+        app.imgbase.set_mode(constants.IMGBASED_MODE_UPDATE)
         if args.format == "liveimg":
             try:
                 base, _ = LiveimgExtractor(app.imgbase).extract(args.FILENAME)

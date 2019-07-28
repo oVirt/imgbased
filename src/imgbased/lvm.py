@@ -20,12 +20,13 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import os
-import shlex
 import logging
+import os
 import re
-from .utils import find_mount_source, unmount, LvmCLI, ExternalBinary
+import shlex
 from operator import itemgetter
+
+from .utils import ExternalBinary, LvmCLI, find_mount_source
 
 log = logging.getLogger(__package__)
 
@@ -105,13 +106,14 @@ class LVM(object):
 
     @staticmethod
     def reset_registered_volumes():
-        ExternalBinary().sync([])
+        run = ExternalBinary()
+        run.sync([])
         mtab = dict([itemgetter(9, 4)(m.split())
                      for m in open("/proc/self/mountinfo")])
         for lv in LVM._volume_registry:
             target = mtab.get(lv.dm_path)
             if target:
-                unmount(target)
+                run.umount([target])
             try:
                 lv.remove(force=True)
             except Exception:
