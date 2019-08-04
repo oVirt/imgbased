@@ -569,13 +569,13 @@ def migrate_etc(imgbase, new_lv, previous_lv):
 
     def configure_versionlock():
         log.info("Configuring versionlock for %s" % new_fs.source)
-        fmt = "{0}:{1.name}-{1.version}-{1.release}.{1.arch}\n"
+        fmt = "{0.name}-{0.version}-{0.release}.{0.arch}\n"
         data = "# imgbased: versionlock begin for layer %s\n" % new_fs.source
         rpm.addMacro("_dbpath", new_fs.path("/usr/share/rpm"))
         for hdr in rpm.TransactionSet().dbMatch():
             if "image-update" in hdr.name.decode("utf-8"):
                 continue
-            data += fmt.format(hdr.epoch or "0", hdr)
+            data += fmt.format(hdr)
         rpm.delMacro("_dbpath")
         data += "# imgbased: versionlock end\n"
         # versionlock.list must exist, so find which one should we use
