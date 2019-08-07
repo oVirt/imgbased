@@ -517,14 +517,37 @@ class LvmCLI():
     lvmconfig = LvmBinary().lvmconfig
 
 
+class SELinux(object):
+    SELINUX_DISABLED = "Disabled"
+    SELINUX_ENFORCING = "Enforcing"
+    SELINUX_PERMISSIVE = "Permissive"
+
+    @staticmethod
+    def mode():
+        return ExternalBinary().getenforce()
+
+    @staticmethod
+    def disabled(mode=None):
+        mode = mode or SELinux.mode()
+        return (mode == SELinux.SELINUX_DISABLED)
+
+    @staticmethod
+    def permissive(mode=None):
+        mode = mode or SELinux.mode()
+        return (mode == SELinux.SELINUX_PERMISSIVE)
+
+    @staticmethod
+    def enforcing(mode=None):
+        mode = mode or SELinux.mode()
+        return (mode == SELinux.SELINUX_ENFORCING)
+
+
 class SELinuxDomain(object):
-    _semanage = ExternalBinary().semanage
-    _runcon = ExternalBinary().runcon
-    _getenforce = ExternalBinary().getenforce
+    run = ExternalBinary()
 
     def __init__(self, domain):
         self._domain = domain
-        self._mode = self._getenforce()
+        self._mode = SELinux.mode()
         self._exists = self._check_domain()
 
     def _check_domain(self):
@@ -532,25 +555,25 @@ class SELinuxDomain(object):
         Checks if the domain is permissive, or if SELinux is disabled.  If any
         of the the checks are True, we should not call `semanage permissive`.
         """
-        if self._mode in ("Disabled", "Permissive"):
+        if SELinux.disabled(self._mode) or SELinux.permissive(self._mode):
             return True
-        domains = self._semanage(["permissive", "-nl"])
+        domains = self.run.semanage(["permissive", "-nl"])
         return self._domain in domains.split()
 
     def __enter__(self):
         if not self._exists:
-            self._semanage(["permissive", "-a", self._domain])
+            self.run.semanage(["permissive", "-a", self._domain])
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
         if self._exists:
             return
-        self._semanage(["permissive", "-d", self._domain])
+        self.run.semanage(["permissive", "-d", self._domain])
 
     def runcon(self, args):
-        if self._mode == "Disabled":
+        if SELinux.disabled(self._mode):
             return
-        self._runcon(["-t", self._domain, "--"] + args)
+        self.run.runcon(["-t", self._domain, "--"] + args)
 
 
 class File(object):

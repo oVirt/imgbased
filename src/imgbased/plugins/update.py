@@ -3,13 +3,14 @@ import glob
 import logging
 import os
 import sys
+
 import six
 
 from .. import local
 from ..bootloader import BootConfiguration
-from ..naming import Image
-from ..utils import mounted, Filesystem, BuildMetadata, Tar
 from ..lvm import LVM
+from ..naming import Image
+from ..utils import BuildMetadata, Filesystem, SELinux, Tar, mounted
 
 log = logging.getLogger(__package__)
 
@@ -90,6 +91,12 @@ class LiveimgExtractor():
             self.imgbase.current_layer()).size_bytes
         return size
 
+    def _check_selinux(self):
+        if not SELinux.disabled():
+            return
+        log.warn("**** Disabling SELinux is not recommended - this will block"
+                 " upgrades in future versions, please re-enable SELinux ****")
+
     def add_base_with_tree(self, sourcetree, size, nvr, lvs=None):
         if not os.path.exists(sourcetree):
             raise RuntimeError("Sourcetree does not exist: %s" % sourcetree)
@@ -113,6 +120,7 @@ class LiveimgExtractor():
         return (new_base_lv, new_layer_lv)
 
     def extract(self, liveimgfile, nvr=None):
+        self._check_selinux()
         new_base = None
         log.info("Extracting image '%s'" % liveimgfile)
         with mounted(liveimgfile, options="ro") as squashfs:
