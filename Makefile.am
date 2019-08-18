@@ -11,7 +11,7 @@ pyimagebaseddir = $(pythondir)/@PACKAGE_NAME@
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
 
 .PHONY: check check-code check-build distcheck
-.SILENT: check check-pyflakes check-pep8 check-nosetests check-build distcheck
+.SILENT: check check-pyflakes check-codestyle check-nosetests check-build distcheck
 
 vpath $(srcdir)
 
@@ -86,9 +86,9 @@ check-pyflakes: $(SRCFILES)
 	@echo "[CHECK] pyflakes"
 	find . -xdev -name \*.py | xargs pyflakes
 
-check-pep8: $(SRCFILES)
-	@echo "[CHECK] pep8"
-	find . -xdev -name \*.py | xargs pep8
+check-codestyle: $(SRCFILES)
+	@echo "[CHECK] @CODESTYLE_CHECKER@"
+	find . -xdev -name \*.py | xargs @CODESTYLE_CHECKER@
 
 check-nosetests: $(SRCFILES)
 	@echo "[CHECK] nosetests"
@@ -98,7 +98,7 @@ check-nosetests: $(SRCFILES)
 		--with-doctest --doctest-tests
 
 
-check-code: check-pyflakes check-pep8 check-nosetests
+check-code: check-pyflakes check-codestyle check-nosetests
 
 check: check-code check-build
 	@echo "PASS"

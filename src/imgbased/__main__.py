@@ -40,7 +40,7 @@ if __name__ == '__main__':
         import config
         h = journal.JournalHandler(SYSLOG_IDENTIFIER=config.PACKAGE_NAME)
         handlers.append(h)
-    except:
+    except Exception:
         log.debug("Failed to add journal handler")
 
     for h in handlers:

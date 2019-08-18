@@ -58,7 +58,7 @@ def on_os_upgraded(imgbase, previous_lv_name, new_lv_name):
         imgbase._lvm_from_layer(imgbase.naming.layer_before(new_layer))
     try:
         reinstall_rpms(imgbase, new_lv, previous_layer_lv)
-    except:
+    except Exception:
         log.exception("Failed to reinstall persisted RPMs")
         raise RpmPersistenceError()
 

@@ -4,7 +4,7 @@
 %global with_python3 0
 %endif
 
-%if 0%{?rhel} >= 8
+%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
 %global with_python2 0
 %else
 %global with_python2 1
@@ -83,7 +83,7 @@ python-imgbased is a python 2 library to manage lvm layers
 Summary: A python 3 module for imgbased
 BuildRequires:       python%{python3_pkgversion}-devel
 %if 0%{?with_check}
-BuildRequires:       python%{python3_pkgversion}-pep8
+BuildRequires:       python%{python3_pkgversion}-pycodestyle
 BuildRequires:       python%{python3_pkgversion}-pyflakes
 BuildRequires:       python%{python3_pkgversion}-nose
 BuildRequires:       python%{python3_pkgversion}-six

@@ -98,7 +98,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     # Try to use current_layer if it exists (upgrades only)
     try:
         previous_layer_lv = imgbase._lvm_from_layer(imgbase.current_layer())
-    except:
+    except Exception:
         pass
 
     if not os.path.ismount("/var"):
@@ -131,7 +131,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         threads.append(ThreadRunner(relocate_update_manager, new_lv))
 
         thread_group_handler(threads)
-    except:
+    except Exception:
         log.exception("Failed to migrate etc")
         raise ConfigMigrationError()
 
@@ -160,7 +160,7 @@ def postprocess(new_lv):
 
     def _permit_root_login():
         f = File(new_fs.path("/etc/ssh/sshd_config"))
-        regex = re.compile("\s*(PermitRootLogin)\s+(yes|no|without-password)")
+        pat = re.compile("\\s*(PermitRootLogin)\\s+(yes|no|without-password)")
         data = ""
         updated = False
         for line in f.lines():
@@ -168,7 +168,7 @@ def postprocess(new_lv):
             if line and line[0] == "#":
                 data += line + "\n"
                 continue
-            if regex.search(line):
+            if pat.search(line):
                 if not updated:
                     data += "PermitRootLogin yes\n"
                     updated = True
@@ -215,7 +215,7 @@ def postprocess(new_lv):
 def migrate_boot(imgbase, new_lv, previous_layer_lv):
     try:
         adjust_mounts_and_boot(imgbase, new_lv, previous_layer_lv)
-    except:
+    except Exception:
         # FIXME Handle and rollback
         log.exception("Failed to update OS")
         raise BootSetupError()
@@ -530,22 +530,22 @@ def remediate_etc(imgbase):
 
     for idx in range(len(layers[:-1])):
         log.debug("Checking %s" % layers[idx])
-        with mounted(imgbase._lvm_from_layer(layers[idx]).path) as m, \
-                mounted(imgbase._lvm_from_layer(layers[idx+1]).path) as n:
-                    pre_files = analyze_removals(
-                        dircmp("{}/etc".format(m.path("/")),
-                               "{}/etc".format(n.path("/"))
-                               )
-                    )
-                    # Resync the files we changed on the last pass
-                    r = Rsync(checksum_only=True, update_only=True,
-                              exclude=["*targeted/active/modules*",
-                                       "*network-scripts/ifcfg-*"])
-                    r.sync(m.path("/etc"), n.path("/etc"))
+        with mounted(imgbase._lvm_from_layer(layers[idx]).path) as m:
+            with mounted(imgbase._lvm_from_layer(layers[idx+1]).path) as n:
+                pre_files = analyze_removals(
+                    dircmp("{}/etc".format(m.path("/")),
+                           "{}/etc".format(n.path("/"))
+                           )
+                )
+                # Resync the files we changed on the last pass
+                r = Rsync(checksum_only=True, update_only=True,
+                          exclude=["*targeted/active/modules*",
+                                   "*network-scripts/ifcfg-*"])
+                r.sync(m.path("/etc"), n.path("/etc"))
 
-                    check_layers(m, n)
-                    fix_systemd_services(m, n)
-                    perform_removals(pre_files, n)
+                check_layers(m, n)
+                fix_systemd_services(m, n)
+                perform_removals(pre_files, n)
 
 
 def migrate_etc(imgbase, new_lv, previous_lv):
@@ -587,7 +587,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         conf = File(new_fs.path("/etc/yum/pluginconf.d/versionlock.conf"))
         if conf.exists():
             data = conf.contents.splitlines()
-            pattern = re.compile("^follow_obsoletes\s*=\s*1")
+            pattern = re.compile("^follow_obsoletes\\s*=\\s*1")
             if not [x for x in data if pattern.search(x)]:
                 conf.writen("follow_obsoletes = 1", mode="a")
 
@@ -738,7 +738,7 @@ def fix_systemd_services(old_fs, new_fs):
                         log.debug("Found a disabled systemd service "
                                   "elsewhere. Removing it: %s" % filename)
                         remove_file(os.path.join(root, f))
-        except:
+        except Exception:
             log.exception("Could not remove %s. Is it a read-only layer?")
 
 
@@ -811,7 +811,7 @@ def relocate_update_manager(new_lv):
 def migrate_ntp_to_chrony(new_lv):
     try:
         systemctl.status("ntpd.service")
-    except:
+    except Exception:
         log.debug("ntpd is disabled, not migrating conf to chrony")
         return
     with mounted(new_lv.path) as new_fs:
@@ -990,7 +990,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
             if not os.path.exists(bootdir):
                 os.mkdir(bootdir)
             copy_files(bootdir, kfiles)
-        except:
+        except Exception:
             log.warn("No kernel found in %s" % new_lv, exc_info=True)
             log.debug("Kernel copy failed", exc_info=True)
             return
@@ -1066,7 +1066,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
         title = None
         try:
             title = utils.BuildMetadata(newroot).get("nvr")
-        except:
+        except Exception:
             log.warn("Failed to retrieve metadata", exc_info=True)
 
         if not title:
@@ -1147,7 +1147,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
             try:
                 boot_partition_validation()
-            except:
+            except Exception:
                 raise
 
 

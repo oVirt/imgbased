@@ -58,7 +58,7 @@ class TimeserverConfiguration(File):
                         keys["servers"].append(v.strip())
                     else:
                         keys[k] = v.strip()
-                except:
+                except Exception:
                     k = line
                     keys[k] = True
 

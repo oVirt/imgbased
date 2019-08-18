@@ -65,6 +65,6 @@ def posttrans_hook(conduit):
             try:
                 yumlogger.info("Unpersisting: %s" % rpm)
                 os.remove(persist_path + rpm)
-            except:
+            except Exception:
                 # Has probably never been persisted before. Manual RPM install?
                 pass

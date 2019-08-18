@@ -65,6 +65,6 @@ class ImgbasedPersist(dnf.Plugin):
                 try:
                     logger.info("Unpersisting: %s" % rpm)
                     os.remove(self.persist_path + rpm)
-                except:
+                except Exception:
                     # Has probably never been persisted. Manual RPM install?
                     pass

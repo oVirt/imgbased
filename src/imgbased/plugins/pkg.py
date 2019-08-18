@@ -51,16 +51,15 @@ def diff(imgbase, left, right, mode="default"):
     imgl = imgbase._lvm_from_layer(Image.from_nvr(left))
     imgr = imgbase._lvm_from_layer(Image.from_nvr(right))
 
-    with mounted(imgl.path) as mountl, \
-            mounted(imgr.path) as mountr:
+    with mounted(imgl.path) as mountl, mounted(imgr.path) as mountr:
         if mode == "default":
             pkgdb = RpmPackageDb()
             pkgdb.root = mountl.target
-            l = sorted(pkgdb.get_packages())
+            lside = sorted(pkgdb.get_packages())
             pkgdb.root = mountr.target
-            r = sorted(pkgdb.get_packages())
-            udiff = difflib.unified_diff(l, r, fromfile=left, tofile=right,
-                                         n=0, lineterm="")
+            rside = sorted(pkgdb.get_packages())
+            udiff = difflib.unified_diff(lside, rside, fromfile=left,
+                                         tofile=right, n=0, lineterm="")
             return (l + "\n" for l in udiff if not l.startswith("@"))
         else:
             raise RuntimeError("Unknown diff mode: %s" % mode)

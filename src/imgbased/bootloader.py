@@ -182,7 +182,7 @@ class Grubby(Bootloader):
         'ovirt-node-ng-4.0.0-0.0.master.20160211.0.el7+1'
         """
         log.debug("Finding key in args: %s" % args)
-        matches = re.findall("%s=([^\s\"']+)" % self._keyarg, args)
+        matches = re.findall("%s=([^\\s\"']+)" % self._keyarg, args)
         if len(matches) == 0:
             raise NoKeyFoundError()
         return matches[0]

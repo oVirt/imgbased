@@ -213,7 +213,7 @@ Image-3-0\\n +- Image-3-0+1'
         for name in names:
             try:
                 images.append(Image.from_nvr(name))
-            except:
+            except Exception:
                 log.debug("Failed to parse name %r" % name)
                 continue
 
@@ -276,7 +276,7 @@ class NVR(object):
         o = NVR()
         try:
             nvrtuple = re.match("^(^.*)-([^-]*)-([^-]*)$", nvr).groups()
-        except:
+        except Exception:
             raise RuntimeError("Failed to parse NVR: %s" % nvr)
         if not nvrtuple:
             raise RuntimeError("No NVR found: %s" % nvr)

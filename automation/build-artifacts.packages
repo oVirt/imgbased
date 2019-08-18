@@ -8,7 +8,7 @@ pykickstart
 pylint
 python3-devel
 python3-nose
-python3-pep8
+python3-pycodestyle
 python3-pyflakes
 python3-pylint
 python3-six

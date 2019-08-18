@@ -28,6 +28,7 @@ PACKAGE_VERSION = '@PACKAGE_VERSION@'
 def version():
     return "%s-%s" % (PACKAGE_NAME, PACKAGE_VERSION)
 
+
 paths = {"/var":           {"size":   "15G",
                             "attach": True},
          "/var/crash":     {"size":   "10G",

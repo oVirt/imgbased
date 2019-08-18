@@ -79,9 +79,9 @@ def path_diff(left, right, mode, left_alias=None, right_alias=None):
             raise RuntimeError("Path does not exist: %r" % p)
 
     if mode == "tree":
-        l = utils.findls(left)
-        r = utils.findls(right)
-        udiff = difflib.unified_diff(r, l, fromfile=left_alias,
+        lside = utils.findls(left)
+        rside = utils.findls(right)
+        udiff = difflib.unified_diff(rside, lside, fromfile=left_alias,
                                      tofile=right_alias, n=0)
         lines = (l for l in udiff if not l.startswith("@"))
         sys.stdout.writelines(lines)

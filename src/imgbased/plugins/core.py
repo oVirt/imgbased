@@ -212,7 +212,7 @@ class Layout():
     def initialize(self, source, init_nvr=None):
         try:
             init_nvr = init_nvr or BuildMetadata().get("nvr")
-        except:
+        except Exception:
             raise Layout.NVRMissingError("There is no NVR set for "
                                          "this build, in this "
                                          "case you need to initialize "
@@ -388,7 +388,7 @@ class Health():
             lvs = LVM._lvs(["--noheadings",
                             "-odata_percent,metadata_percent", pool.lvm_name])
             datap, metap = map(float, lvs.replace(",", ".").split())
-        except:
+        except Exception:
             log.debug("Failed to get thin data", exc_info=True)
 
         if datap is None:
@@ -405,7 +405,7 @@ class Health():
             ret = False
             try:
                 ret = int(LVM._lvmconfig(args).split("=")[1]) < 100
-            except:
+            except Exception:
                 pass
             return ret
 

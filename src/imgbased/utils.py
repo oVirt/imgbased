@@ -123,7 +123,7 @@ def findmnt(options, path=None):
 
     try:
         return findmnt(opts_cmd)
-    except:
+    except Exception:
         return None
 
 
@@ -821,7 +821,7 @@ class ShellVarFile(File):
                     continue
                 key, val = line.split("=", 1)
                 parsed[key] = val.strip('"').strip("'")
-        except:
+        except Exception:
             log.error("Failed to parse: %s" % line)
             raise
         return parsed
@@ -1569,7 +1569,7 @@ class ThreadRunner(threading.Thread):
     def run(self):
         try:
             self._function(*self._func_args, **self._func_kwargs)
-        except:
+        except Exception:
             self.__exceptions.put(sys.exc_info())
         self.__exceptions.put(None)
 
@@ -1593,7 +1593,7 @@ def thread_group_handler(threads, exc=None):
     for t in threads:
         try:
             t.join_with_exceptions()
-        except:
+        except Exception:
             log.debug(traceback.format_exc())
             sys.exit(1)
 
@@ -1702,7 +1702,7 @@ class ExitStack(object):
                 if cb(*exc_details):
                     suppressed_exc = True
                     exc_details = (None, None, None)
-            except:
+            except Exception:
                 new_exc_details = sys.exc_info()
                 # simulate the stack of exceptions by setting the context
                 _fix_exception_context(new_exc_details[1], exc_details[1])

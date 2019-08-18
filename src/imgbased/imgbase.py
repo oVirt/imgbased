@@ -219,7 +219,7 @@ class ImageLayers(object):
             new_lv = prev_lv.create_snapshot(new_lv_name)
             new_lv.activate(True, True)
             new_lv.addtag(self.lv_layer_tag)
-        except:
+        except Exception:
             log.error("Failed to create a new layer")
             log.debug("Snapshot creation failed", exc_info=True)
             raise RuntimeError("Failed to create a new layer")
@@ -381,7 +381,7 @@ class ImageLayers(object):
                 "--options", "data_percent,lv_size",
                 lvm_name]
         stdout = LVM._lvs(args).replace(",", ".").strip()
-        used_percent, size = re.split("\s+", stdout)
+        used_percent, size = re.split("\\s+", stdout)
         log.debug("Used: %s%% from %s" % (used_percent, size))
         free = float(size)
         free -= float(size) * float(used_percent) / 100.00
@@ -400,7 +400,7 @@ class ImageLayers(object):
         log.debug("Found '%s'" % lv)
         try:
             return self.image_from_path(lv)
-        except:
+        except Exception:
             log.error("The root volume does not look like an image")
             raise
 
