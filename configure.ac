@@ -64,9 +64,7 @@ if test "x$ASCIIDOC" = "x"; then
 fi
 
 AC_CHECK_PROGS(CODESTYLE_CHECKER, [pycodestyle-3 pep8])
-if test "x$CODESTYLE_CHECKER" = "x"; then
-        AC_MSG_ERROR([codestyle checker not found])
-fi
+AM_CONDITIONAL([HAVE_CODESTYLE_CHECKER], [test "x$CODESTYLE_CHECKER" != "x"])
 
 AM_PATH_PYTHON
 

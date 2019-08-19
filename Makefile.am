@@ -87,8 +87,12 @@ check-pyflakes: $(SRCFILES)
 	find . -xdev -name \*.py | xargs pyflakes
 
 check-codestyle: $(SRCFILES)
+if HAVE_CODESTYLE_CHECKER
 	@echo "[CHECK] @CODESTYLE_CHECKER@"
 	find . -xdev -name \*.py | xargs @CODESTYLE_CHECKER@
+else
+	@echo "[CHECK] Codestyle checker not found, skipping"
+endif
 
 check-nosetests: $(SRCFILES)
 	@echo "[CHECK] nosetests"
