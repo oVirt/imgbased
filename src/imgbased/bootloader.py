@@ -29,7 +29,8 @@ import shutil
 import tempfile
 
 from .naming import Layer
-from .utils import File, find_mount_target, grub2_mkconfig, grubby
+from .utils import (File, ShellVarFile, find_mount_target, grub2_mkconfig,
+                    grubby)
 
 log = logging.getLogger(__package__)
 
@@ -338,9 +339,14 @@ class Grubby(Bootloader):
     def make_config(self):
         # UUID for /boot is set during build and never gets updated when using
         # BLS - this is bad, so we need to adjust our grub.cfg
-        if self._use_bls:
-            log.debug("BLS enabled, regenerating grub config file")
-            grub2_mkconfig()
+        if not self._use_bls:
+            return
+        log.debug("BLS enabled, regenerating grub config file")
+        # Ensure os-prober of the calling layer is disabled, otherwise we get
+        # a bunch of irrelevant boot entries
+        defgrub = ShellVarFile("/etc/default/grub")
+        defgrub.set("GRUB_DISABLE_OS_PROBER", "true", force=True)
+        grub2_mkconfig()
 
 
 class BootConfiguration():
