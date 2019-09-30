@@ -6,6 +6,6 @@ stage:
   - check-patch:
       runtime-requirements:
         support-nesting-level: 2
-distro: [el7, fc29, fc30]
+distro: [el7, el8, fc29, fc30]
 release_branches:
     master: ovirt-master

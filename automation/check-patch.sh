@@ -80,6 +80,13 @@ build_test_images() {
         ${PACKAGER} install --installroot=$mntdir -y python3-coverage $rpms
         ${PACKAGER} clean all --installroot=$mntdir
         dnf config-manager -q --installroot=$mntdir --set-disabled fedora updates
+    elif [[ ${DIST} = el8* ]]; then
+        export PACKAGER=dnf
+        export COVERAGE=coverage3
+        dnf config-manager -q --installroot=$mntdir --set-enabled BaseOS AppStream
+        ${PACKAGER} install --installroot=$mntdir -y python3-coverage $rpms
+        ${PACKAGER} clean all --installroot=$mntdir
+        dnf config-manager -q --installroot=$mntdir --set-disabled BaseOS AppStream
     else
         export PACKAGER=yum
         export COVERAGE=coverage
