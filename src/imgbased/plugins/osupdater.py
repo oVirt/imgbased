@@ -88,24 +88,9 @@ def init(app):
 
 def on_new_layer(imgbase, previous_lv, new_lv):
     log.debug("Got: %s and %s" % (new_lv, previous_lv))
-    LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
 
-    # FIXME this can be improved by providing a better methods in .naming
-    new_layer = Image.from_lv_name(new_lv.lv_name)
-    layer_before = imgbase.naming.layer_before(new_layer)
-    previous_layer_lv = imgbase._lvm_from_layer(layer_before)
-
-    # Try to use current_layer if it exists (upgrades only)
-    try:
-        previous_layer_lv = imgbase._lvm_from_layer(imgbase.current_layer())
-    except:
-        pass
-
-    if not os.path.ismount("/var"):
-        raise SeparateVarPartition(
-            "\nIt's required /var as separate mountpoint!"
-            "\nPlease check documentation for more details!"
-        )
+    vdsm_is_active = preprocess(imgbase)
+    previous_layer_lv = get_prev_layer_lv(imgbase, new_lv)
 
     try:
         # Some change in managed nodes is blapping /dev/mapper. Add it back
@@ -138,12 +123,57 @@ def on_new_layer(imgbase, previous_lv, new_lv):
     postprocess(new_lv)
     migrate_boot(imgbase, new_lv, previous_layer_lv)
     imgbase.protect_init_lv()
+    restart_vdsm(vdsm_is_active)
+
+
+def preprocess(imgbase):
+    if not os.path.ismount("/var"):
+        raise SeparateVarPartition(
+            "\nIt's required /var as separate mountpoint!"
+            "\nPlease check documentation for more details!"
+        )
+    # Protect /var from being unmounted
+    utils.ExternalBinary().mount(["--make-rprivate", "/var"])
+    # vdsm can deactivate our LVs during upgrades in some cases.  Since the
+    # host is in maintenance mode during upgrades, we can safely stop its
+    # services, and restart them when we're done (see vdsm's %post for details)
+    vdsm_is_active = systemctl.is_active("vdsmd")
+    [systemctl.stop(unit) for unit in ("vdsmd", "supervdsmd", "vdsm-network")]
+    LvmCLI.vgchange(["-ay", "--select", "vg_tags = %s" % imgbase.vg_tag])
+    return vdsm_is_active
+
+
+def get_prev_layer_lv(imgbase, new_lv):
+    new_layer = Image.from_lv_name(new_lv.lv_name)
+    layer_before = imgbase.naming.layer_before(new_layer)
+    previous_layer_lv = imgbase._lvm_from_layer(layer_before)
+    # Try to use current_layer if it exists (upgrades only)
+    try:
+        previous_layer_lv = imgbase._lvm_from_layer(imgbase.current_layer())
+    except Exception:
+        pass
+    return previous_layer_lv
 
 
 def mknod_dev_urandom(new_lv):
     with mounted(new_lv.path) as new_fs:
         devurandom = "{}/dev/urandom".format(new_fs.target)
         utils.ExternalBinary().mknod([devurandom, "c", "1", "9"])
+
+
+def restart_vdsm(vdsm_is_active):
+    try:
+        utils.ExternalBinary().mount(["--make-rshared", "/var"])
+    except Exception:
+        log.warn("Could not restore mount propagation on /var, ignoring")
+
+    if vdsm_is_active:
+        try:
+            systemctl.start("vdsmd")
+        except Exception:
+            log.warn("vdsmd failed to start, a reboot is required")
+    else:
+        log.info("vdsmd was not active, skipping restart")
 
 
 def postprocess(new_lv):

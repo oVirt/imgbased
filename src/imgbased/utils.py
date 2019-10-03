@@ -271,7 +271,7 @@ class mounted(object):
 
 @contextmanager
 def bindmounted(source, target, rbind=False, readonly=False):
-    options = "rbind,rprivate" if rbind else "bind,private"
+    options = "rbind" if rbind else "bind,private"
     options = options + ",ro" if readonly else options
     with mounted(source, target=target, options=options) as mnt:
         yield mnt
@@ -1011,7 +1011,7 @@ class RpmPackageDb(PackageDb):
 class systemctl():
     @staticmethod
     def _systemctl(*a):
-        ExternalBinary().systemctl(list(a))
+        return ExternalBinary().systemctl(list(a))
 
     @staticmethod
     def start(*units):
@@ -1044,6 +1044,15 @@ class systemctl():
     @staticmethod
     def status(*units):
         systemctl._systemctl("status", *units)
+
+    @staticmethod
+    def is_active(*units):
+        try:
+            if "inactive" in systemctl._systemctl("is-active", *units):
+                return False
+        except subprocess.CalledProcessError:
+            return False
+        return True
 
 
 class Tar():
