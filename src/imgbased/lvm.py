@@ -106,6 +106,8 @@ class LVM(object):
 
     @staticmethod
     def reset_registered_volumes():
+        if os.getenv("IMGBASED_KEEP_VOLUMES"):
+            return
         run = ExternalBinary()
         run.sync([])
         mtab = dict([itemgetter(9, 4)(m.split())
