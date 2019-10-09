@@ -7,7 +7,7 @@ import sys
 import unittest
 from collections import namedtuple
 from logging import debug
-from StringIO import StringIO
+from io import StringIO
 
 from mock import patch
 
@@ -15,6 +15,14 @@ import imgbased
 import imgbased.lvm
 from fakelvm import FakeLVM
 from imgbased import CliApplication, utils
+
+
+class _StringIO(StringIO):
+    def write(self, data):
+        try:
+            StringIO.write(self, data)
+        except TypeError:
+            StringIO.write(self, data.decode(errors="replace"))
 
 
 class ImgbaseTestCase(unittest.TestCase):
@@ -51,8 +59,8 @@ class CliTestCase(ImgbaseTestCase):
             try:
                 olderr = sys.stderr
                 oldout = sys.stdout
-                sys.stdout = StringIO()
-                sys.stderr = StringIO()
+                sys.stdout = _StringIO()
+                sys.stderr = _StringIO()
 
                 CliApplication(args)
 
