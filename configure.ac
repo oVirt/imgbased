@@ -66,6 +66,10 @@ fi
 AC_CHECK_PROGS(CODESTYLE_CHECKER, [pycodestyle-3 pep8])
 AM_CONDITIONAL([HAVE_CODESTYLE_CHECKER], [test "x$CODESTYLE_CHECKER" != "x"])
 
+AC_ARG_VAR([NOSETESTS], [path to nosetests utility])
+AC_CHECK_PROGS(NOSETESTS, [nosetests nosetests-3])
+AM_CONDITIONAL([HAVE_NOSETESTS], [test "x$NOSETESTS" != "x"])
+
 AM_PATH_PYTHON
 
 AC_CONFIG_FILES([Makefile

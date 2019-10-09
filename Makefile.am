@@ -94,11 +94,15 @@ else
 endif
 
 check-nosetests: $(SRCFILES)
+if HAVE_NOSETESTS
 	@echo "[CHECK] nosetests"
-	nosetests --no-byte-compile --with-xunit \
+	@NOSETESTS@ --no-byte-compile --with-xunit \
 		--with-coverage --cover-erase --cover-tests \
 		--cover-package=imgbased --cover-xml --cover-min-percentage=25 \
 		--with-doctest --doctest-tests
+else
+	@echo "[CHECK] nosetests not found, skipping"
+endif
 
 
 check-code: check-pyflakes check-codestyle check-nosetests

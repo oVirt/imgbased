@@ -7,6 +7,7 @@ pyflakes
 pykickstart
 pylint
 python3-devel
+
 python3-nose
 python3-pycodestyle
 python3-pyflakes
