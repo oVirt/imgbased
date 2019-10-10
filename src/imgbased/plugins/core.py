@@ -191,10 +191,7 @@ def post_argparse(app, args):
 class Layout():
     """High-Level functionality of the layuot verb
     """
-    class NVRRequiredError(Exception):
-        pass
-
-    class InitializationFailedError(Exception):
+    class NVRMissingError(Exception):
         pass
 
     def __init__(self, app):
