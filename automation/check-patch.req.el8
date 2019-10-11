@@ -16,7 +16,7 @@ pykickstart
 python3-coverage
 python3-devel
 python3-mock
-python3-nose
+# python3-nose disabled till we fix unit testing
 python3-pycodestyle
 python3-pyflakes
 python3-pylint
