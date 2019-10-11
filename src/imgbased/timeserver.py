@@ -115,7 +115,7 @@ class TimeserverConfiguration(File):
         if not hasattr(self, 'keys'):
             self._parse()
 
-        for k, v in self.keys.iteritems():
+        for k, v in self.keys.items():
             if k == "servers":
                 for server in self.keys["servers"]:
                     contents += "server {server}\n".format(server=server)
