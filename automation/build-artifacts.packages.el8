@@ -11,9 +11,9 @@ python3-mock
 python3-pycodestyle
 python3-pyflakes
 python3-pylint
+python3-rpm
 python3-six
 rpm-build
-rpm-python
 systemd-python3
 systemd-units
 dnf
