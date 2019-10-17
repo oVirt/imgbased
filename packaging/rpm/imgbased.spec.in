@@ -172,6 +172,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Thu Oct 17 2019 Sandro Bonazzola <sbonazzo@redhat.com> - 1.1.11-1
+- osupdater: stop vdsm services before update (rhbz#1747410)
+
 * Tue Aug 20 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.10-1
 - Warn if SELinux is diabled on upgrades (rhbz#1724102)
 
