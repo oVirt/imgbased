@@ -127,7 +127,8 @@ class OSCAPScanner(object):
             datastream = self._config.datastream
         if not datastream or not File(datastream).exists():
             raise ScapDatastreamError("Datastream not found: %s" % datastream)
-        stdout = nsenter(["oscap", "info", "--profiles", datastream])
+        cmd = ["oscap", "info", "--profiles", datastream]
+        stdout = nsenter(cmd).decode(errors="replace")
         profiles = dict([x.split(":") for x in stdout.splitlines()])
         log.debug("Collected OSCAP profiles: %s", profiles)
         return profiles
