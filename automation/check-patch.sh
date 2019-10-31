@@ -82,9 +82,10 @@ build_test_images() {
         dnf config-manager -q --installroot=$mntdir --set-disabled fedora updates
     elif [[ ${DIST} = el8* ]]; then
         export PACKAGER=dnf
-        export COVERAGE=coverage3
+        export COVERAGE="/usr/libexec/platform-python -m coverage"
+        echo 'PLATFORM_ID="platform:el8"' >> $mntdir/etc/os-release
         dnf config-manager -q --installroot=$mntdir --set-enabled BaseOS AppStream
-        ${PACKAGER} install --installroot=$mntdir -y python3-coverage $rpms
+        ${PACKAGER} install --installroot=$mntdir -y platform-python-coverage $rpms
         ${PACKAGER} clean all --installroot=$mntdir
         dnf config-manager -q --installroot=$mntdir --set-disabled BaseOS AppStream
     else
@@ -168,7 +169,7 @@ repack_node_artifacts() {
         -e 's/--quiet//' \
         -e 's/null/stdout/' \
         -e 's#^export PYTHONPATH.*#export PYTHONPATH=$(find $MNTDIR/usr/lib/python* -name imgbased -type d -exec dirname {} \\; | sort | tail -1):$PYTHONPATH#'
-    touch boot.iso
+    touch boot.iso data/ovirt-node-ng-image.ks
     touch ovirt-node-ng-image.{squashfs.img,manifest-rpm,unsigned-rpms}
     make rpm PLACEHOLDER_RPM_VERSION=$IMG_UPD PLACEHOLDER_RPM_RELEASE=0
     find tmp.repos -name "ovirt*image-update*.rpm" -exec mv {} $TMPDIR \;
@@ -350,11 +351,11 @@ lvchange --addtag imgbased:layer \$vg/$test_nvr \$vg/$test_nvr+1
 imgbase --debug layout
 imgbase --debug --experimental recover --list
 imgbase --debug --experimental recover --force
-imgbase --debug rollback --to $prev_nvr
+imgbase --debug boot --setup /
+imgbase --debug rollback --to $prev_nvr+1
 imgbase --debug base --latest
 imgbase --debug base --remove $prev_nvr
 imgbase --debug --experimental volume --create /var/crash 1G
-imgbase --debug boot --setup /
 rpm -q imgbased-persist
 EOF
 

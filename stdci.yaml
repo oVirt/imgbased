@@ -6,6 +6,7 @@ stage:
   - check-patch:
       runtime-requirements:
         support-nesting-level: 2
+        isolation_level: container
 distro: [el7, el8, fc29, fc30]
 release_branches:
     master: ovirt-master
