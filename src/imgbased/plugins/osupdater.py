@@ -233,12 +233,21 @@ def postprocess(new_lv):
         log.debug("Running ldconfig on new layer")
         utils.ExternalBinary().ldconfig(["-r", new_fs.path("/")])
 
+    def _install_update_rpm():
+        update_rpm = os.getenv("IMGBASED_IMAGE_UPDATE_RPM")
+        if not update_rpm:
+            return
+        log.debug("Installing image-update rpm from %s", update_rpm)
+        utils.ExternalBinary().rpm(["-U", "--quiet", "--justdb", "--root",
+                                    new_fs.path("/"), update_rpm])
+
     with mounted(new_lv.path) as new_fs:
         _reconfigure_vdsm()
         _apply_scap_profile()
         _permit_root_login()
         _disable_os_probes()
         _run_ldconfig()
+        _install_update_rpm()
     _clear_libvirt_cache()
 
 
