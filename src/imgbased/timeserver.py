@@ -158,10 +158,10 @@ class Ntp(TimeserverConfiguration):
     >>> print(ntp._configuration)
     # This file has been migrated or modified by imgbased
     <BLANKLINE>
-    restrict default kod nomodify notrap nopeer noquery
-    driftfile /var/lib/ntp/drift
     server 1.2.3.6
     server 1.2.3.7
+    driftfile /var/lib/ntp/drift
+    restrict default kod nomodify notrap nopeer noquery
     <BLANKLINE>
     """
 
@@ -188,8 +188,8 @@ class Chrony(TimeserverConfiguration):
     >>> print(chrony._configuration)
     # This file has been migrated or modified by imgbased
     <BLANKLINE>
-    logdir /var/log/chrony
     pool 2.fedora.pool.ntp.org iburst
+    logdir /var/log/chrony
     <BLANKLINE>
     """
 

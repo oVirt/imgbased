@@ -135,7 +135,7 @@ class Grubby(Bootloader):
         >>> parsed = Grubby.GrubbyEntry.parse(entry)
         Traceback (most recent call last):
         ...
-        InvalidBootEntryError
+        imgbased.bootloader.InvalidBootEntryError
 
         >>> entries = '''index=0
         ... kernel=ker0
@@ -193,9 +193,13 @@ class Grubby(Bootloader):
                 raise RuntimeError("Missing bls id for %s" % self)
             return "/boot/loader/entries/%s.conf" % self.blsid
 
-    def __init__(self):
+    def __init__(self, use_bls=None):
         Bootloader.__init__(self)
-        self._use_bls = os.access("/usr/libexec/grubby/grubby-bls", os.X_OK)
+        if use_bls is None:
+            self._use_bls = os.access("/usr/libexec/grubby/grubby-bls",
+                                      os.X_OK)
+        else:
+            self._use_bls = use_bls
 
     def _parse_key_from_args(self, args):
         """

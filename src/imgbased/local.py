@@ -23,7 +23,7 @@
 
 import os
 from six.moves import configparser
-from io import BytesIO
+from io import StringIO
 
 import logging
 
@@ -119,7 +119,7 @@ class Configuration():
         if self.cfgstr:
             log.debug("Using cfgstr")
             # Used for doctests
-            p.readfp(BytesIO(self.cfgstr))
+            p.readfp(StringIO(self.cfgstr))
         else:
             locs = [self.VENDOR_CFG_PREFIX]
             if only_user_file:
@@ -160,7 +160,7 @@ class Configuration():
         >>> rs.cfgstr = example
 
         >>> def writer(p):
-        ...     dst = BytesIO()
+        ...     dst = StringIO()
         ...     p.write(dst)
         ...     rs.cfgstr = dst.getvalue()
         ...     print(rs.cfgstr)
@@ -265,7 +265,7 @@ class Configuration():
         for k, v in section.__dict__.items():
             if k == "name":
                 continue
-            p.set(sname, k, v)
+            p.set(sname, k, str(v))
         self._write(p)
 
     def _write(self, p):

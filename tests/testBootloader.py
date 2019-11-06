@@ -52,7 +52,7 @@ def _fake_grubby(*a, **kw):
 class GrubbyTestCase(unittest.TestCase):
     @patch("imgbased.bootloader.grubby", _fake_grubby)
     def test_simple_flow(self):
-        loader = Grubby()
+        loader = Grubby(use_bls=False)
 
         r = loader.add_entry("a", "a-title", "vmlinuz-1.2-3", "a-initramfs",
                              "a-append")

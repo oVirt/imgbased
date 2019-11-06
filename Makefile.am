@@ -95,8 +95,8 @@ endif
 
 check-nosetests: $(SRCFILES)
 if HAVE_NOSETESTS
-	@echo "[CHECK] nosetests"
-	@NOSETESTS@ --no-byte-compile --with-xunit \
+	@echo "[CHECK] @NOSETESTS@"
+	@NOSETESTS@ --verbosity=2 --no-byte-compile --with-xunit \
 		--with-coverage --cover-erase --cover-tests \
 		--cover-package=imgbased --cover-xml --cover-min-percentage=25 \
 		--with-doctest --doctest-tests
