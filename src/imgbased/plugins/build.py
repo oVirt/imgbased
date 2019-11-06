@@ -6,6 +6,8 @@ import os
 import shutil
 import subprocess
 
+from configparser import ConfigParser
+
 from ..utils import BuildMetadata, File, Rsync, ShellVarFile, systemctl
 
 log = logging.getLogger(__package__)
@@ -137,14 +139,16 @@ def disable_and_clean_yum_repos():
     repofiles = glob.glob("/etc/yum.repos.d/*")
     log.debug("Conditionally disabling repositories in files: %s" %
               repofiles)
-    for fn in repofiles:
-        # Ensure that enabled=0 is set everywhere
-        subprocess.call(["sed", "-i", "-e",
-                         "/enabled=/ d ; /^\\[/ a enabled=0", fn])
-        # Now re-enable for files wich have the marker
-        subprocess.call(["sed", "-i", "-e",
-                         "/# imgbased: set-enabled/,$ "
-                         "{ s/enabled=.*/enabled=1/ }", fn])
+    for fname in repofiles:
+        val = "1" if "# imgbased: set-enabled" in File(fname).contents else "0"
+        cp = ConfigParser(strict=False)
+        cp.read(fname)
+        for s in cp.sections():
+            cp.set(s, "enabled", val)
+        with open(fname, "w") as fobj:
+            if val == "1":  # Keep the comment
+                fobj.write("# imgbased: set-enabled\n")
+            cp.write(fobj)
     log.info("Clean all yum data")
     subprocess.call(["yum", "clean", "all", "--enablerepo", "*"])
 
