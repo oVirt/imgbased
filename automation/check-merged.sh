@@ -3,6 +3,5 @@ echo "check-merged.sh"
 
 set -xe
 
-./autogen.sh
-./configure
+PYTHON=/usr/bin/python3 ./autogen.sh
 make -j5 check

@@ -174,6 +174,19 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Thu Nov 07 2019 Yuval Turgeman <yturgema@redhat.com> - 1.2.5-1
+- Disable repos if set-enabled is not set (rhbz#1766579)
+- Decode bytes when running oscap (rhbz#1760217)
+- Install image-update rpm if passed in environment (rhbz#1747410)
+- Stop vdsm services before update (rhbz#1747410)
+- Add IMGBASED_KEEP_VOLUMES env variable (debugging)
+- Add IMGBASED_DISABLE_THREADS env variable (debugging)
+- Warn when selinux is disabled (rhbz#1724102)
+- Run ldconfig on new layer (rhbz#1726534)
+- Handle multiple kernel rpms as hotfixes
+- Move more code to python3
+- Refactor bootloader setup code
+
 * Mon Feb 25 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.5-1
 - Do not use hostonly when generating an initrd (rhbz#1652519)
 
