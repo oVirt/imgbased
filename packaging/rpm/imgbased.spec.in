@@ -172,6 +172,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Sun Nov 10 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.12-1
+- osupdater: install update rpm from environment variable (rhbz#1747410)
+
 * Thu Oct 17 2019 Sandro Bonazzola <sbonazzo@redhat.com> - 1.1.11-1
 - osupdater: stop vdsm services before update (rhbz#1747410)
 
