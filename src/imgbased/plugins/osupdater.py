@@ -237,9 +237,13 @@ def postprocess(new_lv):
         update_rpm = os.getenv("IMGBASED_IMAGE_UPDATE_RPM")
         if not update_rpm:
             return
-        log.debug("Installing image-update rpm from %s", update_rpm)
+        # Grab the first update rpm
+        rpms = list(set(update_rpm.splitlines()))
+        if len(rpms) > 1:
+            log.warn("Received multiple update rpms %s", rpms)
+        log.debug("Installing image-update rpm from %s", rpms[0])
         utils.ExternalBinary().rpm(["-U", "--quiet", "--justdb", "--root",
-                                    new_fs.path("/"), update_rpm])
+                                    new_fs.path("/"), rpms[0]])
 
     with mounted(new_lv.path) as new_fs:
         _reconfigure_vdsm()
