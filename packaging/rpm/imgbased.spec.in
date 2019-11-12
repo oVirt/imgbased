@@ -172,6 +172,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Tue Nov 12 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.13-1
+- osupdater: install first image-update rpm (rhbz#1747410)
+
 * Sun Nov 10 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.12-1
 - osupdater: install update rpm from environment variable (rhbz#1747410)
 
