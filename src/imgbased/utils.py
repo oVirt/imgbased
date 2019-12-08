@@ -116,6 +116,11 @@ def grub2_mkconfig():
     ExternalBinary().grub2_mkconfig(["-o", grub_cfg_path()])
 
 
+def grub2_editenv(*args, **kwargs):
+    grubenv = os.path.dirname(grub_cfg_path()) + "/grubenv"
+    ExternalBinary().grub2_editenv([grubenv] + list(args), **kwargs)
+
+
 def findmnt(options, path=None, raise_on_error=False):
     opts_cmd = ["-no"] + options
     if path is not None:
@@ -364,6 +369,9 @@ class ExternalBinary(object):
 
     def grub2_mkconfig(self, args, **kwargs):
         return self.call(["grub2-mkconfig"] + args, **kwargs)
+
+    def grub2_editenv(self, args, **kwargs):
+        return self.call(["grub2-editenv"] + args, **kwargs)
 
     def systemctl(self, args, **kwargs):
         return self.call(["systemctl"] + args, **kwargs)

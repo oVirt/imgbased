@@ -72,7 +72,7 @@ class GrubbyTestCase(unittest.TestCase):
                             '.4.5.el7.x86_64'),
                            {}))
 
-        r = loader.set_default("a")
+        r = loader.set_default("a", update_grubenv=False)
         self.assertEquals(_fake_grubby.last_data,
                           (('--set-default-index', '0'), {}))
 # vim: sw=4 et sts=4:
