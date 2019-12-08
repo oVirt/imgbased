@@ -99,7 +99,7 @@ def on_new_layer(imgbase, previous_lv, new_lv):
         mknod_dev_urandom(new_lv)
 
         threads = []
-        threads.append(ThreadRunner(remediate_etc, imgbase))
+        threads.append(ThreadRunner(remediate_etc, imgbase, new_lv))
         threads.append(ThreadRunner(migrate_var, imgbase, new_lv))
 
         thread_group_handler(threads, ConfigMigrationError)
@@ -444,7 +444,7 @@ def boot_partition_validation():
         raise BootPartitionRequires1G
 
 
-def remediate_etc(imgbase):
+def remediate_etc(imgbase, new_lv):
     # Find a list of files which have been erroneously copied and
     # look through old layers to find them
     critical_files = [r'.*?/initiatorname.iscsi$',
@@ -456,8 +456,6 @@ def remediate_etc(imgbase):
                       ]
 
     crits = [re.compile(f) for f in critical_files]
-
-    layers = []
 
     def check_file(f):
         return any(c.match(f) for c in crits)
@@ -565,11 +563,12 @@ def remediate_etc(imgbase):
                     log.debug("os.unlink({})".format(filename))
                     os.unlink(filename)
 
-    tree = imgbase.naming.tree()
-
-    for t in tree:
-        for l in t.layers:
-            layers.append(l)
+    layers = [Image.from_lv_name(new_lv.lv_name)]
+    # Add the current layer only in upgrades
+    try:
+        layers.insert(0, imgbase.current_layer())
+    except Exception:
+        pass
 
     for idx in range(len(layers[:-1])):
         log.debug("Checking %s" % layers[idx])
