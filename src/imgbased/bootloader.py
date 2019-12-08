@@ -24,9 +24,9 @@ import logging
 import os
 import re
 import shutil
-from .utils import grubby
-from .naming import Layer
 
+from .naming import Layer
+from .utils import grub2_editenv, grub_cfg_path, grubby
 
 log = logging.getLogger(__package__)
 
@@ -47,13 +47,6 @@ class Bootloader(object):
     """Low-level object to access the bootloader
     """
     dry = False
-
-    def __init__(self):
-        # hack for MBR environment, see: bz#1366785, bz#1323842, bz#1366549
-        grubenv_path = "/boot/grub2/grubenv"
-        if not os.path.ismount("/boot/efi") and os.path.islink(grubenv_path):
-            os.unlink(grubenv_path)
-        # hack for MBR environment, see: bz#1366785, bz#1323842, bz#1366549
 
     def list(self):
         raise NotImplementedError()
@@ -222,6 +215,25 @@ class Grubby(Bootloader):
 
         return (entrymap, other_entries)
 
+    def _install_grubenv_efi(self):
+        grubenv = "/boot/grub2/grubenv"
+        efigrubenv = os.path.dirname(grub_cfg_path()) + "/grubenv"
+        if os.path.isfile(grubenv) and not os.path.isfile(efigrubenv):
+            log.debug("Copying %s to %s", grubenv, efigrubenv)
+            shutil.copy2(grubenv, efigrubenv)
+            os.unlink(grubenv)
+            lnk = os.path.relpath(efigrubenv, os.path.dirname(grubenv))
+            os.symlink(lnk, grubenv)
+            try:
+                os.unlink(grubenv + ".rpmnew")
+            except Exception:
+                pass
+
+    def _update_grubenv(self, entry):
+        if os.path.isdir("/sys/firmware/efi"):
+            self._install_grubenv_efi()
+        grub2_editenv("set", "saved_entry=%s" % entry.title)
+
     def add_entry(self, key, title, linux, initramfs, append):
         assert " " not in key
         log.debug("Adding entry: %s" % key)
@@ -252,11 +264,13 @@ class Grubby(Bootloader):
                 log.info("Removing boot entry: %s" % ke.title)
                 grubby("--remove-kernel", ke.kernel)
 
-    def set_default(self, key):
+    def set_default(self, key, update_grubenv=True):
         boot_entries = self._get_valid_entries()[key]
         entry = sorted(boot_entries, reverse=True)[0]
         log.debug("Making default: %s" % entry.title)
         grubby("--set-default", entry.kernel)
+        if update_grubenv:
+            self._update_grubenv(entry)
 
     def get_default(self):
         log.debug("Getting default")

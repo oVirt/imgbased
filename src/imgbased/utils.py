@@ -112,6 +112,21 @@ def grub2_set_default(key):
     ExternalBinary().grub2_set_default([key])
 
 
+def grub_cfg_path():
+    grub_efi_cfg = "/etc/grub2-efi.cfg"
+    if os.path.isdir("/sys/firmware/efi") and os.path.exists(grub_efi_cfg):
+        return os.path.realpath(grub_efi_cfg)
+    grub_cfg = "/etc/grub2.cfg"
+    if os.path.exists(grub_cfg):
+        return os.path.realpath(grub_cfg)
+    raise RuntimeError("No grub conf found")
+
+
+def grub2_editenv(*args, **kwargs):
+    grubenv = os.path.dirname(grub_cfg_path()) + "/grubenv"
+    ExternalBinary().grub2_editenv([grubenv] + list(args), **kwargs)
+
+
 def findmnt(options, path=None):
     findmnt = ExternalBinary().findmnt
 
@@ -463,6 +478,9 @@ class ExternalBinary(object):
 
     def grubby(self, args, **kwargs):
         return self.call(["grubby"] + args, **kwargs)
+
+    def grub2_editenv(self, args, **kwargs):
+        return self.call(["grub2-editenv"] + args, **kwargs)
 
     def systemctl(self, args, **kwargs):
         return self.call(["systemctl"] + args, **kwargs)
