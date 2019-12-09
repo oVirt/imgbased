@@ -95,7 +95,8 @@ class ImageLayers(object):
         self.naming = naming.NvrNaming(datasource=self.list_our_lv_names)
 
     def set_mode(self, mode):
-        assert mode in constants.IMGBASED_MODES
+        assert mode in constants.IMGBASED_MODES, "Invalid mode %s" % mode
+        assert self.mode is None, "Mode is already set to %s" % self.mode
         self.mode = mode
 
     def list_our_lv_names(self):
