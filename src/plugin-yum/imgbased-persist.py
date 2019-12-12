@@ -24,12 +24,11 @@ import os
 import shutil
 
 from imgbased.bootsetup import BootSetupHandler
+from imgbased.constants import IMGBASED_PERSIST_PATH
 from yum.plugins import TYPE_CORE, TYPE_INTERACTIVE
 
 requires_api_version = '2.3'
 plugin_type = (TYPE_CORE, TYPE_INTERACTIVE)
-
-persist_path = '/var/imgbased/persisted-rpms/'
 
 # Annoying here as well, but this isn't available through any exposed
 # properties/methods
@@ -50,14 +49,15 @@ def check_bootsetup(conduit, pkg):
 def pretrans_hook(conduit):
     ts = conduit.getTsInfo()
     if ts.installed:
-        if not os.path.isdir(persist_path):
-            os.makedirs(persist_path)
+        if not os.path.isdir(IMGBASED_PERSIST_PATH):
+            os.makedirs(IMGBASED_PERSIST_PATH)
         for pkg in ts.installed + ts.depinstalled + ts.depupdated:
             if check_excluded(conduit, pkg):
                 continue
             rpm = pkg.po.localPkg()
-            yumlogger.info("Persisting: %s" % os.path.basename(rpm))
-            shutil.copy2(rpm, persist_path + os.path.basename(rpm))
+            base_rpm = os.path.basename(rpm)
+            yumlogger.info("Persisting: %s" % base_rpm)
+            shutil.copy2(rpm, IMGBASED_PERSIST_PATH + base_rpm)
 
 
 def posttrans_hook(conduit):
@@ -67,7 +67,7 @@ def posttrans_hook(conduit):
             rpm = pkg.po.nvra + ".rpm"
             try:
                 yumlogger.info("Unpersisting: %s" % rpm)
-                os.remove(persist_path + rpm)
+                os.remove(IMGBASED_PERSIST_PATH + rpm)
             except Exception:
                 # Has probably never been persisted before. Manual RPM install?
                 pass

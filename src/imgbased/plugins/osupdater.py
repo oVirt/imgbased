@@ -816,16 +816,9 @@ def migrate_ntp_to_chrony(new_lv):
         return
     with mounted(new_lv.path) as new_fs:
         if os.path.exists(new_fs.path("/") + "/etc/ntp.conf"):
-            # Create a state directory to track migrations
-            # /var is the right place for application-level data
-            if not os.path.isdir("/var/lib/imgbased"):
-                os.mkdir("/var/lib/imgbased")
-
-            if not os.path.exists("/var/lib/imgbased/ntp-migrated"):
-                log.debug("Migrating NTP configuration to chrony")
-                c = timeserver.Chrony(new_fs.path("/") + "/etc/chrony.conf")
-
-                c.from_ntp(timeserver.Ntp(new_fs.path("/") + "/etc/ntp.conf"))
+            log.debug("Migrating NTP configuration to chrony")
+            c = timeserver.Chrony(new_fs.path("/") + "/etc/chrony.conf")
+            c.from_ntp(timeserver.Ntp(new_fs.path("/") + "/etc/ntp.conf"))
 
 
 def run_rpm_perms(new_lv):

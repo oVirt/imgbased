@@ -10,7 +10,7 @@ from .. import constants, local
 from ..bootloader import BootConfiguration
 from ..lvm import LVM
 from ..naming import Image
-from ..utils import BuildMetadata, Filesystem, SELinux, Tar, mounted
+from ..utils import BuildMetadata, File, Filesystem, SELinux, Tar, mounted
 
 log = logging.getLogger(__package__)
 
@@ -65,8 +65,7 @@ def post_argparse(app, args):
             try:
                 base, _ = LiveimgExtractor(app.imgbase).extract(args.FILENAME)
                 log.info("Update was pulled successfully")
-                keep = app.imgbase.config.section("update").images_to_keep
-                GarbageCollector(app.imgbase).run(base, keep)
+                GarbageCollector(app.imgbase).run(base)
             except GCFailedError:
                 log.info("GC failed, skipping")
             except Exception:
@@ -88,15 +87,25 @@ class LiveimgExtractor():
     def _recommend_size_for_tree(self):
         # Get the size of the current layer and use that
         # so each new layer is the size of the last one
-        size = self.imgbase.lv_from_layer(
-            self.imgbase.current_layer()).size_bytes
-        return size
+        lv = self.imgbase.lv_from_layer(self.imgbase.current_layer())
+        return lv.size_bytes
 
     def _check_selinux(self):
         if not SELinux.disabled():
             return
         log.warn("**** Disabling SELinux is not recommended - this will block"
                  " upgrades in future versions, please re-enable SELinux ****")
+
+    def _clear_updated_file(self):
+        try:
+            File(constants.IMGBASED_IMAGE_UPDATED).remove()
+        except Exception:
+            pass
+
+    def _create_updated_file(self, img):
+        if not os.path.isdir(constants.IMGBASED_STATE_DIR):
+            os.makedirs(constants.IMGBASED_STATE_DIR)
+        File(constants.IMGBASED_IMAGE_UPDATED).writen(img)
 
     def add_base_with_tree(self, sourcetree, size, nvr, lvs=None):
         if not os.path.exists(sourcetree):
@@ -121,6 +130,7 @@ class LiveimgExtractor():
         return (new_base_lv, new_layer_lv)
 
     def extract(self, liveimgfile, nvr=None):
+        self._clear_updated_file()
         self._check_selinux()
         new_base = None
         log.info("Extracting image '%s'" % liveimgfile)
@@ -134,10 +144,11 @@ class LiveimgExtractor():
                 size = self._recommend_size_for_tree()
                 log.debug("Recommeneded base size: %s" % size)
                 log.info("Starting base creation")
-                add_tree = self.add_base_with_tree
-                new_base = add_tree(rootfs.target, "%s" % size, nvr)
+                new_base = self.add_base_with_tree(rootfs.target,
+                                                   "%s" % size, nvr)
                 log.info("Files extracted")
         log.debug("Extraction done")
+        self._create_updated_file(os.path.basename(liveimgfile))
         return new_base
 
 
@@ -193,15 +204,16 @@ class GarbageCollector():
     def __init__(self, imgbase):
         self.imgbase = imgbase
 
-    def run(self, new_base_lv, keep):
+    def run(self, new_base_lv):
         try:
-            self._do_run(new_base_lv, keep)
+            self._do_run(new_base_lv)
         except Exception:
             raise GCFailedError("GC failed, remember to remove old bases")
 
-    def _do_run(self, new_base_lv, keep):
+    def _do_run(self, new_base_lv):
         log.info("Starting garbage collection")
 
+        keep = self.imgbase.config.section("update").images_to_keep
         assert keep > 0
 
         bases = sorted(self.imgbase.naming.bases())

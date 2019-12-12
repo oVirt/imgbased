@@ -6,12 +6,13 @@ from six.moves.configparser import ConfigParser
 from systemd import journal
 
 from .command import nsenter
+from .constants import IMGBASED_STATE_DIR
 from .utils import File, bindmounted
 
 log = logging.getLogger(__package__)
 
 
-SCAP_BASEDIR = "/var/imgbased/openscap"
+SCAP_BASEDIR = IMGBASED_STATE_DIR + "/openscap"
 SCAP_REPORTSDIR = SCAP_BASEDIR + "/reports"
 SCAP_REPORT_FMT = SCAP_REPORTSDIR + "/scap-report-%s.html"
 

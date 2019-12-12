@@ -96,7 +96,7 @@ def install_rpms(new_fs):
             log.info("Failed to reinstall persisted RPMs!")
             log.info("Result: " + e.output)
 
-    rpms = glob.glob("/var/imgbased/persisted-rpms/*.rpm")
+    rpms = glob.glob(constants.IMGBASED_PERSIST_PATH + "/*.rpm")
     if rpms:
         machine_id = new_fs.path("/etc") + "/machine-id"
         backup = machine_id + ".bak"
