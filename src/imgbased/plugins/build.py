@@ -150,7 +150,7 @@ def disable_and_clean_yum_repos():
                 fobj.write("# imgbased: set-enabled\n")
             cp.write(fobj)
     log.info("Clean all yum data")
-    subprocess.call(["yum", "clean", "all", "--enablerepo", "*"])
+    subprocess.call(["dnf", "clean", "all", "--enablerepo=*"])
 
 
 @Postprocessor.add_step
