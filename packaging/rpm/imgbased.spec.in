@@ -172,6 +172,11 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Tue Dec 17 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.14-1
+- bootloader: fix grubenv symlink in efi (rhbz#1779661)
+- osupdater: set saved_entry in grubenv (rhbz#1765250)
+- osupdater: compare /etc with current_layer only (rhbz#1780331)
+
 * Tue Nov 12 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.13-1
 - osupdater: install first image-update rpm (rhbz#1747410)
 
