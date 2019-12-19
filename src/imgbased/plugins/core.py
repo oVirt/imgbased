@@ -20,18 +20,17 @@
 #
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
-import os
-import logging
 import inspect
+import logging
+import os
 import re
 
-from ..config import paths
-from ..utils import BuildMetadata, Fstab, Motd, bcolors
-from ..naming import Image
-from ..lvm import LVM
 from ..bootloader import BootConfiguration
+from ..constants import volume_paths
 from ..imgbase import LayerNotFoundError
-
+from ..lvm import LVM
+from ..naming import Image
+from ..utils import BuildMetadata, Fstab, Motd, bcolors
 
 log = logging.getLogger(__package__)
 
@@ -432,7 +431,7 @@ class Health():
 
             discards = []
 
-            targets = list(paths.keys()) + ["/"]
+            targets = list(volume_paths().keys()) + ["/"]
             for tgt in targets:
                 try:
                     ret = "discard" in fstab.by_target(tgt).options

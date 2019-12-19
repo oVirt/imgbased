@@ -74,6 +74,6 @@ AM_PATH_PYTHON
 
 AC_CONFIG_FILES([Makefile
                  packaging/rpm/imgbased.spec
-                 src/imgbased/config.py])
+                 src/imgbased/constants.py])
 
 AC_OUTPUT

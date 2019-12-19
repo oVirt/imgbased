@@ -24,7 +24,7 @@
 import sys
 import logging
 import argparse
-from . import config
+from . import constants
 from .imgbase import ImageLayers
 from .hooks import Hooks
 from . import plugins
@@ -48,14 +48,14 @@ class Application(object):
 
 
 def CliApplication(args=None):
-    log.debug("Version: %s" % config.version())
+    log.debug("Version: %s" % constants.version())
 
     app = Application()
     app.experimental = "--experimental" in sys.argv
 
     parser = argparse.ArgumentParser(prog="imgbase")
     parser.add_argument("--version", action="version",
-                        version=config.version())
+                        version=constants.version())
 
     subparsers = parser.add_subparsers(title="Sub-commands", dest="command")
 

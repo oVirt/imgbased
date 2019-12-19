@@ -1,12 +1,12 @@
-import os
-import six
 import logging
+import os
+
+import six
 
 from ..bootloader import BootConfiguration
-from ..config import paths
+from ..constants import volume_paths
 from ..naming import NVR
 from ..volume import Volumes
-
 
 log = logging.getLogger(__package__)
 
@@ -53,6 +53,7 @@ class ImageRecovery:
         return [l for l in layers if l.nvr not in boot_entries]
 
     def _get_unused_volumes(self):
+        paths = volume_paths()
         not_mounts = [p for p in sorted(paths) if not os.path.ismount(p)]
         return [p for p in not_mounts if self._volumes.is_volume(p)]
 

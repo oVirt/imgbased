@@ -143,6 +143,11 @@ def find_mount_source(path, raise_on_error=False):
     return None
 
 
+def get_boot_args():
+    cmdline = File("/proc/cmdline").contents
+    return dict([(x.split("=", maxsplit=1)+[""])[:2] for x in cmdline.split()])
+
+
 class MountPoint(object):
     target = None
     tmpdir = None
@@ -519,7 +524,9 @@ class File(object):
     def sub(self, pat, repl):
         self.write(re.sub(pat, repl, self.contents))
 
-    def write(self, data, mode="w"):
+    def write(self, data, mode="w", mkdir=False):
+        if mkdir:
+            os.makedirs(os.path.dirname(self.filename))
         with open(self.filename, mode) as dst:
             dst.write(data)
 

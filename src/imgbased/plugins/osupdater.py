@@ -38,7 +38,6 @@ import rpm
 from .. import bootloader, constants, timeserver, utils
 from ..bootsetup import BootSetupHandler
 from ..command import nsenter
-from ..config import paths
 from ..lvm import LVM
 from ..naming import Image
 from ..openscap import OSCAPScanner
@@ -285,32 +284,35 @@ def set_thinpool_profile(imgbase, new_lv):
 
 
 def check_nist_layout(imgbase, new_lv):
-    to_create = []
+    paths = constants.volume_paths()
 
+    to_create = []
     for path in sorted(paths.keys()):
         if not os.path.ismount(path):
             to_create.append(path)
 
+    if not to_create:
+        return
+
     with mounted(new_lv.path) as new_fs:
-        if to_create:
-            # lvm.conf has a breaking change in 7.4.
-            # work around it
-            config_path = mkdtemp()
+        # lvm.conf has a breaking change in 7.4.
+        # work around it
+        config_path = mkdtemp()
 
-            lvm_config_path = "/etc/lvm/lvm.conf"
+        lvm_config_path = "/etc/lvm/lvm.conf"
 
-            original_config = "{}/lvm.conf".format(config_path)
-            new_config = "{}/lvm.conf.new".format(config_path)
+        original_config = "{}/lvm.conf".format(config_path)
+        new_config = "{}/lvm.conf.new".format(config_path)
 
-            shutil.copy2(lvm_config_path, original_config)
-            with utils.bindmounted(new_fs.path("/etc"), "/etc"):
-                shutil.copy2("/etc/lvm/lvm.conf", new_config)
-                shutil.copy2(original_config, lvm_config_path)
-                v = Volumes(imgbase)
-                for t in to_create:
-                    log.debug("Creating %s as %s" % (t, paths[t]))
-                    v.create(t, paths[t]["size"], paths[t]["attach"])
-                shutil.copy2(new_config, lvm_config_path)
+        shutil.copy2(lvm_config_path, original_config)
+        with utils.bindmounted(new_fs.path("/etc"), "/etc"):
+            shutil.copy2("/etc/lvm/lvm.conf", new_config)
+            shutil.copy2(original_config, lvm_config_path)
+            v = Volumes(imgbase)
+            for t in to_create:
+                log.debug("Creating %s as %s" % (t, paths[t]))
+                v.create(t, paths[t]["size"], paths[t]["attach"])
+            shutil.copy2(new_config, lvm_config_path)
 
 
 def migrate_state(new_lv, previous_lv, path, exclude=None):
@@ -913,7 +915,7 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
 
         # Ensure that discard is used
         # This can also be done in anaconda once it is fixed
-        targets = list(paths.keys()) + ["/"]
+        targets = list(constants.volume_paths().keys()) + ["/"]
         for tgt in targets:
             try:
                 e = newfstab.by_target(tgt)

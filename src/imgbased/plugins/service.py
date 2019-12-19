@@ -8,7 +8,7 @@ from glob import glob
 from .. import command, constants
 from ..bootloader import BootConfiguration
 from ..imgbase import ImageLayers
-from ..utils import File, safe_copy_file
+from ..utils import File, get_boot_args, safe_copy_file
 
 log = logging.getLogger(__package__)
 
@@ -37,9 +37,9 @@ class ServiceHandler(object):
         self._layer = str(ImageLayers().current_layer())
 
     def _get_kernel(self):
-        cmdline = File("/proc/cmdline").contents
-        boot_img = [x.split("=")[1] for x in cmdline.split()
-                    if x.startswith("BOOT_IMAGE=")][0]
+        boot_img = get_boot_args().get("BOOT_IMAGE")
+        if not boot_img:
+            raise RuntimeError("Could not find running kernel")
         return os.path.normpath("/boot/" + re.sub("\\(.*\\)", "", boot_img))
 
 

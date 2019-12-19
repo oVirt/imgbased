@@ -1,0 +1,42 @@
+from .utils import File, get_boot_args
+
+PACKAGE_NAME = '@PACKAGE_NAME@'
+PACKAGE_VERSION = '@PACKAGE_VERSION@'
+
+IMGBASED_TMPFILE_PREFIX = "tmp.imgbased."
+
+IMGBASED_MODE_INIT = "init"
+IMGBASED_MODE_UPDATE = "update"
+IMGBASED_MODES = (IMGBASED_MODE_INIT, IMGBASED_MODE_UPDATE)
+
+IMGBASED_STATE_DIR = "/var/imgbased"
+IMGBASED_IMAGE_UPDATED = IMGBASED_STATE_DIR + "/.image-updated"
+
+IMGBASED_PERSIST_PATH = IMGBASED_STATE_DIR + "/persisted-rpms/"
+
+IMGBASED_SKIP_VOLUMES_PATH = IMGBASED_STATE_DIR + "/.skip-volumes"
+IMGBASED_MINIMUM_VOLUMES = {"/var":           {"size": "8G", "attach": True}}
+IMGBASED_DEFAULT_VOLUMES = {"/var":           {"size": "15G", "attach": True},
+                            "/var/crash":     {"size": "10G", "attach": True},
+                            "/var/log":       {"size": "8G", "attach": True},
+                            "/var/log/audit": {"size": "2G", "attach": True},
+                            "/home":          {"size": "1G", "attach": True},
+                            "/tmp":           {"size": "1G", "attach": False}}
+
+IMGBASED_STORAGE_BOOT_ARG = "node_storage"
+IMGBASED_STORAGE_MINIMAL_PROFILE = "minimal"
+
+
+def version():
+    return "%s-%s" % (PACKAGE_NAME, PACKAGE_VERSION)
+
+
+def volume_paths():
+    skipvf = File(IMGBASED_SKIP_VOLUMES_PATH)
+    if skipvf.exists():
+        return IMGBASED_MINIMUM_VOLUMES
+    storage = get_boot_args().get(IMGBASED_STORAGE_BOOT_ARG, "")
+    if IMGBASED_STORAGE_MINIMAL_PROFILE in storage.lower().strip().split(","):
+        skipvf.write("", mkdir=True)
+        return IMGBASED_MINIMUM_VOLUMES
+    return IMGBASED_DEFAULT_VOLUMES
