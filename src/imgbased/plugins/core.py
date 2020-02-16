@@ -23,14 +23,13 @@
 import inspect
 import logging
 import os
-import re
 
 from ..bootloader import BootConfiguration
 from ..constants import volume_paths
 from ..imgbase import LayerNotFoundError
 from ..lvm import LVM
 from ..naming import Image
-from ..utils import BuildMetadata, Fstab, Motd, bcolors
+from ..utils import BuildMetadata, Motd, bcolors, findmnt
 
 log = logging.getLogger(__package__)
 
@@ -427,30 +426,12 @@ class Health():
         def check_discard():
             if not os.path.ismount("/var"):
                 return False
-            fstab = Fstab("/etc/fstab")
-
             discards = []
-
             targets = list(volume_paths().keys()) + ["/"]
             for tgt in targets:
-                try:
-                    ret = "discard" in fstab.by_target(tgt).options
-                    discards.append(ret)
-                except KeyError:
-                    from six.moves.configparser import ConfigParser
-                    c = ConfigParser()
-                    c.optionxform = str
-
-                    sub = re.sub(r'^/', '', tgt)
-                    sub = re.sub(r'/', '-', tgt)
-                    fname = "/etc/systemd/system/{}.mount".format(sub)
-
-                    if os.path.exists(fname):
-                        c.read(fname)
-                        ret = "discard" in c.get('Mount', 'Options')
-                        discards.append(ret)
-            is_ok = all(discards)
-            return is_ok
+                mnt_options = findmnt(["options"], path=tgt).split(",")
+                discards.append("discard" in mnt_options)
+            return all(discards)
 
         group.checks = [
             Health.Check("Separate /var",

@@ -72,7 +72,8 @@ class BootSetupHandler(object):
         args = "rd.lvm.lv={0} root=/dev/{0}".format(self._lv.lvm_name).split()
         boot_uuid = utils.findmnt(["UUID"], path="/boot")
         if boot_uuid:
-            args += ["boot=UUID={}".format(boot_uuid)]
+            args.append("boot=UUID={}".format(boot_uuid))
+        args.append("rootflags=discard")
         return " ".join(list(set(cmdline).union(set(args))))
 
     def _get_title(self):
