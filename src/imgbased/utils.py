@@ -118,6 +118,9 @@ def grub2_mkconfig():
 
 def grub2_editenv(*args, **kwargs):
     grubenv = os.path.dirname(grub_cfg_path()) + "/grubenv"
+    if os.stat(grubenv).st_size != 1024:
+        log.warn("Wrong size fo %s, skipping grub2-editenv", grubenv)
+        return
     ExternalBinary().grub2_editenv([grubenv] + list(args), **kwargs)
 
 
