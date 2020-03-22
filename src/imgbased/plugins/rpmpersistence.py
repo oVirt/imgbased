@@ -66,7 +66,7 @@ def on_os_upgraded(imgbase, previous_lv_name, new_lv_name):
 def reinstall_rpms(imgbase, new_lv, previous_lv):
     # FIXME: this should get moved to a generalized plugin. We need to check
     # it in multiple places
-    if "inst.ks" not in File('/proc/cmdline').contents:
+    if "ks=" not in File('/proc/cmdline').contents:
         with mounted(new_lv.path) as new_fs:
             new_etc = new_fs.path("/etc")
             new_rel = SystemRelease(new_etc + "/system-release-cpe")
