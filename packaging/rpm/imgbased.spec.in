@@ -174,6 +174,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Fri Apr 17 2020 Sandro Bonazzola <sbonazzo@redhat.com> - 1.2.9-1
+- utils: verify grubenv size (rhbz#1809367)
+
 * Tue Mar 10 2020 Sandro Bonazzola <sbonazzo@redhat.com> - 1.2.8-1
 - bootsetup: add discard to rootflags (rhbz#1803017)
 
