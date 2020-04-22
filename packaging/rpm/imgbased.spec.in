@@ -172,6 +172,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Wed Apr 22 2020 Nir Levy <nlevy@redhat.com> - 1.1.15-1
+- persistence: skip reinstall during installation (rhbz#1812574)
+
 * Tue Dec 17 2019 Yuval Turgeman <yturgema@redhat.com> - 1.1.14-1
 - bootloader: fix grubenv symlink in efi (rhbz#1779661)
 - osupdater: set saved_entry in grubenv (rhbz#1765250)
