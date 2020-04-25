@@ -74,7 +74,10 @@ class BootSetupHandler(object):
         if boot_uuid:
             args.append("boot=UUID={}".format(boot_uuid))
         args.append("rootflags=discard")
-        return " ".join(list(set(cmdline).union(set(args))))
+        for arg in args:
+            if arg not in cmdline:
+                cmdline.append(arg)
+        return " ".join(cmdline)
 
     def _get_title(self):
         return utils.BuildMetadata(self._root).get("nvr")
