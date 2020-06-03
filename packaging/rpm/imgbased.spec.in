@@ -174,6 +174,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Wed Jun 03 2020 Nir Levy <nlevy@redhat.com> - 1.2.10-1
+- bootsetup: keep cmdline arguments order (rhbz#1827232)
+
 * Fri Apr 17 2020 Sandro Bonazzola <sbonazzo@redhat.com> - 1.2.9-1
 - utils: verify grubenv size (rhbz#1809367)
 
