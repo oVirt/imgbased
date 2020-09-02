@@ -50,7 +50,8 @@ class BootSetupHandler(object):
         log.debug("Regenerating initrd for %s", initrd)
         initrd_in_root = "/boot/" + os.path.basename(initrd)
         with utils.bindmounted("/proc", self._root + "/proc"):
-            chroot(["dracut", "-f", initrd_in_root, kver], self._root)
+            chroot(["dracut", "-f", "--add", "multipath",
+                   initrd_in_root, kver], self._root)
 
     def _install_kernel(self, b, title, cmdline, kfiles):
         bootdir = "/boot/{}".format(self._lv.lv_name)
