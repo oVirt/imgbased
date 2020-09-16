@@ -172,6 +172,17 @@ def restart_vdsm(vdsm_is_active):
 
 
 def postprocess(new_lv):
+    def _vdsm_config_lvm_filter():
+        env = os.environ.copy()
+        with utils.bindmounted("/proc", new_fs.target + "/proc"):
+            with utils.bindmounted("/run", new_fs.target + "/run"):
+                # required by lsblk
+                with utils.bindmounted("/sys", new_fs.target + "/sys"):
+                    # required by udevadm
+                    with utils.bindmounted("/dev", new_fs.target + "/dev"):
+                        nsenter(["vdsm-tool", "config-lvm-filter", "-y"],
+                                new_root=new_fs.path("/"), environ=env)
+
     def _reconfigure_vdsm():
         env = os.environ.copy()
         env["SYSTEMD_IGNORE_CHROOT"] = "1"
@@ -234,6 +245,7 @@ def postprocess(new_lv):
                                     new_fs.path("/"), rpms[0]])
 
     with mounted(new_lv.path) as new_fs:
+        _vdsm_config_lvm_filter()
         _reconfigure_vdsm()
         _apply_scap_profile()
         _permit_root_login()
