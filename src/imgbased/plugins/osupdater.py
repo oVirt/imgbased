@@ -700,8 +700,12 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                 for c in changed:
                     d = c.replace("redhat-access-insights", "insights-client")
                     if "targeted/active/modules" not in c:
-                        copy_files(new_fs.path("/") + d,
-                                   [old_fs.path("/") + c], "-a", "-r")
+                        dst_path = new_fs.path("/") + d
+                        src_path = old_fs.path("/") + c
+                        # if folder, do not copy folder into folder
+                        dst_path = os.path.dirname(dst_path) \
+                            if os.path.isdir(src_path) else dst_path
+                        copy_files(dst_path, [src_path], "-a", "-r")
 
             File(new_fs.path("/etc/group")).write(group_content)
             File(new_fs.path("/etc/passwd")).write(passwd_content)
