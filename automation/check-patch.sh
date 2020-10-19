@@ -166,7 +166,7 @@ repack_node_artifacts() {
     make rpm PLACEHOLDER_RPM_VERSION=$IMG_UPD PLACEHOLDER_RPM_RELEASE=0
     find tmp.repos -name "ovirt*image-update*.rpm" -exec mv {} $TMPDIR \;
     cp -fv $TMPDIR/*.noarch.rpm $ARTIFACTSDIR
-    git checkout -
+    git checkout - -f
     popd
 }
 
