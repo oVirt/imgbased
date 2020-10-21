@@ -172,6 +172,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Wed Oct 21 2020 Nir Levy <nlevy@redhat.com> - 1.1.16-1
+- osupdater: /etc/multipath/conf.d is not copied correctly (rhbz#1889738)
+
 * Wed Apr 22 2020 Nir Levy <nlevy@redhat.com> - 1.1.15-1
 - persistence: skip reinstall during installation (rhbz#1812574)
 
