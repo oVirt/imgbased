@@ -843,6 +843,10 @@ def run_rpm_perms(new_lv):
     with mounted(new_lv.path) as new_fs:
         with utils.bindmounted("/var", new_fs.path("/var"), rbind=True):
             hack_rpm_permissions(new_fs)
+            # This is a workaround until bz#1900662 will be fixed.
+            change_dir_perms(
+                new_fs.path("/etc/crypto-policies/back-ends/"), 0o644
+            )
 
 
 def hack_rpm_permissions(new_fs):
@@ -880,6 +884,14 @@ def hack_rpm_permissions(new_fs):
         if pkgs_req_update:
             nsenter(["rpm", pgroup["verb"]] + pkgs_req_update,
                     new_root=new_root)
+
+
+def change_dir_perms(path, mode):
+    for root, dirs, files in os.walk(path):
+        for d in dirs:
+            os.chmod(os.path.join(root, d), mode)
+        for f in files:
+            os.chmod(os.path.join(root, f), mode)
 
 
 def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
