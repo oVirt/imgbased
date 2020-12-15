@@ -657,7 +657,9 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                             )
 
             required_files = ["/etc/passwd", "/etc/group", "/etc/fstab",
-                              "/etc/shadow", "/etc/iscsi/initiatorname.iscsi"]
+                              "/etc/shadow", "/etc/iscsi/initiatorname.iscsi",
+                              "/etc/systemd/system/multi-user.target.wants/"
+                              "chronyd.service"]
 
             # Comparisons against the first layer can leave these files out.
             # Ensure they're copied
