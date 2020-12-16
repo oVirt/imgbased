@@ -83,10 +83,10 @@ build_test_images() {
         export PACKAGER=dnf
         export COVERAGE="/usr/libexec/platform-python -m coverage"
         echo 'PLATFORM_ID="platform:el8"' >> $mntdir/etc/os-release
-        dnf config-manager -q --installroot=$mntdir --set-enabled BaseOS AppStream
+        dnf config-manager -q --installroot=$mntdir --set-enabled baseos appstream
         ${PACKAGER} install --installroot=$mntdir -y platform-python-coverage $rpms
         ${PACKAGER} clean all --installroot=$mntdir
-        dnf config-manager -q --installroot=$mntdir --set-disabled BaseOS AppStream
+        dnf config-manager -q --installroot=$mntdir --set-disabled baseos appstream
     else
         export PACKAGER=yum
         export COVERAGE=coverage
