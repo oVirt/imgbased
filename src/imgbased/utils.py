@@ -1008,10 +1008,17 @@ class Rsync():
     existing = False
     update_only = False
 
-    def __init__(self, checksum_only=False, update_only=False, exclude=None):
+    def __init__(
+        self,
+        checksum_only=False,
+        update_only=False,
+        exclude=None,
+        preserve_owner=True,
+    ):
         self.exclude = ["mnt.*/*"] + (exclude or [])
         self.checksum_only = checksum_only
         self.update_only = update_only
+        self.preserve_owner = preserve_owner
 
     def _run(self, cmd):
         log.debug("Running: %s" % cmd)
@@ -1023,9 +1030,11 @@ class Rsync():
         self._run(["restorecon", "-Rv", sourcetree])
 
         cmd = ["rsync"]
-        cmd += ["-pogAXlHrx"]
+        cmd += ["-pAXlHrx"]
         cmd += ["-SWc", "--no-i-r"]
         # cmd += ["--progress"]
+        if self.preserve_owner:
+            cmd += ["-og"]
         if self.existing:
             cmd += ["--existing"]
         if self.checksum_only:

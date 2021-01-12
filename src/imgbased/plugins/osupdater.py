@@ -552,9 +552,15 @@ def remediate_etc(imgbase, new_lv):
                            )
                 )
                 # Resync the files we changed on the last pass
-                r = Rsync(checksum_only=True, update_only=True,
-                          exclude=["*targeted/active/modules*",
-                                   "*network-scripts/ifcfg-*"])
+                r = Rsync(
+                    checksum_only=True,
+                    update_only=True,
+                    exclude=[
+                        "*targeted/active/modules*",
+                        "*network-scripts/ifcfg-*",
+                    ],
+                    preserve_owner=False,
+                )
                 r.sync(m.path("/etc"), n.path("/etc"))
 
                 check_layers(m, n)
