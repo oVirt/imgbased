@@ -538,6 +538,15 @@ def remediate_etc(imgbase, new_lv):
                     log.debug("os.unlink({})".format(filename))
                     os.unlink(filename)
 
+    # due to ctypto-policy #BZ1921646
+    # we remove a link which causes directory comparison to remove files.
+    def _hack_for_crypto_policy(roots):
+        for r in roots:
+            path = "/".join([r, "/etc/crypto-policies/back-ends/.config"])
+            if os.path.islink(path):
+                os.unlink(path)
+                log.debug("{} unlinked".format(path))
+
     layers = [Image.from_lv_name(new_lv.lv_name)]
     if imgbase.mode == constants.IMGBASED_MODE_UPDATE:
         layers.insert(0, imgbase.current_layer())
@@ -546,6 +555,7 @@ def remediate_etc(imgbase, new_lv):
         log.debug("Checking %s" % layers[idx])
         with mounted(imgbase._lvm_from_layer(layers[idx]).path) as m:
             with mounted(imgbase._lvm_from_layer(layers[idx+1]).path) as n:
+                _hack_for_crypto_policy([n.path("/"), m.path("/")])
                 pre_files = analyze_removals(
                     dircmp("{}/etc".format(m.path("/")),
                            "{}/etc".format(n.path("/"))
@@ -899,7 +909,9 @@ def change_dir_perms(path, mode):
         for d in dirs:
             os.chmod(os.path.join(root, d), mode)
         for f in files:
-            os.chmod(os.path.join(root, f), mode)
+            target = os.path.join(root, f)
+            if not os.path.islink(target):
+                os.chmod(os.path.join(root, f), mode)
 
 
 def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
