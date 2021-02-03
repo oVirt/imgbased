@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 from . import utils
 from .bootloader import BootConfiguration
@@ -63,6 +64,8 @@ class BootSetupHandler(object):
             self._run_dracut(initrd, BootConfiguration.kernel_version(vmlinuz))
         log.info("Copying kfiles for %s to %s...", title, bootdir)
         [utils.safe_copy_file(kf, bootdir) for kf in kfiles]
+        [utils.safe_copy_file(kf, '/boot/') for kf in kfiles
+            if re.search("vmlinuz", kf)]
         log.info("Adding bootloader entry %s (%s, %s)", title, vmlinuz, initrd)
         b.add(self._layer, title, vmlinuz.replace("/boot", ""),
               initrd.replace("/boot", ""), cmdline)
