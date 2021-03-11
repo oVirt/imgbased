@@ -603,7 +603,10 @@ def migrate_etc(imgbase, new_lv, previous_lv):
         data = "# imgbased: versionlock begin for layer %s\n" % new_fs.source
         rpm.addMacro("_dbpath", new_fs.path("/usr/share/rpm"))
         for hdr in rpm.TransactionSet().dbMatch():
-            if "image-update" in hdr.name.decode("utf-8"):
+            if isinstance(hdr.name, str):
+                if "image-update" in hdr.name:
+                    continue
+            elif "image-update" in hdr.name.decode("utf-8"):
                 continue
             data += fmt.format(hdr)
         rpm.delMacro("_dbpath")

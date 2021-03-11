@@ -94,7 +94,7 @@ def install_rpms(new_fs):
             subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             log.info("Failed to reinstall persisted RPMs!")
-            log.info("Result: " + e.output)
+            log.info("Result: " + e.output.decode("utf-8"))
 
     rpms = glob.glob(constants.IMGBASED_PERSIST_PATH + "/*.rpm")
     if rpms:
