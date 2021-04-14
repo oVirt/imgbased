@@ -21,6 +21,7 @@
 # Author(s): Ryan Barry <rbarry@redhat.com>
 #
 
+import errno
 import glob
 import logging
 import os
@@ -98,9 +99,67 @@ def install_rpms(new_fs):
 
     rpms = glob.glob(constants.IMGBASED_PERSIST_PATH + "/*.rpm")
     if rpms:
+        for rpm in list(rpms):
+            if not check_if_rpm_installed(rpm):
+                try:
+                    log.info("Removing dangling RPM ({})".format(
+                        rpm,
+                    ))
+                    os.remove(rpm)
+                except OSError as e:
+                    log.info("Failed to remove dangling RPM ({})".format(
+                        rpm,
+                    ))
+                    log.info("Result: " + str(e))
+                rpms.remove(rpm)
+    # Check if the list still contains any RPMs after the cleanup
+    # i.e. in case the directory contained only files that were
+    # installed and then removed, but were left there due to a bug
+    if rpms:
         machine_id = new_fs.path("/etc") + "/machine-id"
         backup = machine_id + ".bak"
         os.rename(machine_id, backup)
         with utils.SELinuxDomain("systemd_machined_t"):
             install(["yum", "install", "-y", "--noplugins"] + rpms)
         os.rename(backup, machine_id)
+
+
+def check_if_rpm_installed(rpm_file_name):
+    if not os.path.isfile(rpm_file_name):
+        raise NameError("File {} does NOT exist".format(rpm_file_name))
+    cmd = (
+        ["rpm", "-qp", "--queryformat", "%{NAME}-%{VERSION}-%{RELEASE}"] +
+        [rpm_file_name]
+    )
+    log.info("Processing " + rpm_file_name)
+    try:
+        child = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            log.info("Could NOT find rpm executable!")
+        raise
+    output = child.communicate()
+    if child.returncode == 0:
+        rpm_version = output[0].decode("utf-8")
+        log.info("Processed fine, got: " + rpm_version)
+    else:
+        log.info(
+            "Error processing! Got (STDOUT): {} (STDERR): {} ".format(
+                output[0].decode("utf-8"),
+                output[1].decode("utf-8"),
+            )
+        )
+        return False
+    cmd = ["rpm", "-q"] + [rpm_version]
+    log.info("Quering for " + rpm_version)
+    try:
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        log.info("RPM not installed")
+        log.info(e.output.decode("utf-8"))
+        return False
+    return True
