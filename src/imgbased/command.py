@@ -21,9 +21,13 @@ def nsenter(arg, new_root=None, shell=False, environ=None):
     DEVNULL = open(os.devnull, "w")
     if new_root:
         if shell:
-            arg = "nsenter --root=%s --wd=/ %s" % (new_root, arg)
+            arg = "nsenter --root={0} --wd={0} {1}".format(new_root, arg)
         else:
-            arg = ["nsenter", "--root=" + new_root, "--wd=/"] + arg
+            arg = [
+                "nsenter",
+                "--root={}".format(new_root),
+                "--wd={}".format(new_root),
+            ] + arg
     environ = environ or os.environ
     log.debug("Executing: %s", arg)
     proc = subprocess.Popen(arg, stdout=subprocess.PIPE, env=environ,
