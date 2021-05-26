@@ -3,7 +3,7 @@
 #
 # imgbase
 #
-# Copyright (C) 2014  Red Hat, Inc.
+# Copyright (C) 2014-2021  Red Hat, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import os
 import re
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -1359,8 +1360,32 @@ class IDMap():
         for (fn, old_ids) in new_ids_xlated_to_old:
             # The uid/gid has changed, so change it to the old uid/gid
             try:
+                restore_mode = False
+                st = os.stat(fn)
+                if stat.S_ISDIR(st.st_mode):
+                    ftype = "directory"
+                elif stat.S_ISREG(st.st_mode):
+                    ftype = "file"
+                else:
+                    ftype = ""
+                mode = stat.S_IMODE(st.st_mode)
+                log.debug("The mode of {} {} is: {:o}".format(
+                    ftype,
+                    fn,
+                    mode,
+                ))
+                if (mode & stat.S_ISUID) or (mode & stat.S_ISGID):
+                    log.debug("Going to restore the access mode")
+                    restore_mode = True
                 log.debug("Chowning %r to %s" % (fn, old_ids))
                 os.chown(fn, *old_ids)
+                if restore_mode:
+                    log.debug("Restoring mode of {} {} to: {:o}".format(
+                        ftype,
+                        fn,
+                        mode,
+                    ))
+                    os.chmod(fn, mode)
                 yield fn
             except OSError as e:
                 log.debug("Failed to chown %s: %r" % (fn, e))
