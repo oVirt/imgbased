@@ -174,6 +174,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %endif
 
 %changelog
+* Sun Jul 11 2021 Lev Veyde <lveyde@redhat.com> - 1.2.22-1
+- Fixed SELinux binary policy migration issue (rhbz#1979624)
+
 * Thu May 27 2021 Lev Veyde <lveyde@redhat.com> - 1.2.21-1
 - Fixed SUID/SGID handling issue (rhbz#1964490)
 
