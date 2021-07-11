@@ -567,6 +567,7 @@ def remediate_etc(imgbase, new_lv):
                     update_only=True,
                     exclude=[
                         "*targeted/active/modules*",
+                        "*selinux/targeted/policy/policy.31",
                         "*network-scripts/ifcfg-*",
                     ],
                     preserve_owner=False,
@@ -686,6 +687,15 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                 log.debug("%s not in required_files, adding" % f)
                 if f not in changed and os.path.exists(f):
                     changed.append(f)
+
+            # List of files we should never migrate
+            never_migrate_files = [
+                # SELinux binary policy
+                "/etc/selinux/targeted/policy/policy.31",
+            ]
+            for f in never_migrate_files:
+                if f in changed:
+                    changed.remove(f)
 
             # imgbase layout --init double-dips here. Make sure that it's
             # not actually the same filesystem
