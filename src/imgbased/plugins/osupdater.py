@@ -188,8 +188,13 @@ def postprocess(new_lv):
         env["SYSTEMD_IGNORE_CHROOT"] = "1"
         with utils.bindmounted("/proc", new_fs.target + "/proc"):
             with utils.bindmounted("/run", new_fs.target + "/run"):
-                nsenter(["vdsm-tool", "configure", "--force"],
-                        new_root=new_fs.path("/"), environ=env)
+                with utils.bindmounted("/sys", new_fs.target + "/sys"):
+                    with utils.bindmounted(
+                            "/sys/fs/selinux",
+                            new_fs.target + "/sys/fs/selinux"
+                    ):
+                        nsenter(["vdsm-tool", "configure", "--force"],
+                                new_root=new_fs.path("/"), environ=env)
 
     def _apply_scap_profile():
         OSCAPScanner().process(new_fs.path("/"))
