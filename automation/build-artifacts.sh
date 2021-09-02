@@ -2,6 +2,10 @@
 
 set -xe
 
+# mock runner is not setting up the system correctly
+# https://issues.redhat.com/browse/CPDEVOPS-242
+dnf install -y $(cat automation/build-artifacts.packages)
+
 export ARTIFACTSDIR=$PWD/exported-artifacts
 export PATH=$PATH:/sbin:/usr/sbin
 

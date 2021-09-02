@@ -1,7 +1,5 @@
 #!/bin/bash -ex
 
-
-
 # mock runner is not setting up the system correctly
 # https://issues.redhat.com/browse/CPDEVOPS-242
 if [[ "$(rpm --eval "%dist")" == ".el9" ]]; then
