@@ -453,11 +453,11 @@ def remediate_etc(imgbase, new_lv):
         if candidates is None:
             candidates = set()
         if dc.same_files:
-            for l in dc.same_files:
-                f = "{}/{}".format(dc.left, l)
+            for line in dc.same_files:
+                f = "{}/{}".format(dc.left, line)
                 if not os.path.islink(f):
                     if strip(f) in problems and strip(f) not in candidates:
-                        if sha256sum(f, "{}/{}".format(dc.right, l)):
+                        if sha256sum(f, "{}/{}".format(dc.right, line)):
                             candidates.add(strip(f))
                             log.debug("Updating %s from the next "
                                       "layer" % ("{}".format(strip(f))))
@@ -471,14 +471,14 @@ def remediate_etc(imgbase, new_lv):
         if problems is None:
             problems = []
         if dc.diff_files:
-            for l in dc.diff_files:
+            for line in dc.diff_files:
                 # This is annoying, but handle initiatorname.iscsi
                 # specially, since it's generated on-the-fly and will
                 # always match what's in the first factory, but we
                 # actually don't want to copy it
-                if not os.path.islink("{}/{}".format(dc.left, l)) and \
-                        not check_file(l):
-                    problems.append("{}/{}".format(strip(dc.left), l))
+                if not os.path.islink("{}/{}".format(dc.left, line)) and \
+                        not check_file(line):
+                    problems.append("{}/{}".format(strip(dc.left), line))
         if dc.subdirs:
             for d in dc.subdirs.values():
                 diff_problems(d, problems)

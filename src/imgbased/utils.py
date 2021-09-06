@@ -191,8 +191,9 @@ class MountPoint(object):
             self.run.call(["rmdir", self.tmpdir])
 
     def _ismount(self, path):
-        return any([l for l in File('/proc/mounts').lines() if
-                    l.split()[1] == re.sub(r'/+', '/', path)])
+        return any(
+            [current_line for current_line in File('/proc/mounts').lines() if
+             current_line.split()[1] == re.sub(r'/+', '/', path)])
 
     def path(self, subpath):
         """Return the abs path to a path inside this mounted fs
@@ -1149,7 +1150,7 @@ class IDMap():
 
         return (uidmap, gidmap)
 
-    def _merge_ids(self, old_content, new_content, l, tracker={}):
+    def _merge_ids(self, old_content, new_content, li, tracker={}):
         """
         >>> old_content = '''
         ... root:x:0:0:root:/root:/bin/bash
@@ -1182,7 +1183,7 @@ class IDMap():
         >>> ids
         {'6': '7'}
         """
-
+        # TODO: document parameters, not clear what "li" is supposed to be.
         ids = {}
         changed_ids = {}
 
@@ -1222,7 +1223,7 @@ class IDMap():
                                                           fields[2]))
                     ids[name] = i
                     changed_ids[str(old_id)] = i
-                    l.append((int(i), old_id))
+                    li.append((int(i), old_id))
 
             try:
                 fields = n.split(":")

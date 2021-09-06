@@ -83,7 +83,9 @@ def path_diff(left, right, mode, left_alias=None, right_alias=None):
         rside = utils.findls(right)
         udiff = difflib.unified_diff(rside, lside, fromfile=left_alias,
                                      tofile=right_alias, n=0)
-        lines = (l for l in udiff if not l.startswith("@"))
+        lines = (
+            current_line for current_line in udiff
+            if not current_line.startswith("@"))
         sys.stdout.writelines(lines)
     elif mode == "content":
         import subprocess

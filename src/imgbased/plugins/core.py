@@ -175,7 +175,8 @@ def post_argparse(app, args):
         elif args.bases:
             print("\n".join(str(b) for b in layout.list_bases()))
         elif args.layers:
-            print("\n".join(str(l) for l in layout.list_layers()))
+            print("\n".join(
+                str(current_layer) for current_layer in layout.list_layers()))
         else:
             print(layout.dumps())
 

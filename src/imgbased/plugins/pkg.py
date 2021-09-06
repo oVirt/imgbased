@@ -60,7 +60,7 @@ def diff(imgbase, left, right, mode="default"):
             rside = sorted(pkgdb.get_packages())
             udiff = difflib.unified_diff(lside, rside, fromfile=left,
                                          tofile=right, n=0, lineterm="")
-            return (l + "\n" for l in udiff if not l.startswith("@"))
+            return (line + "\n" for line in udiff if not line.startswith("@"))
         else:
             raise RuntimeError("Unknown diff mode: %s" % mode)
 

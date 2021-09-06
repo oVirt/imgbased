@@ -50,7 +50,8 @@ class ImageRecovery:
     def _get_unused_layers(self):
         boot_entries = [NVR.parse(b) for b in BootConfiguration().list()]
         layers = self._imgbase.naming.layers()
-        return [l for l in layers if l.nvr not in boot_entries]
+        return [current_layer for current_layer in layers
+                if current_layer.nvr not in boot_entries]
 
     def _get_unused_volumes(self):
         paths = volume_paths()
