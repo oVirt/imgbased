@@ -3,7 +3,6 @@ autoconf
 automake
 git
 make
-pykickstart
 python3-coverage
 python3-devel
 python3-mock

@@ -12,7 +12,6 @@ iputils
 isomd5sum
 make
 pigz
-pykickstart
 python3-coverage
 python3-devel
 python3-mock
