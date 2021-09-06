@@ -1,5 +1,15 @@
 #!/bin/bash -ex
 
+
+
+# mock runner is not setting up the system correctly
+# https://issues.redhat.com/browse/CPDEVOPS-242
+if [[ "$(rpm --eval "%dist")" == ".el9" ]]; then
+    dnf install -y $(cat automation/check-patch.req.el9stream)
+else
+    dnf install -y $(cat automation/check-patch.req)
+fi
+
 ARTIFACTSDIR=$HOME/exported-artifacts
 TMPDIR=$HOME/tmp
 NGNDIR=$TMPDIR/ngn/ovirt-node-ng-image
