@@ -30,7 +30,7 @@ setup_environ() {
 
 build_imgbased() {
     PYTHON=/usr/bin/python3 ./autogen.sh
-    make -j5 check
+    make check
     find rpmbuild -name "*.rpm" -exec cp -vf {} $ARTIFACTSDIR \;
 }
 
