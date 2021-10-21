@@ -1,5 +1,6 @@
-imgbased
-========
+# imgbased
+
+[![Copr build status](https://copr.fedorainfracloud.org/coprs/ovirt/ovirt-master-snapshot/package/imgbased/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/ovirt/ovirt-master-snapshot/package/imgbased/)
 
 imgbased provides a specific management method to derive writeable filesystem
 layers from read-only base images.
@@ -19,8 +20,7 @@ In a nutshell this works by:
 For more details see below.
 
 
-Build the tool
---------------
+## Build the tool
 
 How to build the tools.
 
@@ -32,8 +32,7 @@ How to build the tools.
 
 
 
-Using `imgbase`
----------------
+## Using `imgbase`
 
 To use the `imgbase` tool you need a Fedora or CentOS image, which was
 installed using the `autopart --type=thinp` directive.
@@ -46,7 +45,7 @@ installed using the `autopart --type=thinp` directive.
     imgbase layout
 
     # Add a new base
-    # The `--size` argument specifies the size of the underlying 
+    # The `--size` argument specifies the size of the underlying
     # logical volume. It must be at least the size of the filesystem
     # contained in `$IMGFILE`.
     imgbase base --add Base-2-0 --size 1G
@@ -61,15 +60,13 @@ installed using the `autopart --type=thinp` directive.
     imgbase --debug layer --add
 
 
-Purpose
--------
+## Purpose
 
 Provide a more flexible solution for [oVirt Node](http://www.ovirt.org/Node).
 Mainly a way where we can re-use existing technologies like anaconda.
 
 
-High-Level Things
------------------
+## High-Level Things
 
  * Read-Only bases (see also Drawbacks)
  * Write-able layers
@@ -79,8 +76,7 @@ High-Level Things
     * Copy files between Base-N to Base-(N+1)
 
 
-Features
---------
+## Features
 
  * Based on stable things (LVM, ext4)
  * A real filesystem (the *layer*) is modified and is used for boot
@@ -93,8 +89,7 @@ Features
  * More distro agnostic than LiveCD
     * dracut, lvm (with thin volumes) and ext4 are the requirements
 
-Drawbacks
----------
+## Drawbacks
 
  * Not as read-only as LiveCD-everywhere approach
     * The rootfs is kept on a ro LV, if this is changed to rw then the original
@@ -109,8 +104,7 @@ Drawbacks
     * The LiveCD based delivery will be comparable in size.
 
 
-LVM Structure
--------------
+## LVM Structure
 
 Assumptions about the host:
 
@@ -124,8 +118,8 @@ Assumptions about the host:
     |     + Base-1-0+1 (LV, rw)
     |     |
     |     + Base-1-0+2 (LV, rw)
-    |   
-    |   
+    |
+    |
     +--+ Base-2-0 (LV, ro)
     |   \
     |    \
@@ -138,8 +132,7 @@ Changes are inherited from each Base-\* and can also be persisted using the
 Config LV.
 
 
-LiveCD Payload
---------------
+## LiveCD Payload
 
 The image is the (in future) intended to be also used as a paylod for LiveCD
 ISOs and to be deployed via PXE.
