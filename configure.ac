@@ -70,7 +70,7 @@ AC_ARG_VAR([NOSETESTS], [path to nosetests utility])
 AC_CHECK_PROGS(NOSETESTS, [nosetests-3 nosetests])
 AM_CONDITIONAL([HAVE_NOSETESTS], [test "x$NOSETESTS" != "x"])
 
-AM_PATH_PYTHON
+AM_PATH_PYTHON([3.6])
 
 AC_CONFIG_FILES([Makefile
                  packaging/rpm/imgbased.spec

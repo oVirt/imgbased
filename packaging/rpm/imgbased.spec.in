@@ -1,20 +1,6 @@
-%if 0%{?fedora} || 0%{?rhel} >= 8
-%global with_python3 1
-%else
-%global with_python3 0
-%endif
 
-%if 0%{?fedora} >= 29 || 0%{?rhel} >= 8
-%global with_python2 0
-%else
-%global with_python2 1
-%endif
-
-%if ! 0%{?rhel}
 %{!?with_check:%global with_check 1}
-%else
-%{!?with_check:%global with_check 0}
-%endif
+
 %global _configure ../configure
 
 
@@ -24,7 +10,7 @@ Release:        %{?_release}%{?!_release:1}%{?dist}
 Summary:        Tools to work with an image based rootfs
 
 License:        GPLv2+
-URL:            https://www.github.com/fabiand/imgbased
+URL:            https://github.com/oVirt/imgbased
 Source0:        http://resources.ovirt.org/pub/src/%{name}/%{name}-%{version}.tar.xz
 
 BuildArch:      noarch
@@ -38,11 +24,7 @@ BuildRequires:       git
 BuildRequires:       asciidoc
 BuildRequires:       systemd-units
 
-%if 0%{?with_python3}
 Requires:            python%{python3_pkgversion}-imgbased
-%else
-Requires:            python-imgbased
-%endif # with_python3
 
 Requires:            lvm2
 Requires:            util-linux
@@ -59,28 +41,6 @@ This tool enforces a special usage pattern for LVM.
 Basically this is about having read-only bases and writable
 layers atop.
 
-
-%if 0%{?with_python2}
-%package -n python-imgbased
-Summary: A python 2 module for imgbased
-Requires:       rpm-python
-Requires:       systemd-python
-Requires:       yum-plugin-versionlock
-Requires:       python
-BuildRequires:       python-devel
-%if 0%{?with_check}
-BuildRequires:       python-pep8
-BuildRequires:       pyflakes
-BuildRequires:       python-nose
-BuildRequires:       python-six
-BuildRequires:       systemd-python
-%endif
-
-%description -n python-imgbased
-python-imgbased is a python 2 library to manage lvm layers
-%endif # with_python2
-
-%if 0%{?with_python3}
 %package -n python%{python3_pkgversion}-imgbased
 Summary: A python 3 module for imgbased
 BuildRequires:       python%{python3_pkgversion}-devel
@@ -98,47 +58,26 @@ Requires:       python%{python3_pkgversion}
 
 %description -n python%{python3_pkgversion}-imgbased
 python%{python3_pkgversion}-imgbased is a python 3 library to manage lvm layers
-%endif # with_python3
 
 %prep
 %setup -q
 
 %build
-%if 0%{?with_python2}
-mkdir py2 && pushd py2
-%configure PYTHON="%{__python2}"
-make %{?_smp_mflags}
-popd
-%endif # with_python2
 
-%if 0%{?with_python3}
 mkdir py3 && pushd py3
 %configure PYTHON="%{__python3}"
 make %{?_smp_mflags}
-%endif # with_python3
 
 %install
-%if 0%{?fedora} || 0%{?rhel} >= 8
 install -Dm 0644 src/plugin-dnf/imgbased-persist.conf \
                  %{buildroot}/%{_sysconfdir}/dnf/plugins/imgbased-persist.conf
 install -Dm 0644 src/plugin-dnf/imgbased-persist.py \
                  %{buildroot}/%{python3_sitelib}/dnf-plugins/imgbased-persist.py
-%else
-install -Dm 0644 src/plugin-yum/imgbased-persist.py \
-                 %{buildroot}/%{_prefix}/lib/yum-plugins/imgbased-persist.py
-install -Dm 0644 src/plugin-yum/imgbased-persist.conf \
-                 %{buildroot}/%{_sysconfdir}/yum/pluginconf.d/imgbased-persist.conf
-%endif
+
 install -Dm 0644 data/imgbase-setup.service %{buildroot}%{_unitdir}/imgbase-setup.service
 install -Dm 0444 data/imgbased-pool.profile %{buildroot}%{_sysconfdir}/lvm/profile/imgbased-pool.profile
 
-%if 0%{?with_python2}
-make -C py2 install DESTDIR="%{buildroot}"
-%endif # with_python2
-
-%if 0%{?with_python3}
 make -C py3 install DESTDIR="%{buildroot}"
-%endif # with_python3
 
 
 %files
@@ -150,28 +89,14 @@ make -C py3 install DESTDIR="%{buildroot}"
 /%{_docdir}/%{name}/*.asc
 %{_unitdir}/imgbase-setup.service
 %{_sysconfdir}/lvm/profile/imgbased-pool.profile
-%if 0%{?fedora} || 0%{?rhel} >= 8
 %{_sysconfdir}/dnf/plugins/imgbased-persist.conf
 %{python3_sitelib}/dnf-plugins/imgbased-persist.py*
 %{python3_sitelib}/dnf-plugins/__pycache__/imgbased*
-%else
-%{_sysconfdir}/yum/pluginconf.d/imgbased-persist.conf
-%{_prefix}/lib/yum-plugins/imgbased-persist.py*
-%endif
 
-%if 0%{?with_python2}
-%files -n python-imgbased
-%doc README.md
-%license LICENSE
-%{python2_sitelib}/%{name}/
-%endif
-
-%if 0%{?with_python3}
 %files -n python%{python3_pkgversion}-imgbased
 %doc README.md
 %license LICENSE
 %{python3_sitelib}/%{name}/
-%endif
 
 %changelog
 * Wed Jul 14 2021 Lev Veyde <lveyde@redhat.com> - 1.2.23-1
