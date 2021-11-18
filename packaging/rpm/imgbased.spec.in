@@ -1,5 +1,5 @@
 
-%{!?with_check:%global with_check 1}
+%{!?with_check:%global with_check 0}
 
 %global _configure ../configure
 
