@@ -9,7 +9,7 @@ from collections import namedtuple
 from logging import debug
 from io import StringIO
 
-from mock import patch
+from unittest.mock import patch
 
 import imgbased
 import imgbased.lvm

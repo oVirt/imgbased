@@ -2,6 +2,8 @@
 
 [![Copr build status](https://copr.fedorainfracloud.org/coprs/ovirt/ovirt-master-snapshot/package/imgbased/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/ovirt/ovirt-master-snapshot/package/imgbased/)
 
+Welcome to the oVirt imgbased source repository. This repository is hosted on [GitHub:imgbased](https://github.com/oVirt/imgbased).
+
 imgbased provides a specific management method to derive writeable filesystem
 layers from read-only base images.
 It also takes care that the layer which shall be used can be selected at boot
@@ -18,6 +20,26 @@ In a nutshell this works by:
    specific layer
 
 For more details see below.
+
+
+## How to contribute
+
+All contributions are welcome - patches, bug reports, and documentation issues.
+
+### Submitting patches
+
+Please submit patches to [GitHub:imgbased](https://github.com/oVirt/imgbased). If you are not familiar with the process, you can read about [collaborating with pull requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests) on the GitHub website.
+
+### Found a bug or documentation issue?
+
+To submit a bug or suggest an enhancement for oVirt imgbased please use [oVirt Bugzilla](https://bugzilla.redhat.com/enter_bug.cgi?product=imgbased).
+
+If you don't have a Bugzilla account, you can still report [issues](https://github.com/oVirt/imgbased/issues). If you find a documentation issue on the oVirt website, please navigate to the page footer and click "Report an issue on GitHub".
+
+## Still need help?
+
+If you have any other questions or suggestions, you can join and contact us on the [oVirt Users forum / mailing list](https://lists.ovirt.org/admin/lists/users.ovirt.org/).
+
 
 
 ## Build the tool
