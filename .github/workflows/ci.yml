@@ -34,6 +34,9 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
+      
+    - name: Install tools that should be in buildcontainer / BuildRequires
+      run: dnf install -y python3-pycodestyle python3-pyflakes asciidoc python3-coverage python3-nose python3-systemd
 
     - name: Autogen
       run: ./autogen.sh
