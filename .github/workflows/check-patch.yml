@@ -1,103 +1,56 @@
 ---
-name: Check patch
+name: CI
 
 # TODO:
 # The automation we had in Jenkins did deep integration testing using virtualization.
 # We should do something similar here.
-
-permissions:
-  pull-requests: read
-  contents: read
 
 on:
   push:
   pull_request:
 
 jobs:
-  build-el8:
-
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: centos-stream-8
+            shortcut: cs8
+            container-name: el8stream
+          - name: centos-stream-9
+            shortcut: cs9
+            container-name: el9stream
+
+    name: ${{ matrix.name }}
+
+    env:
+      ARTIFACTS_DIR: exported-artifacts
+
     container:
-      image: quay.io/centos/centos:stream8
+      image: quay.io/ovirt/buildcontainer:${{ matrix.container-name }}
 
     steps:
-      - name: prepare env
-        run: |
-           mkdir -p ${PWD}/tmp.repos/BUILD
-           dnf install -y --setopt=tsflags=nodocs autoconf automake createrepo make python3-devel git dnf-plugins-core xz rpm-build
-           dnf copr enable -y ovirt/ovirt-master-snapshot centos-stream-8
-           dnf install -y ovirt-release-master
-           dnf install -y --setopt=tsflags=nodocs python3-pycodestyle python3-pyflakes asciidoc python3-coverage python3-nose python3-systemd
+    - name: Checkout sources
+      uses: actions/checkout@v2
 
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+    - name: Autogen
+      run: ./autogen.sh
 
-      - name: autogen
-        run: ./autogen.sh
+    - name: Check code
+      run: make -j distcheck
 
-      - name: check code
-        run: make -j distcheck
+    - name: Build RPM
+      run: make rpm
 
-      - name: Build RPM
-        run: make rpm
+    - name: Collect artifacts
+      run: |
+        mkdir -p exported-artifacts
+        find ~/rpmbuild/*RPMS/ -iname \*rpm -exec mv "{}" $ARTIFACTS_DIR/ \;
+        mv ./*tar.xz $ARTIFACTS_DIR/
 
-      - name: Collect artifacts
-        run: |
-          mkdir -p exported-artifacts
-          find /github/home/rpmbuild/*RPMS/ -iname \*rpm -exec mv "{}" exported-artifacts/ \;
-          mv ./*tar.xz exported-artifacts/
-
-      - name: test install
-        run: |
-          dnf --downloadonly install -y exported-artifacts/*noarch.rpm
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: artifacts
-          path: exported-artifacts/
-
-  build-el9:
-
-    runs-on: ubuntu-latest
-    container:
-      image: quay.io/centos/centos:stream9
-
-    steps:
-      - name: prepare env
-        run: |
-          mkdir -p ${PWD}/tmp.repos/BUILD
-          dnf install -y --setopt=tsflags=nodocs autoconf automake createrepo make python3-devel git dnf-plugins-core xz rpm-build
-          dnf copr enable -y ovirt/ovirt-master-snapshot
-          dnf install -y ovirt-release-master
-          dnf install -y --setopt=tsflags=nodocs python3-pycodestyle python3-pyflakes asciidoc python3-coverage python3-nose python3-systemd
-
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: autogen
-        run: ./autogen.sh
-
-      - name: check code
-        run: make -j distcheck
-
-      - name: Build RPM
-        run: make rpm
-
-      - name: Collect artifacts
-        run: |
-            mkdir -p exported-artifacts
-            find /github/home/rpmbuild/*RPMS/ -iname \*rpm -exec mv "{}" exported-artifacts/ \;
-            mv ./*tar.xz exported-artifacts/
-
-      - name: test install
-        run: |
-            dnf --downloadonly install -y exported-artifacts/*noarch.rpm
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: artifacts
-          path: exported-artifacts/
+    - name: Upload artifacts
+      uses: ovirt/upload-rpms-action@v2
+      with:
+        directory: ${{ env.ARTIFACTS_DIR}}
