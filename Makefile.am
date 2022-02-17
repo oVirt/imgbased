@@ -19,7 +19,21 @@ dist_sbin_SCRIPTS = \
   scripts/imgbase
 
 dist_pyimagebased_PYTHON = \
-  $(srcdir)/src/imgbased/*.py
+  $(srcdir)/src/imgbased/bootloader.py \
+  $(srcdir)/src/imgbased/bootsetup.py \
+  $(srcdir)/src/imgbased/command.py \
+  $(srcdir)/src/imgbased/hooks.py \
+  $(srcdir)/src/imgbased/imgbase.py \
+  $(srcdir)/src/imgbased/__init__.py \
+  $(srcdir)/src/imgbased/local.py \
+  $(srcdir)/src/imgbased/lvm.py \
+  $(srcdir)/src/imgbased/__main__.py \
+  $(srcdir)/src/imgbased/naming.py \
+  $(srcdir)/src/imgbased/openscap.py \
+  $(srcdir)/src/imgbased/timeserver.py \
+  $(srcdir)/src/imgbased/utils.py \
+  $(srcdir)/src/imgbased/volume.py \
+  src/imgbased/constants.py
 
 dist_pyimagebasedplugins_PYTHON = \
   $(srcdir)/src/imgbased/plugins/*.py
