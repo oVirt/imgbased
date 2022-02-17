@@ -16,10 +16,11 @@ IMGBASED_PERSIST_PATH = IMGBASED_STATE_DIR + "/persisted-rpms/"
 
 IMGBASED_SKIP_VOLUMES_PATH = IMGBASED_STATE_DIR + "/.skip-volumes"
 IMGBASED_MINIMUM_VOLUMES = {"/var":           {"size": "8G", "attach": True}}
-IMGBASED_DEFAULT_VOLUMES = {"/var":           {"size": "15G", "attach": True},
+IMGBASED_DEFAULT_VOLUMES = {"/var":           {"size": "5G", "attach": True},
                             "/var/crash":     {"size": "10G", "attach": True},
                             "/var/log":       {"size": "8G", "attach": True},
                             "/var/log/audit": {"size": "2G", "attach": True},
+                            "/var/tmp":       {"size": "10G", "attach": True},
                             "/home":          {"size": "1G", "attach": True},
                             "/tmp":           {"size": "1G", "attach": False}}
 
