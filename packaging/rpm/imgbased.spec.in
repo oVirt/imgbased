@@ -99,6 +99,9 @@ make -C py3 install DESTDIR="%{buildroot}"
 %{python3_sitelib}/%{name}/
 
 %changelog
+* Wed Feb 23 2022 Sandro Bonazzola <sbonazzo@redhat.com> - 1.2.24-1
+- Split /var/tmp to its own partition (rhbz#2055829)
+
 * Wed Jul 14 2021 Lev Veyde <lveyde@redhat.com> - 1.2.23-1
 - Fixed vdsm-tool running env. (rhbz#1979624)
 
