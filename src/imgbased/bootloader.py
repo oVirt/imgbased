@@ -101,7 +101,7 @@ class Grubby(Bootloader):
         >>> parsed = Grubby.GrubbyEntry.parse(entry)
         >>> parsed.title
         'ovirt-node-4.0+1 (3.10.0-327.4.5.el7.x86_64)'
-        >>> parsed.blsid
+        >>> parsed.id
         'my-custom-bls-id'
         >>> parsed.root
         '/dev/mapper/centos_installed-root'
@@ -120,7 +120,7 @@ class Grubby(Bootloader):
         '/boot/initramfs-4.0.0.fc23.x86_64.img'
         >>> parsed.args
         'ro console=ttyS0'
-        >>> parsed.blsid
+        >>> parsed.id
         ''
 
         >>> entry = '''index=1
@@ -152,7 +152,7 @@ class Grubby(Bootloader):
         1
         """
 
-        blsid = None
+        id = None
         args = None
         root = None
         index = None
@@ -162,29 +162,48 @@ class Grubby(Bootloader):
 
         @staticmethod
         def parse(entry):
+            """
+            >>> parsed_entry = Grubby.GrubbyEntry.parse("index=0\\n"
+            ... "kernel=\\"/boot/vmlinuz-5.14.0-70.el9.x86_64\\"\\n"
+            ... "args=\\"inst.stage2=hd:LABEL=CentOS-Stream-9-BaseOS-x86_64 "
+            ... "quiet inst.ks=hd:LABEL=CentOS-Stream-9-BaseOS-x86_64:/int"
+            ... "eractive-defaults.ks $tuned_params\\"\\n"
+            ... "initrd=\\"/boot/initramfs-5.14.0-70.el9.x86_64.img "
+            ... "$tuned_initrd\\"\\n"
+            ... "title=\\"CentOS Stream (5.14.0-70.el9.x86_64) 9\\"\\n"
+            ... "id=\\"33aecfecb4e54020ad22a79d7ecac27d-5.14.0-"
+            ... "70.el9.x86_64\\"")
+            >>> parsed_entry.id
+            '33aecfecb4e54020ad22a79d7ecac27d-5.14.0-70.el9.x86_64'
+            """
             g = Grubby.GrubbyEntry()
 
-            r = re.compile(r"""(?:index=)(\d+)\n?
-                               (?:(?:kernel=)?(.*?)\n)?
-                               (?:(?:args=)?(.*?)\n)?
-                               (?:(?:root=)?(.*?)\n)?
-                               (?:(?:initrd=)?(.*?)\n)?
-                               (?:(?:title=)?(.*)\n?)?
-                               (?:(?:id=)?(.*))?
-                            """, re.VERBOSE)
-            matches = r.match(entry)
-            g.index, g.kernel, g.args, g.root, g.initrd, g.title, g.blsid = \
-                [x.strip('"') if x else x for x in matches.groups()]
+            for line in entry.splitlines():
+                if line == "":
+                    continue
+                parts = line.split("=", 2)
+                if parts.__len__() < 2:
+                    raise InvalidBootEntryError(
+                        "invalid line encountered in grubby info output " +
+                        "(missing =): {}".format(line))
+
+                if parts[1].startswith("\"") and parts[1].endswith("\""):
+                    parts[1] = parts[1][1:-1]
+                else:
+                    parts[1] = int(parts[1])
+                g.__setattr__(parts[0], parts[1])
 
             if not all([g.kernel, g.args, g.initrd]):
-                raise InvalidBootEntryError()
+                raise InvalidBootEntryError(
+                    "Missing kernel, args, or initrd in grubby " +
+                    "entry: {}".format(entry))
 
             return g
 
         def bls_conf_path(self):
-            if not self.blsid:
+            if not self.id:
                 raise RuntimeError("Missing bls id for %s" % self)
-            return "/boot/loader/entries/%s.conf" % self.blsid
+            return "/boot/loader/entries/%s.conf" % self.id
 
     def __init__(self, use_bls=None):
         Bootloader.__init__(self)
