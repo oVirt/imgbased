@@ -109,8 +109,9 @@ def relocate_rpm_and_yum_dbs():
     log.info("Relocating rpmdb")
     # Move out of /var
     shutil.move("/var/lib/rpm", "/usr/share/rpm")
-    # Make the /var entry a symlink to the moved db
-    os.symlink("../../usr/share/rpm", "/var/lib/rpm")
+    # Make 'rpm' look there
+    with open('/etc/rpm/macros', 'w') as f:
+        f.write('%_dbpath /usr/share/rpm\n')
 
     for d in ('yum', 'dnf'):
         orig_path = "/var/lib/{}".format(d)
