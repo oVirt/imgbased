@@ -1039,17 +1039,18 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
     imgbase.hooks.emit("os-upgraded", previous_lv.lv_name, new_lv.lvm_name)
 
     with mounted(new_lv.path) as newroot:
-        with utils.bindmounted("/var", target=newroot.target + "/var",
-                               rbind=True):
-            _update_grub_cmdline(newroot.target)
-            _update_fstab(newroot.target)
-            _relabel_selinux(newroot.target)
-            BootSetupHandler(
-                root=newroot.target,
-                mkconfig=(imgbase.mode == constants.IMGBASED_MODE_INIT),
-                mkinitrd=(imgbase.mode == constants.IMGBASED_MODE_UPDATE)
-            ).setup()
-            bootloader.BootConfiguration.validate()
+        with utils.bindmounted("/proc", target=newroot.target + "/proc"):
+            with utils.bindmounted("/var", target=newroot.target + "/var",
+                                   rbind=True):
+                _update_grub_cmdline(newroot.target)
+                _update_fstab(newroot.target)
+                _relabel_selinux(newroot.target)
+                BootSetupHandler(
+                    root=newroot.target,
+                    mkconfig=(imgbase.mode == constants.IMGBASED_MODE_INIT),
+                    mkinitrd=(imgbase.mode == constants.IMGBASED_MODE_UPDATE)
+                ).setup()
+                bootloader.BootConfiguration.validate()
 
 
 def on_remove_layer(imgbase, lv_fullname):
