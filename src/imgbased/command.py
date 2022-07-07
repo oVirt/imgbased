@@ -18,7 +18,6 @@ def call(*args, **kwargs):
 
 
 def nsenter(arg, new_root=None, shell=False, environ=None):
-    DEVNULL = open(os.devnull, "w")
     if new_root:
         if shell:
             arg = "nsenter --root={0} --wd={0} {1}".format(new_root, arg)
@@ -31,10 +30,12 @@ def nsenter(arg, new_root=None, shell=False, environ=None):
     environ = environ or os.environ
     log.debug("Executing: %s", arg)
     proc = subprocess.Popen(arg, stdout=subprocess.PIPE, env=environ,
-                            stderr=DEVNULL, shell=shell).communicate()
-    ret = proc[0]
-    log.debug("Result: %s", repr(ret))
-    return ret
+                            stderr=subprocess.PIPE, shell=shell)
+    stdout, stderr = proc.communicate()
+    log.debug("STDOUT: %s", repr(stdout))
+    log.debug("STDERR: %s", repr(stderr))
+    log.debug("ReturnCode: %s", repr(proc.returncode))
+    return stdout
 
 
 def chroot(args, root):
