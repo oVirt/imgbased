@@ -32,9 +32,9 @@ def nsenter(arg, new_root=None, shell=False, environ=None):
     proc = subprocess.Popen(arg, stdout=subprocess.PIPE, env=environ,
                             stderr=subprocess.PIPE, shell=shell)
     stdout, stderr = proc.communicate()
-    log.debug("STDOUT: %s", repr(stdout))
-    log.debug("STDERR: %s", repr(stderr))
-    log.debug("ReturnCode: %s", repr(proc.returncode))
+    log.debug("STDOUT: %r", stdout)
+    log.debug("STDERR: %r", stderr)
+    log.debug("ReturnCode: %s", proc.returncode)
     return stdout
 
 
