@@ -32,9 +32,7 @@ Please submit patches to [GitHub:imgbased](https://github.com/oVirt/imgbased). I
 
 ### Found a bug or documentation issue?
 
-To submit a bug or suggest an enhancement for oVirt imgbased please use [oVirt Bugzilla](https://bugzilla.redhat.com/enter_bug.cgi?product=imgbased).
-
-If you don't have a Bugzilla account, you can still report [issues](https://github.com/oVirt/imgbased/issues). If you find a documentation issue on the oVirt website, please navigate to the page footer and click "Report an issue on GitHub".
+To submit a bug or suggest an enhancement for oVirt imgbased please report [issues](https://github.com/oVirt/imgbased/issues). If you find a documentation issue on the oVirt website, please navigate to the page footer and click "Report an issue on GitHub".
 
 ## Still need help?
 
