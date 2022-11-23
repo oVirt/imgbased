@@ -2,7 +2,6 @@ import logging
 import os
 import os.path
 import re
-import uuid
 from glob import glob
 
 from .. import command, constants
@@ -55,9 +54,8 @@ class Startup(ServiceHandler):
         if os.path.exists(initiator):
             return
         log.debug("Description=Generate a random iSCSI initiator IQN name")
-        suuid = str(uuid.uuid4()).split("-")[-1]
-        factory_f = File("/usr/share/factory/etc/iscsi/initiatorname.iscsi")
-        iqn = factory_f.contents.split(":")[0] + ":" + suuid + "\n"
+        identifier = command.call("/usr/sbin/iscsi-iname")
+        iqn = "InitiatorName=" + identifier.decode("utf-8").strip() + "\n"
         File(initiator).write(iqn)
 
     def _copy_files_to_boot(self):
