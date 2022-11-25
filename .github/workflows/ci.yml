@@ -17,10 +17,8 @@ jobs:
       matrix:
         include:
           - name: centos-stream-8
-            shortcut: cs8
             container-name: el8stream
           - name: centos-stream-9
-            shortcut: cs9
             container-name: el9stream
 
     name: ${{ matrix.name }}
@@ -33,7 +31,7 @@ jobs:
 
     steps:
     - name: Checkout sources
-      uses: actions/checkout@v2
+      uses: ovirt/checkout-action@main
 
     - name: Install tools that should be in buildcontainer / BuildRequires
       run: dnf install -y python3-pycodestyle python3-pyflakes asciidoc python3-coverage python3-nose python3-systemd
@@ -54,6 +52,6 @@ jobs:
         mv ./*tar.xz $ARTIFACTS_DIR/
 
     - name: Upload artifacts
-      uses: ovirt/upload-rpms-action@v2
+      uses: ovirt/upload-rpms-action@main
       with:
         directory: ${{ env.ARTIFACTS_DIR}}
