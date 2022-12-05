@@ -17,7 +17,7 @@ dnl along with this program.  If not, see <http://www.gnu.org/licenses/>.
 dnl
 define([VERSION_MAJOR], [1])
 define([VERSION_MINOR], [2])
-define([VERSION_FIX], [25])
+define([VERSION_FIX], [26])
 define([VERSION_NUMBER], VERSION_MAJOR[.]VERSION_MINOR[.]VERSION_FIX)
 
 AC_INIT([imgbased], VERSION_NUMBER, [devel@ovirt.org])
@@ -36,8 +36,8 @@ AC_SUBST([FEDORA],[[`rpm --eval '%{fedora}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([RHEL], [[`rpm --eval '%{rhel}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([CENTOS], [[`rpm --eval '%{centos}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([PLATFORM])
-AC_SUBST([REVISION], [])
-AC_SUBST([RELEASE], [1])
+AC_SUBST([REVISION], "git"[m4_esyscmd_s([git log -n1 --format=%h])])
+AC_SUBST([RELEASE], [0.0.[`date '+%Y%m%d%H%M'`]])
 AC_SUBST([am__tar], ['find "$$tardir" -print -perm /g=w -exec chmod g-w {} \; | sort | tar --no-recursion --mtime="1970-01-01 00:00Z" --owner=root --group=root -chpf - -T -'])
 
 if test "$FEDORA"; then
