@@ -2,7 +2,8 @@
 name: CI
 
 # TODO:
-# The automation we had in Jenkins did deep integration testing using virtualization.
+# The automation we had in Jenkins did deep integration testing
+# using virtualization.
 # We should do something similar here.
 
 on:
@@ -16,8 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: centos-stream-8
-            container-name: el8stream
           - name: centos-stream-9
             container-name: el9stream
 
@@ -30,28 +29,28 @@ jobs:
       image: quay.io/ovirt/buildcontainer:${{ matrix.container-name }}
 
     steps:
-    - name: Checkout sources
-      uses: ovirt/checkout-action@main
+      - name: Checkout sources
+        uses: ovirt/checkout-action@main
 
-    - name: Install tools that should be in buildcontainer / BuildRequires
-      run: dnf install -y python3-pycodestyle python3-pyflakes asciidoc python3-coverage python3-nose python3-systemd
+      - name: Install tools that should be in buildcontainer / BuildRequires
+        run: dnf install -y python3-pycodestyle python3-pyflakes asciidoc python3-coverage python3-nose python3-systemd
 
-    - name: Autogen
-      run: ./autogen.sh
+      - name: Autogen
+        run: ./autogen.sh
 
-    - name: Check code
-      run: make -j distcheck
+      - name: Check code
+        run: make -j distcheck
 
-    - name: Build RPM
-      run: make rpm
+      - name: Build RPM
+        run: make rpm
 
-    - name: Collect artifacts
-      run: |
-        mkdir -p exported-artifacts
-        find ~/rpmbuild/*RPMS/ -iname \*rpm -exec mv "{}" $ARTIFACTS_DIR/ \;
-        mv ./*tar.xz $ARTIFACTS_DIR/
+      - name: Collect artifacts
+        run: |
+          mkdir -p exported-artifacts
+          find ~/rpmbuild/*RPMS/ -iname \*rpm -exec mv "{}" $ARTIFACTS_DIR/ \;
+          mv ./*tar.xz $ARTIFACTS_DIR/
 
-    - name: Upload artifacts
-      uses: ovirt/upload-rpms-action@main
-      with:
-        directory: ${{ env.ARTIFACTS_DIR}}
+      - name: Upload artifacts
+        uses: ovirt/upload-rpms-action@main
+        with:
+          directory: ${{ env.ARTIFACTS_DIR}}
