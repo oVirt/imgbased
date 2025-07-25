@@ -32,6 +32,7 @@ import shutil
 import subprocess
 from filecmp import dircmp
 from tempfile import mkdtemp
+from configparser import ConfigParser
 
 import rpm
 
@@ -992,7 +993,6 @@ def adjust_mounts_and_boot(imgbase, new_lv, previous_lv):
                 # Created with imgbased.volume?
                 log.debug("{} not found in /etc/fstab. "
                           "not created by Anaconda".format(tgt))
-                from six.moves.configparser import ConfigParser
                 c = ConfigParser()
                 c.optionxform = str
 

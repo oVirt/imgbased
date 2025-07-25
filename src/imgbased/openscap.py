@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from six.moves.configparser import ConfigParser
+from configparser import ConfigParser
 from systemd import journal
 
 from .command import nsenter
