@@ -10,7 +10,6 @@ python3-nose
 python3-pycodestyle
 python3-pyflakes
 python3-rpm
-python3-six
 rpm-build
 systemd-python3
 systemd-units

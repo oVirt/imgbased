@@ -4,8 +4,6 @@ import logging
 import os
 import sys
 
-import six
-
 from .. import constants, local
 from ..bootloader import BootConfiguration
 from ..lvm import LVM
@@ -72,7 +70,7 @@ def post_argparse(app, args):
                 exc_info = sys.exc_info()
                 log.error("Update failed, resetting registered LVs")
                 LVM.reset_registered_volumes()
-                six.reraise(*exc_info)
+                raise exc_info[1].with_traceback(exc_info[2])
         else:
             log.error("Unknown update format %r" % args.format)
 

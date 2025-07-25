@@ -48,7 +48,6 @@ BuildRequires:       python%{python3_pkgversion}-devel
 BuildRequires:       python%{python3_pkgversion}-pycodestyle
 BuildRequires:       python%{python3_pkgversion}-pyflakes
 BuildRequires:       python%{python3_pkgversion}-nose
-BuildRequires:       python%{python3_pkgversion}-six
 BuildRequires:       python%{python3_pkgversion}-systemd
 %endif
 Requires:       python%{python3_pkgversion}-systemd

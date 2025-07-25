@@ -371,9 +371,7 @@ EOF
     cat << EOF >> .coveragerc
 [run]
 omit =
-    /*/site-packages/six*
     /usr/lib/python3.6/site-packages/pkg_resources*
-    /usr/lib/python3.6/site-packages/six*
 
 [paths]
 source =

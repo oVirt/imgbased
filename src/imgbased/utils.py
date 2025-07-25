@@ -35,7 +35,7 @@ import threading
 import traceback
 from contextlib import contextmanager
 
-from six.moves.queue import Queue
+from queue import Queue
 
 from . import command, constants
 

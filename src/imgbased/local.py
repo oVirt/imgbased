@@ -22,7 +22,7 @@
 #
 
 import os
-from six.moves import configparser
+import configparser
 from io import StringIO
 
 import logging

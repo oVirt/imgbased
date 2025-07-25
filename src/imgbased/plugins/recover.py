@@ -1,8 +1,6 @@
 import logging
 import os
 
-import six
-
 from ..bootloader import BootConfiguration
 from ..constants import volume_paths
 from ..naming import NVR
@@ -62,7 +60,7 @@ class ImageRecovery:
         if force:
             return True
         prompt = "Remove %s %s? [y/N]: " % (what, name)
-        return six.moves.input(prompt).lower() == 'y'
+        return input(prompt).lower() == 'y'
 
     def _remove_lvs(self, layers, volumes, force):
         for vol in volumes:
