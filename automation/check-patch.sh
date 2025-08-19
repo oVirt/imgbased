@@ -363,17 +363,9 @@ EOF
     fetch_remote "$sshkey" "$addr" "$COVDIR" $ARTIFACTSDIR/coverage-data
     cp -vr $ARTIFACTSDIR/coverage-data/. .
     cat << EOF >> .coveragerc
-[run]
-omit =
-    /usr/lib/python3.6/site-packages/pkg_resources*
-
 [paths]
 source =
     src/imgbased
-    /usr/lib/python2.7/site-packages/imgbased
-    /tmp/*/usr/lib/python2.7/site-packages/imgbased
-    /usr/lib/python3.6/site-packages/imgbased
-    /tmp/*/usr/lib/python3.6/site-packages/imgbased
 EOF
 
     ${COVERAGE} combine
