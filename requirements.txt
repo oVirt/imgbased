@@ -1,3 +1,5 @@
 pyflakes
 pep8
 sh
+rpm
+systemd

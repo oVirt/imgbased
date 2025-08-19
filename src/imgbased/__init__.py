@@ -24,7 +24,7 @@
 import sys
 import logging
 import argparse
-from . import constants
+from .imgbase import constants
 from .imgbase import ImageLayers
 from .hooks import Hooks
 from . import plugins

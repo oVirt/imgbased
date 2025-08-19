@@ -15,9 +15,10 @@ pigz
 python3-coverage
 python3-devel
 python3-mock
-python3-nose
 python3-pycodestyle
 python3-pyflakes
+python3-pytest
+python3-pytest-mock
 python3-rpm
 rpm-build
 squashfs-tools

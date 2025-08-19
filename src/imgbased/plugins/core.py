@@ -150,7 +150,7 @@ def post_argparse(app, args):
             if args.IMAGE:
                 app.imgbase.add_layer(args.IMAGE)
             else:
-                log.warn("Adding new layer onto latest")
+                log.warning("Adding new layer onto latest")
                 app.imgbase.add_layer_on_latest()
         elif args.current:
             print(app.imgbase.current_layer())
