@@ -35,7 +35,14 @@ def setup_fake_lvm(cli_runner):
     vg._lvs.add(pool)
     pool.create_thinvol("root", 10)
 
-    cli_runner("--debug", "layout", "--init-nvr", "Image-1.0-0", "--from", "hostvg/root")
+    cli_runner(
+        "--debug",
+        "layout",
+        "--init-nvr",
+        "Image-1.0-0",
+        "--from",
+        "hostvg/root"
+    )
 
     return FakeLVM
 
@@ -49,7 +56,10 @@ def cli_runner(mocker):
         mocker.patch("imgbased.imgbase.LVM", FakeLVM)
         mocker.patch("imgbased.imgbase.Hooks")
         mocker.patch("imgbased.imgbase.utils.Filesystem")
-        mocker.patch("imgbased.imgbase.ImageLayers.current_layer", lambda s: None)
+        mocker.patch(
+            "imgbased.imgbase.ImageLayers.current_layer",
+            lambda s: None
+        )
 
         oldout, olderr = sys.stdout, sys.stderr
         sys.stdout, sys.stderr = _StringIO(), _StringIO()
@@ -75,27 +85,34 @@ def cli_runner(mocker):
 def test_findmnt():
     assert utils.findmnt(["SOURCE", "/tmp/_fake_dir_"]) is None
 
+
 def test_mount_target_returns_valid():
-    """ Test if utils can find a valid mount target"""
+    """ Test utils can find a valid mount target"""
     found_mounts = utils.find_mount_target()
     assert isinstance(found_mounts, list)
     assert found_mounts
 
 
 def test_find_mount_source_returns_none_on_wrong_directory():
-    """ Test if utils returns None when no mount source is found for a given directory"""
+    """
+    Test utils returns None for a given directory
+    when no mount source is found
+    """
     assert utils.find_mount_source("/tmp/_fake_dir_") is None
 
 
 def test_supported_filesystem():
-    """ Test if utils returns a list of supported filesystems """
+    """ Test utils returns a list of supported filesystems """
     supported_fs = ['ext4', 'xfs']
     fs = utils.Filesystem.supported_filesystem()
     assert fs == supported_fs
 
 
 def test_get_type_raises():
-    """ Test if utils.Filesystem.get_type raises an error when the device does not exist """
+    """
+    Test utils.Filesystem.get_type raises an error
+    when the device does not exist
+    """
     with pytest.raises(subprocess.CalledProcessError):
         utils.Filesystem.get_type("/dev/mapper/_fake_vg_")
 
@@ -115,20 +132,20 @@ def test_from_mountpoint_raises():
 
 
 def test_layout_init_from(setup_fake_lvm):
-    """ Test if the layout command initializes the base and layer images """
+    """ Test the layout initializes the base and layer images """
     lv_names = [lv.lv_name for lv in setup_fake_lvm.list_lvs()]
     assert "Image-1.0-0" in lv_names
     assert "Image-1.0-0+1" in lv_names
 
 
 def test_layout_bases(cli_runner):
-    """ Test if the layout command with bases param returns the base image name """
+    """ Test the layout with bases param returns the base image name """
     r = cli_runner("--debug", "layout", "--bases")
     assert r.stdout.strip() == "Image-1.0-0"
 
 
 def test_layout_layers(cli_runner):
-    """ Test if the layout command with layers param returns the layer image name """
+    """ Test the layout with layers param returns the layer image name """
     r = cli_runner("--debug", "layout", "--layers")
     assert r.stdout.strip() == "Image-1.0-0+1"
 
@@ -136,14 +153,14 @@ def test_layout_layers(cli_runner):
 
 
 def test_base_add(cli_runner):
-    """ Test if the base command with add param adds it to the list of bases """
+    """ Test the base with add param adds it to the list of bases """
     cli_runner("--debug", "base", "--add", "Image-42-0", "--size", "4096")
     r = cli_runner("layout", "--bases")
     assert "Image-42-0" in r.stdout.strip()
 
 
 def test_base_latest_returns_newly_added(cli_runner):
-    """ Test if the base command with latest param returns the latest base image """
+    """ Test the base with latest param returns the latest base image """
     r = cli_runner("base", "--latest")
     assert r.stdout.strip() == "Image-42-0"
 
@@ -172,7 +189,9 @@ def test_base_of_layer(cli_runner):
 
 
 def test_update(cli_runner, mocker):
-    mock_extract = mocker.patch("imgbased.plugins.update.LiveimgExtractor.extract")
+    mock_extract = mocker.patch(
+        "imgbased.plugins.update.LiveimgExtractor.extract"
+    )
     mock_extract.return_value = ("Image-1.0-0", "Image-2.0-0")
 
     cli_runner("--debug", "update", "/my/file")

@@ -284,7 +284,7 @@ class NVR(object):
         return o
 
     def _do_compare(self, other):
-        assert type(self) == type(other), "%r vs %r" % (self, other)
+        assert isinstance(self, type(other)), "%r vs %r" % (self, other)
         if not self.name == other.name:
             raise RuntimeError("NVRs for different names: %s %s"
                                % (self.name, other.name))
