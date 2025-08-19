@@ -19,6 +19,8 @@ jobs:
         include:
           - name: centos-stream-9
             container-name: el9stream
+          - name: centos-stream-10
+            container-name: el10stream
 
     name: ${{ matrix.name }}
 
@@ -32,8 +34,14 @@ jobs:
       - name: Checkout sources
         uses: ovirt/checkout-action@main
 
+      - name: Mark repository as safe
+        run: git config --global --add safe.directory "$(pwd)"
+
       - name: Install tools that should be in buildcontainer / BuildRequires
-        run: dnf install -y python3-pycodestyle python3-pyflakes asciidoc python3-coverage python3-nose python3-systemd
+        run: dnf install -y asciidoc python3-pip
+
+      - name: Install Python tools
+        run: pip install pycodestyle pyflakes coverage systemd pytest pytest-mock
 
       - name: Autogen
         run: ./autogen.sh
