@@ -66,9 +66,9 @@ fi
 AC_CHECK_PROGS(CODESTYLE_CHECKER, [pycodestyle-3 pep8])
 AM_CONDITIONAL([HAVE_CODESTYLE_CHECKER], [test "x$CODESTYLE_CHECKER" != "x"])
 
-AC_ARG_VAR([NOSETESTS], [path to nosetests utility])
-AC_CHECK_PROGS(NOSETESTS, [nosetests-3 nosetests])
-AM_CONDITIONAL([HAVE_NOSETESTS], [test "x$NOSETESTS" != "x"])
+AC_ARG_VAR([PYTEST], [path to pytest utility])
+AC_CHECK_PROGS(PYTEST, [pytest])
+AM_CONDITIONAL([HAVE_PYTEST], [test "x$PYTEST" != "x"])
 
 AM_PATH_PYTHON([3.6])
 

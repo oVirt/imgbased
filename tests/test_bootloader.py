@@ -21,9 +21,6 @@
 # Author(s): Fabian Deutsch <fabiand@redhat.com>
 #
 
-import unittest
-from unittest.mock import patch
-
 from imgbased.bootloader import Grubby
 
 
@@ -49,30 +46,28 @@ def _fake_grubby(*a, **kw):
     return FAKE_STDOUT
 
 
-class GrubbyTestCase(unittest.TestCase):
-    @patch("imgbased.bootloader.grubby", _fake_grubby)
-    def test_simple_flow(self):
-        loader = Grubby(use_bls=False)
+def test_simple_flow(mocker):
+    """Tests the simple flow of the grubby bootloader."""
+    mocker.patch("imgbased.bootloader.grubby", _fake_grubby)
+    loader = Grubby(use_bls=False)
 
-        r = loader.add_entry("a", "a-title", "vmlinuz-1.2-3", "a-initramfs",
-                             "a-append")
-        self.assertEquals(r, "a")
-        self.assertEquals(_fake_grubby.last_data,
-                          (('--copy-default', '--add-kernel',
-                            '/boot/vmlinuz-1.2-3', '--initrd',
-                            '/boot/a-initramfs', '--args',
-                            'a-append img.bootid=a', '--title',
-                            'a-title (1.2-3)'),
-                           {}))
+    r = loader.add_entry("a", "a-title", "vmlinuz-1.2-3", "a-initramfs",
+                         "a-append")
+    assert r == "a"
+    assert _fake_grubby.last_data == (('--copy-default', '--add-kernel',
+                                        '/boot/vmlinuz-1.2-3', '--initrd',
+                                        '/boot/a-initramfs', '--args',
+                                        'a-append img.bootid=a', '--title',
+                                        'a-title (1.2-3)'),
+                                      {})
 
-        r = loader.remove_entry("a")
-        self.assertEquals(_fake_grubby.last_data,
-                          (('--remove-kernel',
+    r = loader.remove_entry("a")
+    assert _fake_grubby.last_data == (('--remove-kernel',
                             '/boot/ovirt-node-4.0+1/vmlinuz-3.10.0-327'
                             '.4.5.el7.x86_64'),
-                           {}))
+                           {})
 
-        r = loader.set_default("a", update_grubenv=False)
-        self.assertEquals(_fake_grubby.last_data,
-                          (('--set-default-index', '0'), {}))
+    r = loader.set_default("a", update_grubenv=False)
+    assert _fake_grubby.last_data == (('--set-default-index', '0'), {})
+
 # vim: sw=4 et sts=4:

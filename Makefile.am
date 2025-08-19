@@ -11,7 +11,7 @@ pyimagebaseddir = $(pythondir)/@PACKAGE_NAME@
 pyimagebasedpluginsdir = $(pyimagebaseddir)/plugins
 
 .PHONY: check check-code check-build distcheck
-.SILENT: check check-pyflakes check-codestyle check-nosetests check-build distcheck
+.SILENT: check check-pyflakes check-codestyle check-pytest check-build distcheck
 
 vpath $(srcdir)
 
@@ -107,19 +107,16 @@ else
 	@echo "[CHECK] Codestyle checker not found, skipping"
 endif
 
-check-nosetests: $(SRCFILES)
-if HAVE_NOSETESTS
-	@echo "[CHECK] @NOSETESTS@"
-	@NOSETESTS@ --verbosity=2 --no-byte-compile --with-xunit \
-		--with-coverage --cover-erase --cover-tests \
-		--cover-package=imgbased --cover-xml --cover-min-percentage=25 \
-		--with-doctest --doctest-tests
+check-pytest: $(SRCFILES)
+if HAVE_PYTEST
+	@echo "[CHECK] @PYTEST@"
+	@PYTEST@ tests/
 else
-	@echo "[CHECK] nosetests not found, skipping"
+	@echo "[CHECK] pytest not found, skipping"
 endif
 
 
-check-code: check-pyflakes check-codestyle check-nosetests
+check-code: check-pyflakes check-codestyle check-pytest
 
 check: check-code check-build
 	@echo "PASS"

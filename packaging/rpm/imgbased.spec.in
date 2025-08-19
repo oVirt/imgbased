@@ -47,8 +47,10 @@ BuildRequires:       python%{python3_pkgversion}-devel
 %if 0%{?with_check}
 BuildRequires:       python%{python3_pkgversion}-pycodestyle
 BuildRequires:       python%{python3_pkgversion}-pyflakes
-BuildRequires:       python%{python3_pkgversion}-nose
+BuildRequires:       python%{python3_pkgversion}-pytest
+BuildRequires:       python%{python3_pkgversion}-pytest-mock
 BuildRequires:       python%{python3_pkgversion}-systemd
+
 %endif
 Requires:       python%{python3_pkgversion}-systemd
 Requires:       python%{python3_pkgversion}-rpm

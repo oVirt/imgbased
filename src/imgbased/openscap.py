@@ -105,12 +105,12 @@ class OSCAPScanner(object):
             log.info("Unregistering profile %s", profile)
             self._config.profile = ""
         else:
-            log.warn("Profile [%s] is not registered, skipping", profile)
+            log.warning("Profile [%s] is not registered, skipping", profile)
 
     def scan(self, remediate=False, path="/"):
         log.debug("Running OSCAP scan on %s, (remediate=%s)", path, remediate)
         if not self._config.registered:
-            log.warn("Security profile not registered, skipping")
+            log.warning("Security profile not registered, skipping")
             return
         report = SCAP_REPORT_FMT % time.strftime("%Y%m%d%H%M%S")
         args = ["chroot", path, "oscap", "xccdf", "eval",
