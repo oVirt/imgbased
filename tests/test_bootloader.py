@@ -55,17 +55,19 @@ def test_simple_flow(mocker):
                          "a-append")
     assert r == "a"
     assert _fake_grubby.last_data == (('--copy-default', '--add-kernel',
-                                        '/boot/vmlinuz-1.2-3', '--initrd',
-                                        '/boot/a-initramfs', '--args',
-                                        'a-append img.bootid=a', '--title',
-                                        'a-title (1.2-3)'),
+                                       '/boot/vmlinuz-1.2-3', '--initrd',
+                                       '/boot/a-initramfs', '--args',
+                                       'a-append img.bootid=a', '--title',
+                                       'a-title (1.2-3)'),
                                       {})
 
     r = loader.remove_entry("a")
-    assert _fake_grubby.last_data == (('--remove-kernel',
-                            '/boot/ovirt-node-4.0+1/vmlinuz-3.10.0-327'
-                            '.4.5.el7.x86_64'),
-                           {})
+    assert _fake_grubby.last_data == (
+        ('--remove-kernel',
+         '/boot/ovirt-node-4.0+1/vmlinuz-3.10.0-327'
+         '.4.5.el7.x86_64'),
+        {}
+    )
 
     r = loader.set_default("a", update_grubenv=False)
     assert _fake_grubby.last_data == (('--set-default-index', '0'), {})

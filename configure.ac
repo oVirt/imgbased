@@ -63,7 +63,7 @@ if test "x$ASCIIDOC" = "x"; then
         AC_MSG_ERROR([asciidoc not found - cannot create man pages without it])
 fi
 
-AC_CHECK_PROGS(CODESTYLE_CHECKER, [pycodestyle-3 pep8])
+AC_CHECK_PROGS(CODESTYLE_CHECKER, [pycodestyle pep8])
 AM_CONDITIONAL([HAVE_CODESTYLE_CHECKER], [test "x$CODESTYLE_CHECKER" != "x"])
 
 AC_ARG_VAR([PYTEST], [path to pytest utility])

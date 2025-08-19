@@ -632,7 +632,7 @@ def migrate_etc(imgbase, new_lv, previous_lv):
                 conf.writen("follow_obsoletes = 1", mode="a")
 
     log.debug("Migrating etc (%s -> %s)" % (previous_lv, new_lv))
-    with mounted(new_lv.path) as new_fs,\
+    with mounted(new_lv.path) as new_fs, \
             mounted(previous_lv.path) as old_fs:
         old_etc = old_fs.path("/etc")
         new_etc = new_fs.path("/etc")
