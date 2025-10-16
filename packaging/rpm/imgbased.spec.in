@@ -100,6 +100,16 @@ make -C py3 install DESTDIR="%{buildroot}"
 %{python3_sitelib}/%{name}/
 
 %changelog
+* Thu Oct 16 2025 Jean-Louis Dupond <jean-louis@dupond.be> - 1.2.26-1
+- Remove usage of python-six
+- Port tests from nose to pytest
+- Build for CentOS 10
+
+* Mon Dec 12 2022 Sandro Bonazzola <sbonazzo@redhat.com> - 1.2.25-1
+- Bindmount /proc for setting selinux context
+- Added logging of additional debugging information to nsenter function
+- Generate new initiatorname from scratch
+
 * Wed Feb 23 2022 Sandro Bonazzola <sbonazzo@redhat.com> - 1.2.24-1
 - Split /var/tmp to its own partition (rhbz#2055829)
 
