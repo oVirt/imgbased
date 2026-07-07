@@ -1,7 +1,5 @@
 # imgbased
 
-[![Copr build status](https://copr.fedorainfracloud.org/coprs/ovirt/ovirt-master-snapshot/package/imgbased/status_image/last_build.png)](https://copr.fedorainfracloud.org/coprs/ovirt/ovirt-master-snapshot/package/imgbased/)
-
 Welcome to the oVirt imgbased source repository. This repository is hosted on [GitHub:imgbased](https://github.com/oVirt/imgbased).
 
 imgbased provides a specific management method to derive writeable filesystem
