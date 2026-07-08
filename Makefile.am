@@ -70,9 +70,11 @@ doc: $(man8_MANS)
 
 docs/imgbase.8: docs/imgbase.8.asc
 
-rpm:DEF_RELEASE=--define "_release @RELEASE@@REVISION@"
+RPMBUILD_ARGS =
+RPMBUILD_ARGS += $(if $(RELEASE_SUFFIX), --define="release_suffix ${RELEASE_SUFFIX}")
+
 rpm: dist
-	rpmbuild $(RPMBUILD_ARGS) $(DEF_RELEASE) -ta $(DIST_ARCHIVES)
+	rpmbuild $(RPMBUILD_ARGS) -ta $(DIST_ARCHIVES)
 
 rpm-build-deps:
 	grep "Require" packaging/rpm/imgbased.spec | cut -d: -f2-
