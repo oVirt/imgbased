@@ -8,7 +8,10 @@ name: CI
 
 on:
   push:
+    branches: [master]
   pull_request:
+    branches: [master]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -30,7 +33,7 @@ jobs:
             shortcut: el10s
             container-name: el10stream
 
-    name: ${{ matrix.name }}
+    name: Build and test on ${{ matrix.name }}
 
     env:
       ARTIFACTS_DIR: exported-artifacts
@@ -40,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout sources
-        uses: ovirt/checkout-action@main
+        uses: actions/checkout@v7
 
       - name: Mark repository as safe
         run: git config --global --add safe.directory "$(pwd)"
@@ -51,8 +54,18 @@ jobs:
       - name: Install Python tools
         run: pip install pycodestyle pyflakes coverage systemd pytest pytest-mock
 
+      - name: Set build environment
+        run: |
+          if [[ -n "$(git tag --points-at HEAD)" ]]; then
+            echo "RELEASE_SUFFIX=" >> $GITHUB_ENV
+            echo "CONFIGURE_EXTRA_ARGS=--with-rpm-release=1" >> $GITHUB_ENV
+          else
+            echo "RELEASE_SUFFIX=.$(date --utc +%Y%m%d%H%M%S).git$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+            echo "CONFIGURE_EXTRA_ARGS=--with-version-suffix=master" >> $GITHUB_ENV
+          fi
+
       - name: Autogen
-        run: ./autogen.sh
+        run: ./autogen.sh $CONFIGURE_EXTRA_ARGS
 
       - name: Check code
         run: make -j distcheck

@@ -36,10 +36,23 @@ AC_SUBST([FEDORA],[[`rpm --eval '%{fedora}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([RHEL], [[`rpm --eval '%{rhel}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([CENTOS], [[`rpm --eval '%{centos}'|sed 's/[^0-9]//g'`]])
 AC_SUBST([PLATFORM])
-AC_SUBST([REVISION], "git"[m4_esyscmd_s([git log -n1 --format=%h])])
-AC_SUBST([RELEASE], [0.0.[`date '+%Y%m%d%H%M'`]])
-dnl AC_SUBST([REVISION], [])
-dnl AC_SUBST([RELEASE], [1])
+AC_ARG_WITH([rpm-release],
+    [AS_HELP_STRING([--with-rpm-release=N],
+        [RPM release number (default: 0 for development, 1 for releases)])],
+    [rpm_release=$withval],
+    [rpm_release=0])
+
+AC_ARG_WITH([version-suffix],
+    [AS_HELP_STRING([--with-version-suffix=SUFFIX],
+        [version suffix appended to RPM release (default: empty for releases, use master for development)])],
+    [version_suffix=$withval],
+    [version_suffix=])
+
+AS_IF([test -n "$version_suffix"],
+    [PACKAGE_RPM_RELEASE="${rpm_release}.${version_suffix}"],
+    [PACKAGE_RPM_RELEASE="${rpm_release}"])
+
+AC_SUBST([PACKAGE_RPM_RELEASE])
 AC_SUBST([am__tar], ['find "$$tardir" -print -perm /g=w -exec chmod g-w {} \; | sort | tar --no-recursion --mtime="1970-01-01 00:00Z" --owner=root --group=root -chpf - -T -'])
 
 if test "$FEDORA"; then

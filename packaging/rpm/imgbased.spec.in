@@ -6,7 +6,7 @@
 
 Name:           imgbased
 Version:        @PACKAGE_RPM_VERSION@
-Release:        %{?_release}%{?!_release:1}%{?dist}
+Release:        @PACKAGE_RPM_RELEASE@%{?release_suffix}%{?dist}
 Summary:        Tools to work with an image based rootfs
 
 License:        GPLv2+
